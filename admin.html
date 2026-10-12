@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="NAIMA OS · CONALEP — Portal de Administración y Orientación Educativa">
+<meta name="theme-color" content="#0F0F0F">
+<title>NAIMA OS · Administración & Orientación — CONALEP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ===================== SIDEBAR ===================== -->
+<aside class="sidebar" id="sidebar" role="navigation" aria-label="Navegación principal">
+  <div class="brand-block">
+    <div class="brand-logos">
+      <span class="brand-edu"><span class="gov"></span>Educación</span>
+      <span class="brand-sep">|</span>
+      <span class="brand-conalep">conalep</span>
+    </div>
+    <h2>Orientación Educativa</h2>
+    <span class="os">NAIMA OS · PORTAL ADMIN</span>
+  </div>
+
+  <div class="user-profile-block" id="userProfileBlock"><!-- generado por admin.js --></div>
+
+  <nav class="navlist" id="navlist"><!-- generado por admin.js --></nav>
+
+  <div class="side-foot" id="sideFoot">
+    <div class="side-foot-text"><span class="spark">✦</span>Creemos en las personas.</div>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebarMobile()"></div>
+<button class="menu-toggle" onclick="toggleSidebarMobile()" aria-label="Abrir menú">☰</button>
+
+<!-- ===================== CONTENIDO PRINCIPAL ===================== -->
+<main class="main">
+  <!-- Barra superior con accesos institucionales -->
+  <div class="admin-top-nav">
+    <div class="atn-left">
+      <span class="atn-badge">🛡️ PORTAL ADMINISTRADOR</span>
+      <span class="atn-user" id="adminHeaderUser">Psic. Mariana Estrada</span>
+    </div>
+    <div class="atn-actions">
+      <a href="estudiante.html" target="_self" class="btn-top-switch">
+        🎓 Ir al Portal de Estudiantes
+      </a>
+      <a href="index.html" target="_self" class="btn-top-logout">
+        Cerrar sesión ⎋
+      </a>
+    </div>
+  </div>
+
+  <div class="content" id="content"><!-- generado por admin.js --></div>
+</main>
+
+<!-- ===================== MODAL ===================== -->
+<div class="modal-overlay" id="appModal" role="dialog" aria-modal="true">
+  <div class="modal-box" id="appModalBody"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="db.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

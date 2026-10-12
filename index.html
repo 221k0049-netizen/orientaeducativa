@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="NAIMA OS · CONALEP — Inicio de Sesión Oficial">
+<meta name="theme-color" content="#0F0F0F">
+<title>Iniciar Sesión · NAIMA OS — CONALEP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-body">
+
+<div class="login-wrapper">
+  <!-- Cabecera Institucional -->
+  <header class="login-header">
+    <div class="brand-logos" style="justify-content:center;">
+      <span class="brand-edu"><span class="gov"></span>Educación</span>
+      <span class="brand-sep">|</span>
+      <span class="brand-conalep">conalep</span>
+    </div>
+    <h1 class="login-title">Orientación Educativa</h1>
+    <p class="login-sub">NAIMA OS · Plataforma Institucional de Acompañamiento Socioemocional</p>
+    <div class="login-chip-inst">Plantel Mérida I · Acceso Seguro</div>
+  </header>
+
+  <!-- Tarjeta de Autenticación Unificada -->
+  <main class="login-auth-card">
+    <!-- Pestañas de Login / Registro -->
+    <div class="login-tabs-nav">
+      <button type="button" class="login-tab-btn active" id="tabBtnLogin" onclick="switchLoginTab('login')">
+        Iniciar Sesión
+      </button>
+      <button type="button" class="login-tab-btn" id="tabBtnRegister" onclick="switchLoginTab('register')">
+        Registrarse
+      </button>
+    </div>
+
+    <!-- Alerta de Error -->
+    <div class="login-error-alert" id="loginAlertBox"></div>
+
+    <!-- Formulario 1: Iniciar Sesión -->
+    <form id="formLogin" onsubmit="handleLoginSubmit(event)">
+      <div class="login-form-group">
+        <label for="loginUser">Correo institucional o Matrícula</label>
+        <input type="text" id="loginUser" placeholder="ej. usuario@conalep.edu.mx o PTB-26001" required autocomplete="username">
+      </div>
+
+      <div class="login-form-group">
+        <label for="loginPass">Contraseña</label>
+        <input type="password" id="loginPass" placeholder="••••••••" required autocomplete="current-password" value="1234">
+      </div>
+
+      <button type="submit" class="btn-maroon login-submit-btn">
+        Ingresar al Sistema →
+      </button>
+    </form>
+
+    <!-- Formulario 2: Registro -->
+    <form id="formRegister" onsubmit="handleRegisterSubmit(event)" style="display:none;">
+      <div class="login-form-group">
+        <label for="regRol">¿Cuál es tu rol institucional?</label>
+        <select id="regRol" onchange="toggleRegRoleFields(this.value)">
+          <option value="estudiante">🎓 Alumno (Estudiante)</option>
+          <option value="coordinador">🛡️ Personal / Coordinador</option>
+        </select>
+      </div>
+
+      <div class="login-form-group">
+        <label for="regNombre">Nombre completo</label>
+        <input type="text" id="regNombre" placeholder="ej. Daniel Pech Rodríguez" required maxlength="80">
+      </div>
+
+      <div class="login-form-group">
+        <label for="regEmail">Correo electrónico institucional</label>
+        <input type="email" id="regEmail" placeholder="usuario@conalep.edu.mx" required>
+      </div>
+
+      <div class="login-form-group">
+        <label for="regPass">Contraseña de acceso</label>
+        <input type="password" id="regPass" placeholder="Mínimo 6 caracteres" minlength="6" required value="conalep123">
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:3px;">Mínimo 6 caracteres (requerido por Supabase Auth)</div>
+      </div>
+
+      <div id="regStudentFields">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="login-form-group">
+            <label for="regMatricula">Matrícula</label>
+            <input type="text" id="regMatricula" placeholder="PTB-26055">
+          </div>
+          <div class="login-form-group">
+            <label for="regGrupo">Grupo</label>
+            <input type="text" id="regGrupo" placeholder="4B">
+          </div>
+        </div>
+        <div class="login-form-group">
+          <label for="regCarrera">Carrera técnica</label>
+          <select id="regCarrera">
+            <option>Informática</option>
+            <option>Enfermería General</option>
+            <option>Mecatrónica</option>
+            <option>Electromecánica</option>
+            <option>Administración</option>
+            <option>Contabilidad</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="regCoordFields" style="display:none;">
+        <div class="login-form-group">
+          <label for="regCargo">Cargo o puesto</label>
+          <input type="text" id="regCargo" value="Orientador Educativo">
+        </div>
+      </div>
+
+      <button type="submit" class="btn-maroon login-submit-btn">
+        Crear Cuenta e Ingresar →
+      </button>
+    </form>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="db.js"></script>
+<script>
+function switchLoginTab(tab){
+  const btnLogin = document.getElementById('tabBtnLogin');
+  const btnReg = document.getElementById('tabBtnRegister');
+  const formLogin = document.getElementById('formLogin');
+  const formReg = document.getElementById('formRegister');
+  const alertBox = document.getElementById('loginAlertBox');
+  if(alertBox) alertBox.style.display = 'none';
+
+  if(tab === 'login'){
+    btnLogin.classList.add('active');
+    btnReg.classList.remove('active');
+    formLogin.style.display = 'block';
+    formReg.style.display = 'none';
+  } else {
+    btnReg.classList.add('active');
+    btnLogin.classList.remove('active');
+    formLogin.style.display = 'none';
+    formReg.style.display = 'block';
+  }
+}
+
+function toggleRegRoleFields(rol){
+  const sF = document.getElementById('regStudentFields');
+  const cF = document.getElementById('regCoordFields');
+  if(rol === 'coordinador'){
+    if(sF) sF.style.display = 'none';
+    if(cF) cF.style.display = 'block';
+  } else {
+    if(sF) sF.style.display = 'block';
+    if(cF) cF.style.display = 'none';
+  }
+}
+
+function showError(msg){
+  const box = document.getElementById('loginAlertBox');
+  if(box){
+    box.textContent = msg;
+    box.style.display = 'block';
+  }
+}
+
+async function handleLoginSubmit(e){
+  e.preventDefault();
+  const userVal = document.getElementById('loginUser').value.trim();
+  const passVal = document.getElementById('loginPass').value.trim();
+
+  const res = await loginUser(userVal, passVal);
+  if(res.success){
+    window.location.href = res.redirectUrl;
+  } else {
+    showError(res.error);
+  }
+}
+
+async function handleRegisterSubmit(e){
+  e.preventDefault();
+  const rol = document.getElementById('regRol').value;
+  const nombre = document.getElementById('regNombre').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPass').value.trim();
+  const matricula = document.getElementById('regMatricula') ? document.getElementById('regMatricula').value.trim() : null;
+  const grupo = document.getElementById('regGrupo') ? document.getElementById('regGrupo').value.trim() : null;
+  const carrera = document.getElementById('regCarrera') ? document.getElementById('regCarrera').value : null;
+  const cargo = document.getElementById('regCargo') ? document.getElementById('regCargo').value.trim() : null;
+
+  const res = await registerUser({ rol, nombre, email, password, matricula, grupo, carrera, cargo });
+  if(res.success){
+    window.location.href = res.redirectUrl;
+  } else {
+    showError(res.error);
+  }
+}
+
+</script>
+</body>
+</html>

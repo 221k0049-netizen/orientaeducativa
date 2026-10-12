@@ -1,0 +1,1101 @@
+/* ============================================================
+   NAIMA OS · CONALEP — Portal del Estudiante (estudiante.js)
+   Lógica del Alumno, Check-in Emocional y Red de Apoyo IA
+   ============================================================ */
+
+// Asegurar que el usuario activo sea un estudiante al entrar a estudiante.html
+if(isCoordinator()){
+  setCurrentUser('PTB-26001');
+}
+
+const SECTIONS_STUDENT = [
+  { id:'student_inicio',  label:'Mi Espacio',        icon:'🏠' },
+  { id:'student_checkin', label:'Check-in Emocional',icon:'💖' },
+  { id:'student_eirene',  label:'Hablar con Eirén',  icon:'🌸', sep:'COMPAÑERAS IA' },
+  { id:'student_orion',   label:'Consejos de Orión', icon:'✧' },
+  { id:'student_campus3d',label:'Campus 3D & Juegos',icon:'🎮', sep:'ACTIVIDADES' },
+  { id:'student_diario',  label:'Mi Diario',         icon:'📓' },
+];
+
+let currentStudentSection = 'student_inicio';
+let selectedStudentMood = null;
+
+/* ---------- Render Sidebar y Perfil del Alumno ---------- */
+function renderStudentUserProfile(){
+  const el = document.getElementById('userProfileBlock');
+  if(!el) return;
+  const user = getCurrentUser();
+  const s = db.students[user.matricula || user.id] || user;
+
+  el.innerHTML = `
+    <div class="up-avatar student-av">
+      ${initialOf(s.display || s.nombre)}
+    </div>
+    <div class="up-details">
+      <span class="up-name" title="${s.nombre}">${s.display || s.nombre}</span>
+      <span class="up-role-tag student">🎓 ${s.matricula || 'Alumno'}</span>
+    </div>
+    <button class="up-switch-btn" onclick="openStudentPickerModal()" title="Cambiar de alumno">⇄</button>
+  `;
+
+  const topUserEl = document.getElementById('studentHeaderUser');
+  if(topUserEl) topUserEl.textContent = `${s.nombre} (${s.grupo || '4B'} · ${s.carrera || 'Informática'})`;
+}
+
+function renderStudentSidebar(){
+  const navEl = document.getElementById('navlist');
+  if(!navEl) return;
+
+  navEl.innerHTML = SECTIONS_STUDENT.map(s => {
+    const sep = s.sep ? `<div class="nav-sep">${s.sep}</div>` : '';
+    return `${sep}<button data-sec="${s.id}" onclick="nav('${s.id}')"><span class="nicon">${s.icon}</span>${s.label}</button>`;
+  }).join('');
+}
+
+function nav(sec){
+  currentStudentSection = sec;
+  document.querySelectorAll('#navlist button').forEach(b =>
+    b.classList.toggle('active', b.dataset.sec === sec));
+  closeSidebarMobile();
+  const el = document.getElementById('content');
+  window.scrollTo(0,0);
+
+  if(sec === 'student_inicio')   el.innerHTML = renderStudentInicio();
+  else if(sec === 'student_checkin')  el.innerHTML = renderStudentCheckin();
+  else if(sec === 'student_eirene')   el.innerHTML = renderStudentEirene();
+  else if(sec === 'student_orion')    el.innerHTML = renderStudentOrion();
+  else if(sec === 'student_campus3d') el.innerHTML = renderStudentCampus3D();
+  else if(sec === 'student_diario')   el.innerHTML = renderStudentDiario();
+}
+
+function lastMood(s){
+  const h = s.historial && s.historial[s.historial.length-1];
+  return h ? MOODS.find(m => m.id === h.mood) : null;
+}
+
+/* ---------- VISTA: MI ESPACIO (INICIO ESTUDIANTE) ---------- */
+function renderStudentInicio(){
+  const user = getCurrentUser();
+  const s = db.students[user.matricula || user.id] || user;
+  const last = lastMood(s);
+  const pendingAlert = (db.alerts || []).find(a => a.studentId === s.matricula && a.status === 'pendiente');
+  const greeting = eireneGreeting();
+
+  const moodBanner = last ? `
+    <div class="banner" style="border-left-color:${last.hex};">
+      <div class="b-icon" style="background:${last.hex}22;color:${last.hex};">${last.emoji}</div>
+      <div class="b-body">
+        <span class="b-tag">Último registro de bienestar</span>
+        <div class="b-title">Te sentiste "${last.label}" recientemente</div>
+        <div class="b-desc">${s.historial[s.historial.length-1]?.note ? `"${escapeHTML(s.historial[s.historial.length-1].note)}"` : 'Recuerda que puedes actualizar cómo te sientes en cualquier momento.'}</div>
+      </div>
+      <button class="btn-maroon" onclick="nav('student_checkin')">Nuevo Check-in →</button>
+    </div>
+  ` : `
+    <div class="banner">
+      <div class="b-icon">💖</div>
+      <div class="b-body">
+        <span class="b-tag">Bienestar diario</span>
+        <div class="b-title">Aún no has hecho tu Check-in de hoy</div>
+        <div class="b-desc">Tómate 30 segundos para contarnos cómo te sientes. Eirén y Orión están aquí para acompañarte.</div>
+      </div>
+      <button class="btn-maroon" onclick="nav('student_checkin')">Hacer Check-in →</button>
+    </div>
+  `;
+
+  const alertNote = pendingAlert ? `
+    <div class="ai-alert-confirmed-notice" style="margin-bottom:24px;">
+      <span style="font-size:22px;">🛡️</span>
+      <div>
+        <strong>Acompañamiento escolar en curso:</strong> Tu orientadora (<em>${s.guardian || 'Psic. Mariana Estrada'}</em>) tiene conocimiento de tu reporte de ${pendingAlert.moodLabel}. Recuerda que estamos aquí para ti y puedes solicitar una plática en cualquier momento.
+      </div>
+    </div>
+  ` : '';
+
+  const tasks = getStudentTasks(s.matricula);
+  const completedCount = tasks.filter(t => t.completed).length;
+  const pct = tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0;
+  const docs = getStudentDocuments(s.matricula);
+
+  return `
+  <div class="student-hero">
+    <div class="sh-avatar-wrap">
+      ${buildAvatarSVG(s.avatar || DEFAULT_AVATAR, 'sh')}
+    </div>
+    <div class="sh-body">
+      <span class="sh-badge">✦ Espacio del Alumno · CONALEP</span>
+      <h1 class="sh-title">${greeting.text}, ${s.display || s.nombre}</h1>
+      <p class="sh-desc">Este es tu espacio seguro para registrar tus emociones, tomar pausas activas y recibir apoyo cuando lo necesites.</p>
+      <div class="sh-meta">
+        <span class="sh-meta-item">Matrícula: <strong>${s.matricula || 'PTB-Demo'}</strong></span>
+        <span class="sh-meta-item">Grupo: <strong>${s.grupo || '4B'}</strong></span>
+        <span class="sh-meta-item">Carrera: <strong>${s.carrera || 'Informática'}</strong></span>
+        <span class="sh-meta-item">Orientador(a): <strong>${s.guardian || 'Psic. Mariana Estrada'}</strong></span>
+      </div>
+    </div>
+  </div>
+
+  ${alertNote}
+  ${moodBanner}
+
+  <span class="section-label">Tus herramientas</span>
+  <h2 class="section-title">¿Qué te gustaría hacer hoy?</h2>
+
+  <div class="quick-grid">
+    <button class="quick-card" onclick="nav('student_checkin')">
+      <div class="q-icon">💖</div>
+      <div class="q-body">
+        <span class="q-title">Check-in Emocional</span>
+        <span class="q-sub">Registra cómo te sientes hoy</span>
+      </div>
+      <span class="q-chev">›</span>
+    </button>
+    <button class="quick-card" onclick="nav('student_eirene')">
+      <div class="q-icon">🌸</div>
+      <div class="q-body">
+        <span class="q-title">Hablar con Eirén</span>
+        <span class="q-sub">Compañera de bienestar y calma</span>
+      </div>
+      <span class="q-chev">›</span>
+    </button>
+    <button class="quick-card" onclick="nav('student_orion')">
+      <div class="q-icon">✧</div>
+      <div class="q-body">
+        <span class="q-title">Consejos de Orión</span>
+        <span class="q-sub">Organización y motivación escolar</span>
+      </div>
+      <span class="q-chev">›</span>
+    </button>
+  </div>
+
+  <div class="duo-grid">
+    <div class="duo-card">
+      <span class="section-label">🎮 CAMPUS 3D & JUEGOS</span>
+      <h3>Recorridos Virtuales y Juegos</h3>
+      <p>Explora el plantel CONALEP en 3D, el Puente de Progreso y dinámicas interactivas para despejar la mente.</p>
+      <button class="link-arrow" onclick="nav('student_campus3d')">Explorar Campus 3D →</button>
+    </div>
+    <div class="duo-card">
+      <span class="section-label">📓 MI DIARIO</span>
+      <h3>Diario de Reflexión</h3>
+      <p>Escribe lo que piensas y sientes de forma privada. Un espacio para desahogarte a tu ritmo.</p>
+      <button class="link-arrow" onclick="nav('student_diario')">Abrir mi Diario →</button>
+    </div>
+  </div>
+
+  <!-- SECCIÓN: MIS TAREAS Y ACUERDOS DE ORIENTACIÓN -->
+  <div class="student-tasks-block" style="margin-top:28px;">
+    <div class="section-head-row" style="margin-bottom:12px;">
+      <div>
+        <span class="section-label">Acompañamiento y Tutoría</span>
+        <h2 class="section-title" style="margin-bottom:0;">📋 Mis Tareas y Compromisos de Orientación</h2>
+      </div>
+      <div style="text-align:right;">
+        <span class="tasks-progress-badge ${pct === 100 && tasks.length ? 'all-done' : ''}">
+          ${completedCount} de ${tasks.length} cumplidos (${pct}%)
+        </span>
+      </div>
+    </div>
+
+    ${tasks.length ? `
+      <div class="task-progress-bar-wrap">
+        <div class="task-progress-bar-fill" style="width:${pct}%;"></div>
+      </div>
+    ` : ''}
+
+    <div class="student-tasks-container">
+      ${tasks.length ? tasks.map(t => `
+        <div class="student-task-item ${t.completed ? 'completed' : ''}" id="stItem_${t.id}">
+          <label class="st-checkbox-label">
+            <input type="checkbox" class="st-checkbox" ${t.completed ? 'checked' : ''} 
+              onchange="toggleStudentTaskPortal('${t.id}')">
+            <span class="st-custom-check"></span>
+          </label>
+          <div class="st-content">
+            <div class="st-top-row">
+              <span class="task-cat-badge ${t.category ? t.category.toLowerCase() : 'general'}">${t.category || 'Compromiso'}</span>
+              <span class="st-title ${t.completed ? 'line-through' : ''}">${escapeHTML(t.title)}</span>
+            </div>
+            ${t.desc ? `<p class="st-desc">${escapeHTML(t.desc)}</p>` : ''}
+            <div class="st-footer">
+              <span>📅 Entrega / Revisión: <strong>${t.dueDate || 'Esta semana'}</strong></span>
+              <span>· Asignado por: <strong>${t.assignedBy || 'Psic. Mariana Estrada'}</strong></span>
+              ${t.completed ? `<span class="st-completed-badge">✓ ¡Cumplido!</span>` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('') : `
+        <div class="follow-empty" style="padding:24px 16px;">
+          <div class="fe-icon">✨</div>
+          <h4>¡Sin pendientes escolares por ahora!</h4>
+          <p>Tu orientadora no ha asignado tareas en este momento. Continúa cuidando tu bienestar y ritmo de estudio.</p>
+        </div>
+      `}
+    </div>
+  </div>
+
+  <!-- SECCIÓN: MIS DOCUMENTOS DEL EXPEDIENTE -->
+  ${docs.length ? `
+    <div class="student-docs-block" style="margin-top:28px;">
+      <div class="section-head-row" style="margin-bottom:12px;">
+        <div>
+          <span class="section-label">Expediente Oficial</span>
+          <h2 class="section-title" style="margin-bottom:0;">📁 Mis Documentos de Orientación Educativa</h2>
+        </div>
+      </div>
+      <div class="student-docs-grid">
+        ${docs.map(d => `
+          <div class="student-doc-card">
+            <div class="sdc-icon">📄</div>
+            <div class="sdc-info">
+              <span class="doc-type-badge">${d.category || 'Expediente'}</span>
+              <strong class="sdc-title">${escapeHTML(d.title)}</strong>
+              <div class="sdc-meta">📁 ${escapeHTML(d.fileName)} · ${d.fileSize} · Fecha: ${d.date}</div>
+              ${d.notes ? `<div class="sdc-notes">"${escapeHTML(d.notes)}"</div>` : ''}
+            </div>
+            <button class="btn-outline-maroon" style="padding:6px 12px;font-size:12px;align-self:center;" 
+              onclick="openOfficialReportModal('${s.matricula}', '${escapeHTML(d.title)}')">
+              🖨️ Ver Documento
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  ` : ''}
+
+  <div class="section-head-row" style="margin-top:28px;">
+    <div><span class="section-label">Historial</span><h2 class="section-title" style="margin-bottom:0;">Tus últimos check-ins</h2></div>
+  </div>
+
+  <div class="panel">
+    ${(s.historial && s.historial.length) ? s.historial.slice().reverse().map(h => {
+      const m = MOODS.find(x => x.id === h.mood) || { hex:'#888', emoji:'•', label:h.mood };
+      return `
+        <div class="follow-row">
+          <div class="f-avatar" style="background:${m.hex}22;color:${m.hex};font-size:20px;">${m.emoji}</div>
+          <div class="f-body">
+            <span class="f-name">Te sentiste ${m.label}</span>
+            <span class="f-grupo">${h.note ? `"${escapeHTML(h.note)}"` : 'Sin comentarios'}</span>
+          </div>
+          <div class="f-meta">
+            <span class="f-date">${h.date}</span>
+          </div>
+        </div>
+      `;
+    }).join('') : `
+      <div class="follow-empty">
+        <div class="fe-icon">✦</div>
+        <h4>Aún no hay registros en tu historial</h4>
+        <p>Cuando realices tu primer check-in emocional, aparecerá aquí.</p>
+      </div>
+    `}
+  </div>
+  `;
+}
+
+function toggleStudentTaskPortal(taskId){
+  const user = getCurrentUser();
+  const s = db.students[user.matricula || user.id] || user;
+  const task = toggleStudentTask(s.matricula, taskId);
+  if(task && task.completed){
+    showStudentToast('¡Excelente avance! Has cumplido: ' + task.title + ' ✨');
+  }
+  const el = document.getElementById('content');
+  if(el && currentStudentSection === 'student_inicio'){
+    el.innerHTML = renderStudentInicio();
+  }
+}
+
+function showStudentToast(msg){
+  let t = document.getElementById('studentToast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'studentToast';
+    t.className = 'student-toast-badge';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.add('visible');
+  setTimeout(()=>{ t.classList.remove('visible'); }, 3800);
+}
+
+/* ---------- GENERADOR OFICIAL DE DOCUMENTOS (MODO ESTUDIANTE) ---------- */
+function openOfficialReportModal(matricula, docTitle = null){
+  const s = db.students[matricula] || getCurrentUser();
+  const tasks = getStudentTasks(s.matricula);
+  const hist = s.historial || [];
+  const title = docTitle || 'Expediente de Acompañamiento Socioemocional';
+  const folio = 'CONALEP-OE-MID1-2026-' + (s.matricula.replace(/[^0-9]/g,'') || '042');
+  const hoyStr = new Date().toLocaleDateString('es-MX', {
+    day:'2-digit', month:'long', year:'numeric'
+  });
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line);">
+      <div>
+        <span class="section-label" style="margin:0;">Expediente Institucional</span>
+        <div style="font-size:12.5px;color:var(--ink-soft);">Documento oficial expedido por Orientación Educativa</div>
+      </div>
+      <button class="btn-maroon" style="padding:9px 18px;font-size:13px;display:flex;align-items:center;gap:6px;" onclick="window.print();">
+        🖨️ Imprimir / Guardar PDF
+      </button>
+    </div>
+
+    <div class="conalep-official-sheet">
+      <div class="sheet-header">
+        <div class="sheet-header-left">
+          <div class="sheet-gov-crest"><span style="font-size:22px;">🏛️</span></div>
+          <div>
+            <div class="sheet-title-main">GOBIERNO DE MÉXICO · SECRETARÍA DE EDUCACIÓN PÚBLICA</div>
+            <div class="sheet-title-sub">COLEGIO NACIONAL DE EDUCACIÓN PROFESIONAL TÉCNICA</div>
+            <div class="sheet-title-desc">ORGANISMO PÚBLICO DESCENTRALIZADO DEL GOBIERNO FEDERAL</div>
+            <div class="sheet-title-plantel">DIRECCIÓN ESTATAL YUCATÁN · PLANTEL MÉRIDA I (CCT: 31DPT0001E)</div>
+          </div>
+        </div>
+        <div class="sheet-header-right">
+          <div class="sheet-folio-box">
+            <span class="sheet-folio-lbl">FOLIO OFICIAL PIOE</span>
+            <span class="sheet-folio-num mono">${folio}</span>
+          </div>
+          <div class="sheet-date-lbl">Mérida, Yucatán, a ${hoyStr}</div>
+        </div>
+      </div>
+
+      <div class="sheet-doc-title-block">
+        <h2 class="sheet-doc-title">${escapeHTML(title)}</h2>
+        <div class="sheet-doc-subtitle">PROGRAMA INSTITUCIONAL DE ORIENTACIÓN EDUCATIVA Y TUTORÍAS (PIOE)</div>
+      </div>
+
+      <div class="sheet-section-title">I. DATOS DE IDENTIFICACIÓN DEL ESTUDIANTE</div>
+      <table class="sheet-info-table">
+        <tr>
+          <td style="width:25%;" class="sit-lbl">Nombre del Alumno:</td>
+          <td style="width:40%;" class="sit-val"><strong>${s.nombre}</strong></td>
+          <td style="width:15%;" class="sit-lbl">Matrícula:</td>
+          <td style="width:20%;" class="sit-val mono"><strong>${s.matricula}</strong></td>
+        </tr>
+        <tr>
+          <td class="sit-lbl">Carrera Técnica:</td>
+          <td class="sit-val">${s.carrera || 'P.T.B. en Informática'}</td>
+          <td class="sit-lbl">Grupo / Turno:</td>
+          <td class="sit-val">${s.grupo} · Matutino</td>
+        </tr>
+        <tr>
+          <td class="sit-lbl">Orientador(a) Asignado:</td>
+          <td class="sit-val">${s.guardian || 'Psic. Mariana Estrada'}</td>
+          <td class="sit-lbl">Estatus de Apoyo:</td>
+          <td class="sit-val">Acompañamiento Activo</td>
+        </tr>
+      </table>
+
+      <div class="sheet-section-title">II. REGISTRO RECIENTE DE BIENESTAR Y CHECK-INS EMOCIONALES</div>
+      <table class="sheet-table-data">
+        <thead>
+          <tr>
+            <th style="width:25%;">Fecha y Hora</th>
+            <th style="width:25%;">Estado Reportado</th>
+            <th style="width:50%;">Comentario del Alumno</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${hist.length ? hist.slice(-4).reverse().map(h => {
+            const m = MOODS.find(x => x.id === h.mood) || { label:h.mood, emoji:'•' };
+            return `
+              <tr>
+                <td class="mono" style="font-size:11.5px;">${h.date}</td>
+                <td><strong>${m.emoji} ${m.label}</strong></td>
+                <td>${h.note ? escapeHTML(h.note) : 'Check-in rutinario en plataforma'}</td>
+              </tr>
+            `;
+          }).join('') : `
+            <tr>
+              <td colspan="3" style="text-align:center;font-style:italic;color:#666;">Sin registros previos en la bitácora digital.</td>
+            </tr>
+          `}
+        </tbody>
+      </table>
+
+      <div class="sheet-section-title">III. BITÁCORA DE COMPROMISOS Y ACUERDOS DE SEGUIMIENTO</div>
+      <table class="sheet-table-data">
+        <thead>
+          <tr>
+            <th style="width:45%;">Compromiso / Actividad</th>
+            <th style="width:20%;">Área</th>
+            <th style="width:20%;">Fecha Límite</th>
+            <th style="width:15%;">Estatus</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tasks.length ? tasks.map(t => `
+            <tr>
+              <td>
+                <strong>${escapeHTML(t.title)}</strong>
+                ${t.desc ? `<div style="font-size:10.5px;color:#555;margin-top:2px;">${escapeHTML(t.desc)}</div>` : ''}
+              </td>
+              <td>${t.category || 'General'}</td>
+              <td class="mono" style="font-size:11.5px;">${t.dueDate || 'En curso'}</td>
+              <td><span style="font-weight:600;color:${t.completed ? '#17795B' : '#7E1C3E'};">${t.completed ? '✓ CUMPLIDO' : '⏳ PENDIENTE'}</span></td>
+            </tr>
+          `).join('') : `
+            <tr>
+              <td colspan="4" style="text-align:center;font-style:italic;color:#666;">Se acuerda continuar el seguimiento ordinario en aula y talleres.</td>
+            </tr>
+          `}
+        </tbody>
+      </table>
+
+      <div class="sheet-disclaimer">
+        <strong>NOTA DE CONFIDENCIALIDAD Y FUNDAMENTO INSTITUCIONAL:</strong> La información contenida en este documento forma parte del expediente socioemocional y de tutoría del estudiante, amparado por el Modelo Académico de Calidad para la Competitividad de CONALEP y la normatividad de protección de datos personales.
+      </div>
+
+      <div class="sheet-signatures">
+        <div class="sheet-sig-box">
+          <div class="sheet-sig-line"></div>
+          <div class="sheet-sig-name">Psic. Mariana Estrada</div>
+          <div class="sheet-sig-title">Orientadora Educativa y Tutorías</div>
+          <div class="sheet-sig-stamp">✦ SELLO DIGITAL PIOE MER-1 ✦</div>
+        </div>
+        <div class="sheet-sig-box">
+          <div class="sheet-sig-line"></div>
+          <div class="sheet-sig-name">${s.nombre}</div>
+          <div class="sheet-sig-title">Firma del Estudiante (Enterado)</div>
+          <div class="mono" style="font-size:10px;color:#777;margin-top:4px;">Matrícula: ${s.matricula}</div>
+        </div>
+        <div class="sheet-sig-box">
+          <div class="sheet-sig-line"></div>
+          <div class="sheet-sig-name">Padre, Madre o Tutor Legal</div>
+          <div class="sheet-sig-title">Enterado y Corresponsable</div>
+          <div class="mono" style="font-size:10px;color:#777;margin-top:4px;">Ciclo Escolar 2026-2027</div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+/* ---------- VISTA: CHECK-IN EMOCIONAL ---------- */
+function renderStudentCheckin(){
+  selectedStudentMood = null;
+
+  return `
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">BIENESTAR ESTUDIANTIL</span>
+      <h1>¿Cómo te sientes hoy?</h1>
+      <p>Elige la emoción que mejor represente tu momento. No hay respuestas correctas ni incorrectas.</p>
+    </div>
+    <span class="demo-chip">Check-in Diario</span>
+  </div>
+
+  <div class="student-checkin-box">
+    <div class="sc-header">
+      <h3>Selecciona tu estado de ánimo</h3>
+      <p>Tu respuesta es confidencial y nos ayuda a brindarte el apoyo adecuado si lo necesitas.</p>
+    </div>
+
+    <div class="student-mood-grid">
+      ${MOODS.map(m => `
+        <div class="student-mood-card ${NEGATIVE.includes(m.id) ? 'is-negative' : ''}" 
+             id="smCard_${m.id}" 
+             onclick="selectStudentMood('${m.id}')">
+          <span class="smc-emoji">${m.emoji}</span>
+          <span class="smc-label">${m.label}</span>
+          <span class="smc-tag">${NEGATIVE.includes(m.id) ? 'Requiere apoyo' : 'Equilibrio'}</span>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="student-note-field">
+      <label for="scNote">¿Quieres contar qué te hace sentir así hoy? (Opcional)</label>
+      <textarea id="scNote" placeholder="Ej. Tengo mucha carga con los proyectos de cierre, me siento cansado/a, o simplemente tuve un buen día..."></textarea>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+      <button class="btn-maroon" style="padding:14px 28px;font-size:14px;" onclick="submitStudentCheckin()">
+        Registrar mi estado de ánimo →
+      </button>
+      <span style="font-size:12.5px;color:var(--ink-muted);">
+        🔒 Tus datos son tratados conforme a la política de orientación escolar CONALEP.
+      </span>
+    </div>
+  </div>
+
+  <div id="studentCheckinResult"></div>
+  `;
+}
+
+function selectStudentMood(moodId){
+  selectedStudentMood = moodId;
+  document.querySelectorAll('.student-mood-card').forEach(c => c.classList.remove('active'));
+  const target = document.getElementById('smCard_' + moodId);
+  if(target) target.classList.add('active');
+}
+
+function submitStudentCheckin(){
+  if(!selectedStudentMood){
+    alert('Por favor selecciona una emoción antes de guardar.');
+    return;
+  }
+
+  const noteInput = document.getElementById('scNote');
+  const note = noteInput ? noteInput.value.trim() : '';
+
+  const user = getCurrentUser();
+  const s = db.students[user.matricula || user.id] || user;
+  const moodObj = MOODS.find(m => m.id === selectedStudentMood);
+
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const hoy = new Date();
+  const hora = String(hoy.getHours()).padStart(2,'0') + ':' + String(hoy.getMinutes()).padStart(2,'0');
+  const fechaStr = `${hoy.getDate()} ${meses[hoy.getMonth()]} · ${hora}`;
+
+  if(!s.historial) s.historial = [];
+  s.historial.push({
+    id: 'chk_' + Date.now(),
+    mood: selectedStudentMood,
+    date: fechaStr,
+    note: note
+  });
+
+  const isNeg = NEGATIVE.includes(selectedStudentMood);
+
+  if(isNeg){
+    s.prioridad = 'alto';
+    if(!db.alerts) db.alerts = [];
+    const newAlert = {
+      id: 'alt_' + Date.now(),
+      studentId: s.matricula,
+      studentName: s.nombre,
+      grupo: s.grupo,
+      carrera: s.carrera,
+      mood: selectedStudentMood,
+      moodEmoji: moodObj.emoji,
+      moodLabel: moodObj.label,
+      level: 'urgente',
+      status: 'pendiente',
+      date: fechaStr,
+      note: note || 'Reportó estado negativo en check-in'
+    };
+    db.alerts.unshift(newAlert);
+  } else {
+    s.prioridad = 'bajo';
+  }
+
+  saveDB();
+  renderStudentSidebar();
+
+  // Sincronizar Check-in y Alerta en Supabase en segundo plano si está disponible
+  if(typeof isSupabaseLive === 'function' && isSupabaseLive()){
+    const client = typeof getActiveSupabaseClient === 'function' ? getActiveSupabaseClient() : null;
+    if(client){
+      client.from('checkins').insert({
+        student_id: s.matricula,
+        mood: selectedStudentMood,
+        note: (note || '').trim()
+      }).then(({ error }) => {
+        if(error) console.warn('Supabase checkin sync notice:', error.message);
+        else console.log('✅ Check-in registrado en Supabase');
+      }).catch(err => console.warn('Supabase checkin error:', err));
+
+      if(isNeg){
+        client.from('alerts').insert({
+          student_id: s.matricula,
+          level: 'urgente',
+          mood: selectedStudentMood,
+          note: (note || 'Reportó estado negativo en check-in').trim(),
+          status: 'pendiente'
+        }).then(({ error }) => {
+          if(error) console.warn('Supabase alert sync notice:', error.message);
+          else console.log('✅ Alerta registrada en Supabase');
+        }).catch(err => console.warn('Supabase alert error:', err));
+      }
+    }
+  }
+
+  const resContainer = document.getElementById('studentCheckinResult');
+  if(!resContainer) return;
+
+  if(isNeg){
+    resContainer.innerHTML = renderAiSupportContainer(s, moodObj, note);
+  } else {
+    resContainer.innerHTML = renderPositiveAiSupport(s, moodObj, note);
+  }
+
+  resContainer.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+/* --- Apoyo Emocional Inmediato (Eirén & Orión) --- */
+function renderAiSupportContainer(student, mood, note){
+  const firstName = (student.display || student.nombre).split(' ')[0];
+
+  const eireneMsgs = {
+    estresado: `Hola ${firstName}, te escucho con mucho cariño. El estrés en la escuela o en casa puede sentirse como una carga muy pesada, pero no tienes que resolver todo hoy ni hacerlo a solas. Respira hondo: eres una persona valiosa y capaz de superar esto a tu propio ritmo. 💚`,
+    triste: `Hola ${firstName}, gracias por tener la valentía de compartir cómo te sientes. Está completamente bien no sentirse bien hoy. Tu tristeza es válida y no tienes por qué ocultarla. Aquí estoy contigo, sin juicios y a tu lado. Mereces un momento de calma hoy. 🌿`,
+    enojado: `Hola ${firstName}, reconozco tu molestia y es normal sentir coraje o frustración ante situaciones difíciles. Tómate una pausa cómoda antes de tomar cualquier decisión. Vamos a cuidar tu energía para que recuperes tu tranquilidad. ✨`
+  };
+
+  const orionMsgs = {
+    estresado: `✧ Consejo de Orión: 'Las tormentas académicas más intensas son temporales'. Te sugiero dividir tus pendientes en partes pequeñas, tomar un vaso con agua y hacer 3 minutos de respiración. Recuerda que tu orientadora ${student.guardian || 'Psic. Mariana Estrada'} está disponible para respaldarte sin juzgarte.`,
+    triste: `✧ Consejo de Orión: 'Incluso en la noche más oscura, las estrellas siguen ahí'. Hoy no te exijas perfección. Hablar con alguien de confianza o escribir en tu diario personal te ayudará a ordenar lo que sientes. Tu equipo escolar está de tu lado.`,
+    enojado: `✧ Consejo de Orión: 'La pausa es la mayor muestra de fuerza'. Cuando sientas enojo, aléjate unos minutos de la fuente de tensión, camina o realiza una pausa activa. Recuerda que tienes una red de apoyo en CONALEP.`
+  };
+
+  return `
+  <div class="ai-support-container">
+    <div class="ai-support-banner">
+      <div class="as-pulse-icon">💚</div>
+      <div>
+        <h3 class="as-banner-title">Red de Apoyo Emocional Inmediata activada</h3>
+        <p class="as-banner-sub">Eirén y Orión están aquí para acompañarte mientras tu reporte es notificado de forma confidencial.</p>
+      </div>
+    </div>
+
+    <div class="ai-duo-chat-grid">
+      <div class="ai-agent-bubble eirene">
+        <div class="aab-header">
+          <div class="aab-avatar">🌸</div>
+          <div>
+            <span class="aab-name">Eirén</span>
+            <span class="aab-role">Tu compañera de bienestar</span>
+          </div>
+        </div>
+        <p class="aab-msg">${eireneMsgs[mood.id] || eireneMsgs['estresado']}</p>
+      </div>
+
+      <div class="ai-agent-bubble orion">
+        <div class="aab-header">
+          <div class="aab-avatar">✧</div>
+          <div>
+            <span class="aab-name">Orión</span>
+            <span class="aab-role">Estrategia y orientación escolar</span>
+          </div>
+        </div>
+        <p class="aab-msg">${orionMsgs[mood.id] || orionMsgs['estresado']}</p>
+      </div>
+    </div>
+
+    <div class="ai-alert-confirmed-notice">
+      <span style="font-size:22px;">📧</span>
+      <div>
+        <strong>Alerta institucional y correo de seguimiento generados:</strong> Se notificó de forma confidencial al correo de Orientación Educativa (<em>orientacion.merida1@conalep.edu.mx</em> · <em>${student.guardian || 'Psic. Mariana Estrada'}</em>). Estamos aquí para respaldarte en cada paso sin juicios y a tu ritmo.
+      </div>
+    </div>
+
+    <div class="ai-actions-row">
+      <button class="btn-maroon" onclick="eireneStartBreathing()">
+        🧘 Hacer pausa de respiración (3 min)
+      </button>
+      <button class="btn-outline-maroon" onclick="speakEireneCustom('${escapeHTML(eireneMsgs[mood.id] || '')}')">
+        🔊 Escuchar a Eirén
+      </button>
+      <button class="btn-outline-maroon" onclick="nav('student_diario')">
+        📓 Escribir en mi Diario
+      </button>
+      <button class="btn-outline-maroon" style="background:#FFF0F3;border-color:var(--pink);color:var(--pink);" onclick="requestCounselorSupport()">
+        🤝 Solicitar cita presencial con Orientación
+      </button>
+    </div>
+  </div>
+  `;
+}
+
+function renderPositiveAiSupport(student, mood, note){
+  const firstName = (student.display || student.nombre).split(' ')[0];
+
+  return `
+  <div class="ai-support-container" style="border-color:rgba(23,121,91,.35);background:linear-gradient(145deg,#F7FCF9 0%,#F0F8F4 100%);">
+    <div class="ai-support-banner">
+      <div class="as-pulse-icon" style="background:rgba(23,121,91,.15);color:var(--green);">✨</div>
+      <div>
+        <h3 class="as-banner-title" style="color:var(--green);">¡Nos alegra que te sientas ${mood.label}, ${firstName}!</h3>
+        <p class="as-banner-sub">Has registrado un estado de bienestar positivo el día de hoy.</p>
+      </div>
+    </div>
+
+    <div class="ai-duo-chat-grid">
+      <div class="ai-agent-bubble eirene">
+        <div class="aab-header"><div class="aab-avatar">🌸</div><div><span class="aab-name">Eirén</span><span class="aab-role">Bienestar</span></div></div>
+        <p class="aab-msg">¡Qué alegría saber que estás teniendo un buen momento, ${firstName}! Aprovecha esta energía para aprender algo nuevo, compartir con tus compañeros o guardar este recuerdo en tu diario. 💚</p>
+      </div>
+      <div class="ai-agent-bubble orion">
+        <div class="aab-header"><div class="aab-avatar">✧</div><div><span class="aab-name">Orión</span><span class="aab-role">Orientación</span></div></div>
+        <p class="aab-msg">✧ Consejo de Orión: Cuando te sientes tranquilo o feliz, tu cerebro aprende y retiene información con mayor claridad. ¡Sigue con ese gran impulso en tus clases de CONALEP!</p>
+      </div>
+    </div>
+
+    <div class="ai-actions-row">
+      <button class="btn-maroon" style="background:var(--green);" onclick="nav('student_inicio')">
+        Ir a Mi Espacio →
+      </button>
+      <button class="btn-outline-maroon" onclick="nav('student_campus3d')">
+        🎮 Explorar Campus 3D & Juegos
+      </button>
+    </div>
+  </div>
+  `;
+}
+
+function speakEireneCustom(msg){
+  if(!('speechSynthesis' in window)){
+    alert('Tu navegador no soporta síntesis de voz.');
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(msg || 'Hola, estoy aquí contigo.');
+  u.lang = 'es-MX';
+  u.rate = 0.95;
+  u.pitch = 1.15;
+  window.speechSynthesis.speak(u);
+}
+
+function eireneStartBreathing(){
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <span class="section-label">💧 Respiración</span>
+    <h3 style="font-size:18px;margin-bottom:10px;">Una pausa breve</h3>
+    <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:18px;">
+      Haz una pausa cómoda. Respira a tu propio ritmo. Puedes detener la actividad cuando quieras.
+    </p>
+    <div class="eirene-breath">
+      <div class="eb-circle"></div>
+      <p class="eb-text">Inhala… sostén… exhala…</p>
+    </div>
+    <button class="btn-maroon" style="width:100%;margin-top:16px;" onclick="closeModal()">Terminar pausa</button>
+  `);
+}
+
+function requestCounselorSupport(){
+  const user = getCurrentUser();
+  const s = db.students[user.matricula || user.id] || user;
+
+  if(!db.supportRequests) db.supportRequests = [];
+  db.supportRequests.push({
+    id: 'req_' + Date.now(),
+    studentId: s.matricula,
+    studentName: s.nombre,
+    date: new Date().toLocaleString(),
+    status: 'pendiente'
+  });
+
+  if(!db.alerts) db.alerts = [];
+  db.alerts.unshift({
+    id: 'alt_req_' + Date.now(),
+    studentId: s.matricula,
+    studentName: s.nombre,
+    grupo: s.grupo,
+    carrera: s.carrera,
+    mood: 'solicitud',
+    moodEmoji: '🤝',
+    moodLabel: 'Solicitud de Cita Directa',
+    level: 'urgente',
+    status: 'pendiente',
+    date: new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }),
+    note: 'El alumno solicitó expresamente una cita presencial con el personal de Orientación.'
+  });
+
+  saveDB();
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <div style="text-align:center;padding:10px 0;">
+      <div style="font-size:44px;margin-bottom:12px;">🤝</div>
+      <h3 style="font-size:20px;margin-bottom:8px;">Solicitud recibida con éxito</h3>
+      <p style="font-size:14px;color:var(--ink-soft);line-height:1.6;margin-bottom:20px;">
+        Tu orientadora <strong>${s.guardian || 'Psic. Mariana Estrada'}</strong> ha recibido tu notificación prioritaria. Se pondrá en contacto contigo de forma privada y discreta en el plantel escolar.
+      </p>
+      <button class="btn-maroon" style="width:100%;" onclick="closeModal()">Entendido</button>
+    </div>
+  `);
+}
+
+/* ---------- VISTA: HABLAR CON EIRÉN ---------- */
+function renderStudentEirene(){
+  const g = eireneGreeting();
+
+  return `
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">EIRÉNÉ · COMPAÑERA</span>
+      <h1>Tu espacio con Eirén</h1>
+      <p>Un espacio para escucharte, sin juicios y a tu ritmo.</p>
+    </div>
+  </div>
+
+  <div class="eirene-hero">
+    <div class="eirene-hero-body">
+      <h2 class="eirene-greeting">${g.text} ${g.icon}</h2>
+      <p class="eirene-line">Soy Eirene — aquí estoy, sin juicios, contigo y a tu ritmo. 💚</p>
+      <p class="eirene-line">Cuéntame cómo va tu día. Si sientes cansancio o presión, podemos hacer una pausa juntos.</p>
+    </div>
+  </div>
+
+  <div class="eirene-care" style="margin-top:24px;">
+    <button class="eirene-care-card" onclick="eireneStartBreathing()">
+      <div class="ecc-icon">💧</div>
+      <div class="ecc-body">
+        <span class="ecc-title">Pausa de Respiración</span>
+        <span class="ecc-sub">3 minutos para bajar el ritmo</span>
+      </div>
+    </button>
+    <button class="eirene-care-card" onclick="nav('student_diario')">
+      <div class="ecc-icon">📓</div>
+      <div class="ecc-body">
+        <span class="ecc-title">Escribir lo que siento</span>
+        <span class="ecc-sub">En mi Diario privado</span>
+      </div>
+    </button>
+  </div>
+  `;
+}
+
+/* ---------- VISTA: CONSEJOS DE ORIÓN ---------- */
+function renderStudentOrion(){
+  const user = getCurrentUser();
+  const firstName = (user.display || user.nombre).split(' ')[0];
+
+  const chips = [
+    { q:'¿Cómo me organizo para estudiar mejor?', a:'Te sugiero usar la técnica Pomodoro: 25 minutos de estudio enfocado y 5 minutos de descanso. Deja el celular en otra habitación y comienza por la materia que más te cueste.' },
+    { q:'Tengo mucha ansiedad antes de un examen', a:'La ansiedad es tu cuerpo preparándose para actuar. Haz 3 respiraciones profundas con Eirén, recuerda que un examen mide un momento y no tu inteligencia, y llega 10 minutos antes para aclimatarte.' },
+    { q:'Siento que no puedo con tantas tareas', a:'No intentes hacer todo a la vez. Haz una lista de sólo 3 tareas para hoy y numéralas por importancia. Al terminar una, táchala; ese pequeño logro te dará claridad.' },
+    { q:'Quiero hablar con mi orientador escolar', a:'Puedes solicitar una plática confidencial en cualquier momento mediante el botón de cita o acudiendo al cubículo de Orientación en el plantel.' },
+  ];
+
+  return `
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">✧ ORIÓN · GUÍA ESCOLAR</span>
+      <h1>Consejos de Orión</h1>
+      <p>Orientación para tus hábitos de estudio y trayectoria en CONALEP.</p>
+    </div>
+  </div>
+
+  <div class="panel" style="padding:28px;">
+    <h2 class="orion-title">Hola ${firstName}, soy Orión.</h2>
+    <div class="orion-msg" style="margin-bottom:20px;">
+      Puedo ayudarte a organizar tus horarios, resolver bloqueos de estudio y brindarte consejos prácticos para tus materias técnicas.
+    </div>
+
+    <div class="orion-chips">
+      ${chips.map(c => `
+        <button class="orion-chip" onclick="orionStudentAnswer('${escapeHTML(c.q)}','${escapeHTML(c.a)}')">${c.q}</button>
+      `).join('')}
+    </div>
+  </div>
+
+  <div id="orionStudentAnswerBox" style="margin-top:20px;"></div>
+  `;
+}
+
+function orionStudentAnswer(q, a){
+  const el = document.getElementById('orionStudentAnswerBox');
+  if(!el) return;
+  el.innerHTML = `
+    <div class="orion-result" style="animation:pageEnter .3s ease;">
+      <span class="orion-result-tag">✧ Orión responde sobre: "${q}"</span>
+      <div class="orion-result-body">
+        <p style="font-size:14.5px;line-height:1.6;color:var(--ink);">${a}</p>
+      </div>
+    </div>
+  `;
+  el.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+/* ---------- VISTA: CAMPUS 3D & JUEGOS ---------- */
+function renderStudentCampus3D(){
+  return `
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">CAMPUS INTERACTIVO 3D</span>
+      <h1>Campus 3D y Dinámicas</h1>
+      <p>Recorridos virtuales del plantel CONALEP y juegos de concentración.</p>
+    </div>
+    <span class="demo-chip">Integración Mérida 3D</span>
+  </div>
+
+  <div class="quick-grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));">
+    <div class="panel" style="padding:24px;">
+      <div style="font-size:36px;margin-bottom:10px;">🏫</div>
+      <h3>Plantel CONALEP Virtual (3D)</h3>
+      <p style="font-size:13px;color:var(--ink-soft);line-height:1.5;margin:8px 0 16px;">
+        Recorrido virtual en 3D por las aulas, talleres de especialidad, explanada y cubículo de Orientación.
+      </p>
+      <button class="btn-maroon" style="width:100%;" onclick="open3dDemo('Plantel CONALEP')">Iniciar Recorrido 3D →</button>
+    </div>
+
+    <div class="panel" style="padding:24px;">
+      <div style="font-size:36px;margin-bottom:10px;">🌉</div>
+      <h3>Puente de Progreso (3D)</h3>
+      <p style="font-size:13px;color:var(--ink-soft);line-height:1.5;margin:8px 0 16px;">
+        Paseo paisajístico relajante para despejar la mente y reducir el estrés.
+      </p>
+      <button class="btn-maroon" style="width:100%;" onclick="open3dDemo('Puente de Progreso')">Iniciar Experiencia →</button>
+    </div>
+
+    <div class="panel" style="padding:24px;">
+      <div style="font-size:36px;margin-bottom:10px;">🧩</div>
+      <h3>Laberinto de la Calma</h3>
+      <p style="font-size:13px;color:var(--ink-soft);line-height:1.5;margin:8px 0 16px;">
+        Minijuego de enfoque para antes de un examen o entrega de proyecto.
+      </p>
+      <button class="btn-maroon" style="width:100%;" onclick="open3dDemo('Laberinto de la Calma')">Jugar Dinámica →</button>
+    </div>
+  </div>
+  `;
+}
+
+function open3dDemo(nombre){
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h3 style="font-size:18px;margin-bottom:12px;">🎮 ${nombre}</h3>
+    <div style="width:100%;height:320px;background:#0F172A;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;">
+      <div style="font-size:52px;margin-bottom:10px;">🎮</div>
+      <p style="font-size:14px;color:#94A3B8;text-align:center;padding:0 20px;">
+        Listo para conectar los modelos 3D y videojuegos generados para el plantel de Mérida.
+      </p>
+    </div>
+  `);
+}
+
+/* ---------- VISTA: MI DIARIO ---------- */
+function renderStudentDiario(){
+  const user = getCurrentUser();
+  const sId = user.matricula || user.id;
+  const entries = (db.diary && db.diary[sId]) || [];
+
+  return `
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">📔 MI ESPACIO PRIVADO</span>
+      <h1>Mi Diario Emocional</h1>
+      <p>Escribe lo que sientes de forma privada. Un espacio seguro para ti.</p>
+    </div>
+  </div>
+
+  <div class="student-checkin-box">
+    <div class="sc-header">
+      <h3>Nueva reflexión</h3>
+      <p>Tus notas se guardan de forma privada en tu dispositivo.</p>
+    </div>
+
+    <div class="student-note-field">
+      <textarea id="diaryEntryInput" style="min-height:100px;" placeholder="¿Qué pasó hoy? ¿Qué pensamiento quieres soltar hoy?"></textarea>
+    </div>
+
+    <button class="btn-maroon" onclick="saveStudentDiarioEntry()">
+      Guardar en mi Diario →
+    </button>
+  </div>
+
+  <span class="section-label">Historial</span>
+  <h2 class="section-title">Entradas anteriores</h2>
+  <div class="panel">
+    ${entries.length ? entries.slice().reverse().map(e => `
+      <div class="follow-row">
+        <div class="f-avatar" style="background:var(--green-soft);color:var(--green);font-size:18px;">📓</div>
+        <div class="f-body"><span class="f-name">${escapeHTML(e.text)}</span></div>
+        <div class="f-meta"><span class="f-date">${e.date}</span></div>
+      </div>
+    `).join('') : `
+      <div class="follow-empty">
+        <div class="fe-icon">✦</div>
+        <h4>Tu diario está listo</h4>
+        <p>Aún no has escrito ninguna reflexión. Escribe arriba para comenzar.</p>
+      </div>
+    `}
+  </div>
+  `;
+}
+
+function saveStudentDiarioEntry(){
+  const input = document.getElementById('diaryEntryInput');
+  const text = input ? input.value.trim() : '';
+  if(!text){
+    alert('Por favor escribe algo antes de guardar.');
+    return;
+  }
+  const user = getCurrentUser();
+  const sId = user.matricula || user.id;
+  if(!db.diary) db.diary = {};
+  if(!db.diary[sId]) db.diary[sId] = [];
+
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const hoy = new Date();
+  const fechaStr = `${hoy.getDate()} ${meses[hoy.getMonth()]} · ${String(hoy.getHours()).padStart(2,'0')}:${String(hoy.getMinutes()).padStart(2,'0')}`;
+
+  db.diary[sId].push({ id:'dia_' + Date.now(), date:fechaStr, text });
+  saveDB();
+  nav('student_diario');
+}
+
+/* ---------- Modal Selector de Alumno Demo ---------- */
+function openStudentPickerModal(){
+  const students = Object.values(db.students || {});
+  const currId = db.currentUserId;
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <span class="section-label">Demostración Estudiantil</span>
+    <h3 style="font-size:18px;margin-bottom:12px;">Cambiar de Alumno</h3>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      ${students.map(st => `
+        <div class="role-switch-card ${currId === st.matricula ? 'active' : ''}" 
+             onclick="setCurrentUser('${st.matricula}');renderStudentUserProfile();renderStudentSidebar();nav('student_inicio');closeModal();">
+          <div class="rsc-icon">🎓</div>
+          <div>
+            <span class="rsc-title">${st.nombre} ${currId === st.matricula ? '(Activo)' : ''}</span>
+            <span class="rsc-desc">${st.matricula} · Grupo ${st.grupo} · ${st.carrera}</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `);
+}
+
+/* ---------- Modales y Menú Móvil ---------- */
+function openModal(html){
+  const b = document.getElementById('appModalBody');
+  const m = document.getElementById('appModal');
+  if(b && m){
+    b.innerHTML = html;
+    m.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+}
+function closeModal(){
+  const m = document.getElementById('appModal');
+  if(m) m.classList.remove('active');
+  document.body.style.overflow = '';
+}
+function toggleSidebarMobile(){
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebarOverlay');
+  if(sb && ov){
+    const open = !sb.classList.contains('open');
+    sb.classList.toggle('open', open);
+    ov.classList.toggle('active', open);
+  }
+}
+function closeSidebarMobile(){
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebarOverlay');
+  if(sb && ov){
+    sb.classList.remove('open');
+    ov.classList.remove('active');
+  }
+}
+
+/* ---------- Inicialización ---------- */
+document.addEventListener('DOMContentLoaded', function(){
+  renderStudentUserProfile();
+  renderStudentSidebar();
+  nav('student_inicio');
+
+  const overlay = document.getElementById('appModal');
+  if(overlay){
+    overlay.addEventListener('click', function(e){ if(e.target === this) closeModal(); });
+  }
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){ closeModal(); closeSidebarMobile(); }
+  });
+  window.addEventListener('resize', function(){ if(window.innerWidth > 992) closeSidebarMobile(); });
+});
