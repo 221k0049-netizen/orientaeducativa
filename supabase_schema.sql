@@ -249,27 +249,9 @@ CREATE POLICY "Estudiante tiene acceso exclusivo a su diario"
   );
 
 -- ============================================================
--- SEED DATA DE PRUEBA (CONALEP MÉRIDA I)
+-- 11. BASE LIMPIA DE PRODUCCIÓN (SIN DATOS SIMULADOS)
+-- Los alumnos y coordinadores se registran desde la interfaz web.
 -- ============================================================
-INSERT INTO public.students (matricula, nombre, display, email, grupo, carrera, guardian, prioridad, seg_fecha)
-VALUES 
-  ('PTB-26001', 'Carlos Mendoza López', 'Carlos M.', 'carlos.mendoza@alumnos.conalep.edu.mx', '4B', 'Informática', 'Psic. Mariana Estrada', 'alto', '11 oct'),
-  ('PTB-26002', 'Valeria Gómez Pech', 'Valeria G.', 'valeria.gomez@alumnos.conalep.edu.mx', '2A', 'Enfermería General', 'Psic. Mariana Estrada', 'medio', '10 oct'),
-  ('PTB-26003', 'Alejandro Ruiz Cauich', 'Alejandro R.', 'alejandro.ruiz@alumnos.conalep.edu.mx', '6A', 'Mecatrónica', 'Psic. Mariana Estrada', 'bajo', '08 oct')
-ON CONFLICT (matricula) DO NOTHING;
-
-INSERT INTO public.tasks (student_id, title, description, category, due_date, completed)
-VALUES
-  ('PTB-26001', 'Técnica Pomodoro 25/5 para entrega de proyectos', 'Organizar sesiones de estudio con 5 min de descanso para el módulo de Redes.', 'Académico', '14 oct 2026', false),
-  ('PTB-26001', 'Pausa de respiración de 3 min con Eirén', 'Realizar ejercicio de respiración diafragmática al iniciar la tarde.', 'Bienestar', '12 oct 2026', true),
-  ('PTB-26002', 'Registro de bitácora de descanso en prácticas clínicas', 'Monitorear horas de sueño y reporte de fatiga.', 'Salud', '15 oct 2026', false)
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.documents (student_id, title, category, file_name, file_size, notes)
-VALUES
-  ('PTB-26001', 'Cédula de Identificación del Estudiante', 'Expediente', 'Cedula_Carlos_Mendoza_2026.pdf', '184 KB', 'Expediente validado por Servicios Escolares.'),
-  ('PTB-26002', 'Carta Compromiso y Plan de Acompañamiento PIOE', 'Acuerdo PIOE', 'Carta_Compromiso_Valeria_Gomez.pdf', '220 KB', 'Acuerdos en sesión de tutoría.')
-ON CONFLICT DO NOTHING;
 
 -- ============================================================
 -- 12. PERMISOS COMPLETOS PARA LA APLICACIÓN WEB (ROL ANON)

@@ -4,8 +4,11 @@
    ============================================================ */
 
 // Asegurar que el usuario activo sea un estudiante al entrar a estudiante.html
-if(isCoordinator()){
-  setCurrentUser('PTB-26001');
+if(isCoordinator() || !getCurrentUser() || getCurrentUser().rol !== 'estudiante'){
+  const realStudents = Object.values(db.students || {}).filter(s => s && s.rol === 'estudiante' && !['PTB-26001','PTB-26002','PTB-26003'].includes(s.matricula));
+  if(realStudents.length > 0){
+    setCurrentUser(realStudents[0].matricula || realStudents[0].id);
+  }
 }
 
 const SECTIONS_STUDENT = [
@@ -35,7 +38,6 @@ function renderStudentUserProfile(){
       <span class="up-name" title="${s.nombre}">${s.display || s.nombre}</span>
       <span class="up-role-tag student">🎓 ${s.matricula || 'Alumno'}</span>
     </div>
-    <button class="up-switch-btn" onclick="openStudentPickerModal()" title="Cambiar de alumno">⇄</button>
   `;
 
   const topUserEl = document.getElementById('studentHeaderUser');
@@ -1025,30 +1027,6 @@ function saveStudentDiarioEntry(){
   db.diary[sId].push({ id:'dia_' + Date.now(), date:fechaStr, text });
   saveDB();
   nav('student_diario');
-}
-
-/* ---------- Modal Selector de Alumno Demo ---------- */
-function openStudentPickerModal(){
-  const students = Object.values(db.students || {});
-  const currId = db.currentUserId;
-
-  openModal(`
-    <button class="close-x" onclick="closeModal()">✕</button>
-    <span class="section-label">Demostración Estudiantil</span>
-    <h3 style="font-size:18px;margin-bottom:12px;">Cambiar de Alumno</h3>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
-      ${students.map(st => `
-        <div class="role-switch-card ${currId === st.matricula ? 'active' : ''}" 
-             onclick="setCurrentUser('${st.matricula}');renderStudentUserProfile();renderStudentSidebar();nav('student_inicio');closeModal();">
-          <div class="rsc-icon">🎓</div>
-          <div>
-            <span class="rsc-title">${st.nombre} ${currId === st.matricula ? '(Activo)' : ''}</span>
-            <span class="rsc-desc">${st.matricula} · Grupo ${st.grupo} · ${st.carrera}</span>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `);
 }
 
 /* ---------- Modales y Menú Móvil ---------- */

@@ -9,9 +9,10 @@
   --ink-soft:#565650;
   --ink-muted:#8C8C84;
   --line:#E4E0D6;
-  --sidebar-bg:#0F0F0F;
-  --sidebar-text:#8E8E88;
-  --sidebar-active:#FFFFFF;
+  --sidebar-bg:#FFFFFF;
+  --sidebar-border:#E4E0D6;
+  --sidebar-text:#565650;
+  --sidebar-active:#7E1C3E;
   --maroon:#7E1C3E;
   --maroon-dark:#641430;
   --maroon-soft:rgba(126,28,62,.08);
@@ -54,50 +55,75 @@ a{color:inherit;text-decoration:none;}
 ::-webkit-scrollbar-thumb{background:#CFCABE;border-radius:100px;border:2px solid var(--bg);}
 ::-webkit-scrollbar-track{background:transparent;}
 
-/* ---------------- SIDEBAR ---------------- */
+/* ---------------- SIDEBAR INSTITUCIONAL ARMÓNICO ---------------- */
 .sidebar{
   position:fixed;
   inset:0 auto 0 0;
   width:var(--sidebar-w);
   background:var(--sidebar-bg);
   color:var(--sidebar-text);
+  border-right:1px solid var(--line);
+  box-shadow:2px 0 16px rgba(25,25,25,.03);
   display:flex;
   flex-direction:column;
-  padding:26px 18px 20px;
+  padding:24px 18px 20px;
   z-index:60;
   transition:transform .35s cubic-bezier(.25,.46,.45,.94);
 }
-.brand-block{padding:0 10px 22px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:18px;}
-.brand-logos{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
-.brand-sep{color:rgba(255,255,255,.25);font-size:12px;}
-.brand-edu{color:#B03A5B;font-weight:700;font-size:14px;letter-spacing:.01em;}
-.brand-edu .gov{display:inline-flex;width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#F2C14E,#8A5A12);vertical-align:-4px;margin-right:6px;}
-.brand-conalep{color:#4CAF7D;font-weight:700;font-size:14px;}
-.brand-block h2{color:var(--pink);font-size:14.5px;font-weight:600;margin-bottom:4px;}
-.brand-block .os{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;color:#6E6E68;}
+.brand-block{padding:0 8px 20px;border-bottom:1px solid var(--line);margin-bottom:16px;}
+.brand-logos{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.brand-sep{color:var(--line);font-size:12px;}
+.brand-edu{color:var(--maroon);font-weight:700;font-size:13.5px;letter-spacing:.01em;display:inline-flex;align-items:center;}
+.brand-edu .gov{display:inline-flex;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#F2C14E,#8A5A12);vertical-align:-3px;margin-right:6px;box-shadow:0 1px 3px rgba(0,0,0,.15);}
+.brand-conalep{color:var(--green);font-weight:700;font-size:13.5px;letter-spacing:.02em;}
+.brand-block h2{color:var(--ink);font-size:15px;font-weight:700;margin-bottom:3px;letter-spacing:-0.01em;}
+.brand-block .os{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--ink-muted);}
 
-.navlist{display:flex;flex-direction:column;gap:2px;overflow-y:auto;flex:1;}
+.navlist{display:flex;flex-direction:column;gap:3px;overflow-y:auto;flex:1;padding-right:2px;}
 .navlist button{
-  display:flex;align-items:center;gap:12px;
-  padding:10px 12px;border-radius:10px;
-  font-size:13.5px;font-weight:500;color:var(--sidebar-text);
-  transition:all .15s ease;text-align:left;white-space:nowrap;
+  display:flex;align-items:center;gap:11px;
+  padding:9px 12px;border-radius:10px;
+  font-size:13.5px;font-weight:500;color:var(--ink-soft);
+  transition:all .18s ease;text-align:left;white-space:nowrap;
+  border:1px solid transparent;
 }
-.navlist button .nicon{font-size:13px;width:18px;text-align:center;flex-shrink:0;color:#5E5E58;transition:color .15s ease;}
-.navlist button:hover{background:rgba(255,255,255,.05);color:#D8D8D2;}
-.navlist button.active{background:rgba(255,255,255,.07);color:var(--sidebar-active);font-weight:600;}
-.navlist button.active .nicon{color:var(--pink);}
-.navlist .nav-sep{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.18em;color:#4C4C46;padding:14px 12px 6px;}
+.navlist button .nicon{
+  font-size:14px;width:20px;text-align:center;flex-shrink:0;
+  transition:transform .18s ease;
+}
+.navlist button:hover{background:rgba(25,25,25,.04);color:var(--ink);}
+.navlist button:hover .nicon{transform:scale(1.12);}
+.navlist button.active{
+  background:var(--maroon-soft);
+  color:var(--maroon);
+  font-weight:600;
+  border-color:rgba(126,28,62,.15);
+}
+.student-portal-body .navlist button.active{
+  background:var(--green-soft);
+  color:var(--green);
+  font-weight:600;
+  border-color:rgba(23,121,91,.18);
+}
+.navlist .nav-sep{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:9.5px;
+  font-weight:600;
+  letter-spacing:.16em;
+  color:var(--ink-muted);
+  padding:14px 12px 6px;
+  text-transform:uppercase;
+}
 
-.side-foot{padding:16px 10px 0;border-top:1px solid rgba(255,255,255,.08);margin-top:14px;font-size:12px;color:#6E6E68;}
-.side-foot .spark{color:var(--pink);margin-right:6px;}
+.side-foot{padding:14px 10px 0;border-top:1px solid var(--line);margin-top:12px;font-size:12px;color:var(--ink-muted);}
+.side-foot .spark{color:var(--green);margin-right:6px;font-weight:700;}
 
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:55;backdrop-filter:blur(2px);}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:55;backdrop-filter:blur(3px);}
 .sidebar-overlay.active{display:block;}
 .menu-toggle{
   display:none;position:fixed;top:14px;left:14px;z-index:70;
   width:42px;height:42px;border-radius:12px;
-  background:var(--sidebar-bg);color:#fff;font-size:18px;
+  background:var(--surface);color:var(--ink);border:1px solid var(--line);font-size:18px;
   align-items:center;justify-content:center;box-shadow:var(--shadow-lg);
 }
 
@@ -1355,45 +1381,55 @@ a{color:inherit;text-decoration:none;}
    ROLES, PERFILES Y SELECTOR DE VISTAS (Paso 1 y 2)
    ============================================================ */
 
-/* --- Tarjeta de Usuario en Sidebar --- */
+/* --- Tarjeta de Usuario en Sidebar Institucional --- */
 .user-profile-block{
-  padding:12px;
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.08);
+  padding:10px 12px;
+  background:var(--bg);
+  border:1px solid var(--line);
   border-radius:var(--radius-sm);
   margin-bottom:16px;
   display:flex;
   align-items:center;
   gap:10px;
+  transition:all .2s ease;
+}
+.user-profile-block:hover{
+  border-color:#D4CFBF;
+  box-shadow:0 2px 6px rgba(25,25,25,.04);
 }
 .up-avatar{
   width:38px;height:38px;border-radius:10px;flex-shrink:0;
-  background:linear-gradient(135deg,var(--pink),var(--maroon));
+  background:linear-gradient(135deg,var(--maroon),var(--maroon-dark));
   color:#fff;display:flex;align-items:center;justify-content:center;
-  font-weight:700;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.25);
+  font-weight:700;font-size:14px;box-shadow:0 2px 8px rgba(126,28,62,.25);
 }
 .up-avatar.student-av{
-  background:linear-gradient(135deg,var(--green),var(--teal));
+  background:linear-gradient(135deg,var(--green),#0B5C44);
+  box-shadow:0 2px 8px rgba(23,121,91,.25);
 }
 .up-details{flex:1;min-width:0;}
 .up-name{
-  font-size:13px;font-weight:600;color:#fff;
+  font-size:13px;font-weight:600;color:var(--ink);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;
 }
 .up-role-tag{
   display:inline-flex;align-items:center;gap:4px;
-  font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;
-  padding:2px 6px;border-radius:4px;margin-top:2px;letter-spacing:.04em;
+  font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;
+  padding:2px 7px;border-radius:4px;margin-top:2px;letter-spacing:.03em;
 }
-.up-role-tag.coord{background:rgba(194,24,91,.2);color:#F48FB1;}
-.up-role-tag.student{background:rgba(23,121,91,.25);color:#81C784;}
+.up-role-tag.coord{background:var(--maroon-soft);color:var(--maroon);}
+.up-role-tag.student{background:var(--green-soft);color:var(--green);}
 .up-switch-btn{
   width:28px;height:28px;border-radius:8px;
-  background:rgba(255,255,255,.08);color:#CCC;
+  background:var(--surface);border:1px solid var(--line);color:var(--ink-soft);
   display:flex;align-items:center;justify-content:center;
-  font-size:13px;transition:all .15s ease;flex-shrink:0;
+  font-size:13px;transition:all .18s ease;flex-shrink:0;
+  box-shadow:var(--shadow);
 }
-.up-switch-btn:hover{background:rgba(255,255,255,.18);color:#fff;transform:scale(1.05);}
+.up-switch-btn:hover{
+  background:var(--surface);border-color:var(--maroon);color:var(--maroon);
+  transform:scale(1.05);box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
 
 /* --- Barra Superior de Rol / Demostración --- */
 .role-bar-banner{
@@ -1950,6 +1986,35 @@ a{color:inherit;text-decoration:none;}
   border-color:var(--maroon);
   background:var(--surface);
 }
+
+/* --- Selector de Psicólogos / Orientadores Activos en Registro --- */
+.login-active-badge{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10px;
+  font-weight:600;
+  color:var(--green);
+  background:var(--green-soft);
+  padding:2px 8px;
+  border-radius:100px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  letter-spacing:.03em;
+}
+.login-active-badge .badge-dot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 0 2px rgba(23,121,91,.2);
+  display:inline-block;
+  animation:pulseDot 2s infinite;
+}
+@keyframes pulseDot{
+  0%,100%{opacity:1;transform:scale(1);}
+  50%{opacity:.5;transform:scale(1.25);}
+}
+
 
 .demo-quick-section{
   margin-top:26px;

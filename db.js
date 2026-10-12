@@ -48,9 +48,33 @@ function loadDB(){
     const saved = localStorage.getItem(STORAGE_KEY);
     if(saved){
       const parsed = JSON.parse(saved);
-      if(parsed && parsed.students){
+      if(parsed){
         if(!parsed.tasks) parsed.tasks = {};
         if(!parsed.documents) parsed.documents = [];
+        if(!parsed.students) parsed.students = {};
+        if(!parsed.users) parsed.users = {};
+
+        // Eliminar completamente cualquier dato o rastro de alumnos simulados
+        ['PTB-26001', 'PTB-26002', 'PTB-26003'].forEach(mat => {
+          delete parsed.students[mat];
+          delete parsed.users[mat];
+          delete parsed.tasks[mat];
+        });
+        delete parsed.users['usr_coord_2'];
+        delete parsed.users['usr_coord_3'];
+
+        if(parsed.alerts) {
+          parsed.alerts = parsed.alerts.filter(a => !['PTB-26001', 'PTB-26002', 'PTB-26003'].includes(a.studentId));
+        }
+        if(parsed.documents) {
+          parsed.documents = parsed.documents.filter(d => !['PTB-26001', 'PTB-26002', 'PTB-26003'].includes(d.studentId));
+        }
+
+        if(['PTB-26001', 'PTB-26002', 'PTB-26003'].includes(parsed.currentUserId)){
+          const realFirst = Object.keys(parsed.students)[0];
+          parsed.currentUserId = realFirst || 'usr_coord_1';
+        }
+
         return parsed;
       }
     }
@@ -100,6 +124,43 @@ function setCurrentUser(userId){
 
 function isCoordinator(){
   return getCurrentUser()?.rol === 'coordinador';
+}
+
+/* ---------- Catálogo de Psicólogos / Orientadores de la Base de Datos ---------- */
+async function getActivePsychologists(){
+  // 1. Si Supabase está en vivo, consultar EXCLUSIVAMENTE los coordinadores de la base de datos
+  if(isSupabaseLive()){
+    try{
+      const client = getActiveSupabaseClient();
+      if(client){
+        const { data, error } = await client.from('coordinadores').select('*');
+        if(!error && data && data.length > 0){
+          return data.map(c => ({
+            id: c.id,
+            nombre: c.nombre,
+            display: c.display || c.nombre,
+            cargo: c.cargo || 'Orientador Educativo',
+            email: c.email,
+            plantel: c.plantel || 'CONALEP Mérida I'
+          }));
+        }
+      }
+    }catch(err){
+      console.warn('Aviso cargando coordinadores de Supabase:', err);
+    }
+  }
+
+  // 2. Fallback local solo si Supabase no responde: únicamente los coordinadores reales sin simulaciones
+  return Object.values(db.users || {})
+    .filter(u => u.rol === 'coordinador' && !['usr_coord_2', 'usr_coord_3'].includes(u.id))
+    .map(c => ({
+      id: c.id,
+      nombre: c.nombre,
+      display: c.display || c.nombre,
+      cargo: c.cargo || 'Orientador Educativo',
+      email: c.email,
+      plantel: c.plantel || 'CONALEP Mérida I'
+    }));
 }
 
 /* ---------- Autenticación y Redirección por Rol ---------- */
@@ -256,7 +317,7 @@ async function registerUser(data){
             email: emailNorm,
             grupo: data.grupo || '4B',
             carrera: data.carrera || 'Informática',
-            guardian: 'Psic. Mariana Estrada',
+            guardian: data.guardian || 'Psic. Mariana Estrada',
             prioridad: 'bajo',
             seg_fecha: 'Hoy'
           }, { onConflict: 'matricula' }).select();
@@ -306,7 +367,7 @@ async function registerUser(data){
     matricula: data.rol === 'estudiante' ? id : null,
     grupo: data.grupo || '2A',
     carrera: data.carrera || 'Informática',
-    guardian: 'Psic. Mariana Estrada',
+    guardian: data.guardian || 'Psic. Mariana Estrada',
     plantel: 'CONALEP Mérida I',
     prioridad: 'bajo',
     segFecha: 'Hoy',
@@ -662,10 +723,10 @@ async function pullSupabaseToLocal(){
     // Estudiantes
     const { data: stData, error: stErr } = await client.from('students').select('*');
     if(!stErr && stData && stData.length > 0){
-      // 1. Subir a Supabase cualquier alumno local que se haya registrado previamente y falte en la nube
+      // 1. Subir a Supabase cualquier alumno local que se haya registrado previamente y falte en la nube (excluyendo simulaciones)
       const remoteMatriculas = new Set(stData.map(s => s.matricula));
       const localStudents = Object.values(db.students || {});
-      const unsyncedStudents = localStudents.filter(s => s && s.matricula && !remoteMatriculas.has(s.matricula));
+      const unsyncedStudents = localStudents.filter(s => s && s.matricula && !['PTB-26001','PTB-26002','PTB-26003'].includes(s.matricula) && !remoteMatriculas.has(s.matricula));
       if(unsyncedStudents.length > 0){
         console.log('🔄 Sincronizando alumnos locales pendientes hacia Supabase:', unsyncedStudents.length);
         const payload = unsyncedStudents.map(s => ({
@@ -683,8 +744,8 @@ async function pullSupabaseToLocal(){
         await client.from('students').upsert(payload, { onConflict: 'matricula' });
       }
 
-      // 2. Traer todos los alumnos de la nube al estado local
-      stData.forEach(st => {
+      // 2. Traer todos los alumnos reales de la nube al estado local
+      stData.filter(st => !['PTB-26001','PTB-26002','PTB-26003'].includes(st.matricula)).forEach(st => {
         const existingHist = db.students[st.matricula]?.historial || [];
         db.students[st.matricula] = {
           id: st.matricula,

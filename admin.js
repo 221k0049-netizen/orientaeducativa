@@ -1148,7 +1148,7 @@ function renderDocumentos(){
       <div class="doc-area">${d.area}</div>
       <div class="doc-type-wrap"><span class="doc-type">${d.type}</span></div>
       <div class="doc-status">
-        <button class="btn-outline-maroon" style="padding:6px 12px;font-size:12px;" onclick="openOfficialReportModal('PTB-26001', '${d.title}')">
+        <button class="btn-outline-maroon" style="padding:6px 12px;font-size:12px;" onclick="openOfficialReportModal(null, '${d.title}')">
           🖨️ Formato Oficial PDF
         </button>
       </div>
@@ -1207,17 +1207,19 @@ function renderDocumentos(){
 }
 
 function printDoc(title){
-  openOfficialReportModal('PTB-26001', title);
+  const firstStudent = Object.values(db.students || {})[0];
+  openOfficialReportModal(firstStudent ? firstStudent.matricula : null, title);
 }
 
 /* ---------- GENERADOR OFICIAL DE DOCUMENTOS CON MEMBRETE CONALEP ---------- */
 function openOfficialReportModal(matricula, docTitle = null){
-  const s = db.students[matricula] || db.students['PTB-26001'] || {
-    nombre: 'Carlos Mendoza López',
-    matricula: 'PTB-26001',
-    grupo: '4B',
-    carrera: 'Informática',
-    guardian: 'Psic. Mariana Estrada'
+  const firstStudent = Object.values(db.students || {})[0];
+  const s = (matricula ? db.students[matricula] : null) || firstStudent || {
+    nombre: 'Expediente Institucional',
+    matricula: 'CONALEP-MID1',
+    grupo: '—',
+    carrera: 'Orientación Educativa',
+    guardian: getCurrentUser()?.nombre || 'Psic. Mariana Estrada'
   };
 
   const tasks = getStudentTasks(s.matricula);
