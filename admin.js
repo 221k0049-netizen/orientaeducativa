@@ -35,7 +35,7 @@ function renderAdminUserProfile(){
     </div>
     <div class="up-details">
       <span class="up-name" title="${user.nombre}">${user.display || user.nombre}</span>
-      <span class="up-role-tag coord">🛡️ Coordinadora</span>
+      <span class="up-role-tag coord">🛡️ ${escapeHTML(user.cargo || 'Orientador Educativo')}</span>
     </div>
   `;
 
@@ -46,15 +46,16 @@ function renderAdminUserProfile(){
 function renderAdminSidebar(){
   const navEl = document.getElementById('navlist');
   if(!navEl) return;
-  const pendingAlerts = (db.alerts || []).filter(a => a.status === 'pendiente').length;
+  const user = getCurrentUser();
+  const myPendingAlerts = (db.alerts || []).filter(a => a.status === 'pendiente' && isAlertAssignedToMe(a, user)).length;
 
-  // Actualizar botón de alerta en la barra superior si existe
+  // Actualizar botón de alerta en la barra superior si existe (solo alertas de sus alumnos)
   const topAlertBtn = document.getElementById('topNavAlertBtn');
   const topAlertCount = document.getElementById('topNavAlertCount');
   if(topAlertBtn && topAlertCount){
-    if(pendingAlerts > 0){
+    if(myPendingAlerts > 0){
       topAlertBtn.style.display = 'inline-flex';
-      topAlertCount.textContent = pendingAlerts;
+      topAlertCount.textContent = myPendingAlerts;
     } else {
       topAlertBtn.style.display = 'none';
     }
@@ -62,8 +63,8 @@ function renderAdminSidebar(){
 
   navEl.innerHTML = SECTIONS_ADMIN.map(s => {
     const sep = s.sep ? `<div class="nav-sep">${s.sep}</div>` : '';
-    const alertChip = (s.id === 'inicio' && pendingAlerts > 0)
-      ? `<span class="nav-alert-badge">${pendingAlerts}</span>`
+    const alertChip = (s.id === 'inicio' && myPendingAlerts > 0)
+      ? `<span class="nav-alert-badge">${myPendingAlerts}</span>`
       : '';
     return `${sep}<button data-sec="${s.id}" onclick="nav('${s.id}')"><span class="nicon">${s.icon}</span>${s.label} ${alertChip}</button>`;
   }).join('');
@@ -108,87 +109,178 @@ function renderAdminStub(sec){
   `;
 }
 
-/* ---------- Helpers de Datos ---------- */
+/* ---------- Helpers de Datos y Filtros de Orientador ---------- */
+function isStudentAssignedToMe(s, user){
+  const u = user || getCurrentUser();
+  if(!u || !s) return false;
+  const uName = (u.nombre || '').trim().toLowerCase();
+  const uDisplay = (u.display || '').trim().toLowerCase();
+  const uEmail = (u.email || '').trim().toLowerCase();
+  const guardian = (s.guardian || '').trim().toLowerCase();
+  const guardianEmail = (s.guardianEmail || '').trim().toLowerCase();
+
+  if(guardianEmail && uEmail && guardianEmail === uEmail) return true;
+  if(guardian && uName && (guardian === uName || guardian === uDisplay || guardian.includes(uName) || uName.includes(guardian))) return true;
+  return false;
+}
+
+function isAlertAssignedToMe(alt, user){
+  const u = user || getCurrentUser();
+  if(!u || !alt) return false;
+  const uEmail = (u.email || '').trim().toLowerCase();
+  const uName = (u.nombre || '').trim().toLowerCase();
+  const altEmail = (alt.psychologistEmail || '').trim().toLowerCase();
+  const altName = (alt.psychologistName || '').trim().toLowerCase();
+
+  if(altEmail && uEmail && altEmail === uEmail) return true;
+  if(altName && uName && (altName === uName || altName.includes(uName) || uName.includes(altName))) return true;
+
+  const s = db.students[alt.studentId];
+  if(s) return isStudentAssignedToMe(s, u);
+  return false;
+}
+
 function studentsList(){ return Object.values(db.students || {}); }
+
+function myStudentsList(){
+  const u = getCurrentUser();
+  return studentsList().filter(s => isStudentAssignedToMe(s, u));
+}
+
 function lastMood(s){ const h = s.historial && s.historial[s.historial.length-1]; return h ? MOODS.find(m=>m.id===h.mood) : null; }
-function porRevisar(){
-  return studentsList().filter(s => s.prioridad === 'medio' || s.prioridad === 'alto'
+
+function porRevisar(customList){
+  const target = customList || myStudentsList();
+  return target.filter(s => s.prioridad === 'medio' || s.prioridad === 'alto'
     || NEGATIVE.includes(lastMood(s)?.id)).length;
 }
-function bienestarPromedio(){
-  const list = studentsList();
+
+function bienestarPromedio(customList){
+  const list = customList || myStudentsList();
   if(!list.length) return 0;
   const sum = list.reduce((a,s)=>{ const m = lastMood(s); return a + (m ? MOOD_W[m.id] : 0); },0);
   return Math.round(sum / list.length);
 }
 
+let adminAlertsScope = 'mis_alumnos'; // 'mis_alumnos' | 'plantel'
+
+function setAdminAlertsScope(scope){
+  adminAlertsScope = scope;
+  const el = document.getElementById('content');
+  if(el) el.innerHTML = renderAdminInicio();
+}
+
 /* ---------- VISTA: INICIO (ADMIN) ---------- */
 function renderAdminInicio(){
-  const list = studentsList();
-  const rev = porRevisar();
-  const bien = bienestarPromedio();
-  const pendingAlerts = (db.alerts || []).filter(a => a.status === 'pendiente');
+  const user = getCurrentUser();
+  const allStudents = studentsList();
+  const myStudents = myStudentsList();
+  const allPendingAlerts = (db.alerts || []).filter(a => a.status === 'pendiente');
+  const myPendingAlerts = allPendingAlerts.filter(a => isAlertAssignedToMe(a, user));
+
+  const isGlobalScope = adminAlertsScope === 'plantel';
+  const displayedAlerts = isGlobalScope ? allPendingAlerts : myPendingAlerts;
+
+  const rev = porRevisar(myStudents);
+  const bien = bienestarPromedio(myStudents);
 
   // Alertas prioritarias provocadas por check-ins neutros o negativos
-  const urgentAlertsHTML = pendingAlerts.length ? `
-    <div class="coord-urgent-box">
-      <div class="cub-head">
-        <div class="cub-title">
-          <span>🚨</span> Alertas Socioemocionales y Solicitudes de Contacto
+  let urgentAlertsHTML = '';
+
+  if(displayedAlerts.length > 0){
+    urgentAlertsHTML = `
+      <div class="coord-urgent-box">
+        <div class="cub-head">
+          <div class="cub-title">
+            <span>🚨</span> ${isGlobalScope ? 'Alertas Globales de Supervisión del Plantel' : 'Alertas de Tus Alumnos Asignados'}
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button class="btn-outline-maroon" style="padding:4px 10px;font-size:11.5px;background:#FFF;" onclick="setAdminAlertsScope('${isGlobalScope ? 'mis_alumnos' : 'plantel'}')">
+              ${isGlobalScope ? `← Volver a mis alumnos (${myPendingAlerts.length})` : `👁️ Ver todas del plantel (${allPendingAlerts.length})`}
+            </button>
+            <span class="cub-badge">${displayedAlerts.length} ${displayedAlerts.length === 1 ? 'caso prioritario' : 'casos prioritarios'}</span>
+          </div>
         </div>
-        <span class="cub-badge">${pendingAlerts.length} ${pendingAlerts.length === 1 ? 'caso requiere atención' : 'casos requieren atención'}</span>
-      </div>
-      <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">
-        Los siguientes estudiantes registraron estados de ánimo que requieren atención socioemocional (neutro o negativo). La plataforma ha notificado por correo a su orientador(a) y solicita tu comunicación directa con el estudiante.
-      </p>
-      <div class="cub-list">
-        ${pendingAlerts.map(alt => {
-          const s = db.students[alt.studentId] || {};
-          const isUrgent = alt.level === 'urgente';
-          const psychName = alt.psychologistName || s.guardian || 'Psic. Mariana Estrada';
-          return `
-          <div class="cub-item ${isUrgent ? 'cub-item-urgent' : 'cub-item-neutral'}">
-            <div class="cub-item-info">
-              <div class="cub-mood-dot">${alt.moodEmoji || '⚠️'}</div>
-              <div>
-                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                  <span class="cub-student-name">${alt.studentName} (${alt.grupo} · ${alt.carrera || 'Informática'})</span>
-                  <span class="prio-chip ${isUrgent ? 'alto' : 'medio'}" style="font-size:10.5px;padding:2px 7px;">
-                    ${isUrgent ? '🔴 Atención Urgente' : '🟡 Seguimiento Preventivo'}
+        <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">
+          ${isGlobalScope 
+            ? 'Vista de supervisión general: mostrando todas las alertas pendientes registradas en el plantel CONALEP Mérida I.' 
+            : 'Estudiantes asignados a tu acompañamiento que registraron estados de ánimo que requieren atención socioemocional.'}
+        </p>
+        <div class="cub-list">
+          ${displayedAlerts.map(alt => {
+            const s = db.students[alt.studentId] || {};
+            const isUrgent = alt.level === 'urgente';
+            const psychName = alt.psychologistName || s.guardian || 'Orientador Asignado';
+            return `
+            <div class="cub-item ${isUrgent ? 'cub-item-urgent' : 'cub-item-neutral'}">
+              <div class="cub-item-info">
+                <div class="cub-mood-dot">${alt.moodEmoji || '⚠️'}</div>
+                <div>
+                  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <span class="cub-student-name">${alt.studentName} (${alt.grupo} · ${alt.carrera || 'Informática'})</span>
+                    <span class="prio-chip ${isUrgent ? 'alto' : 'medio'}" style="font-size:10.5px;padding:2px 7px;">
+                      ${isUrgent ? '🔴 Atención Urgente' : '🟡 Seguimiento Preventivo'}
+                    </span>
+                  </div>
+                  <span class="cub-student-sub">
+                    Reportó: <strong>${alt.moodLabel || alt.mood}</strong> · ${alt.date} 
+                    ${alt.note ? `— <em>"${escapeHTML(alt.note)}"</em>` : ''}
                   </span>
-                </div>
-                <span class="cub-student-sub">
-                  Reportó: <strong>${alt.moodLabel || alt.mood}</strong> · ${alt.date} 
-                  ${alt.note ? `— <em>"${escapeHTML(alt.note)}"</em>` : ''}
-                </span>
-                <div style="font-size:11.8px;color:var(--ink-soft);margin-top:3px;">
-                  🩺 <strong>Orientador(a) asignado(a):</strong> ${psychName}
-                  <span style="color:var(--green);font-weight:600;margin-left:8px;">✓ Correo notificado</span>
+                  <div style="font-size:11.8px;color:var(--ink-soft);margin-top:3px;">
+                    🩺 <strong>Orientador(a) asignado(a):</strong> ${psychName}
+                    <span style="color:var(--green);font-weight:600;margin-left:8px;">✓ Correo notificado</span>
+                  </div>
                 </div>
               </div>
+              <div class="cub-item-actions">
+                <button class="btn-maroon" style="padding:7px 14px;font-size:12.5px;display:flex;align-items:center;gap:6px;" onclick="openContactStudentModal('${alt.id}')">
+                  📞 Comunicarse con el Alumno
+                </button>
+                <button class="btn-outline-maroon" style="padding:6px 11px;font-size:12px;" onclick="openAlertEmailModal('${alt.id}')" title="Ver correo institucional de alerta">
+                  ✉️ Ver Correo
+                </button>
+                <button class="btn-outline-maroon" style="padding:6px 12px;font-size:12px;" onclick="openStudentModal('${alt.studentId}')">
+                  📋 Expediente
+                </button>
+                <button class="btn-resolve-alert" onclick="resolveAlert('${alt.id}')" title="Marcar como atendida una vez contactado el alumno">
+                  ✓ Atendida
+                </button>
+              </div>
             </div>
-            <div class="cub-item-actions">
-              <button class="btn-maroon" style="padding:7px 14px;font-size:12.5px;display:flex;align-items:center;gap:6px;" onclick="openContactStudentModal('${alt.id}')">
-                📞 Comunicarse con el Alumno
-              </button>
-              <button class="btn-outline-maroon" style="padding:6px 11px;font-size:12px;" onclick="openAlertEmailModal('${alt.id}')" title="Ver correo institucional de alerta">
-                ✉️ Ver Correo
-              </button>
-              <button class="btn-outline-maroon" style="padding:6px 12px;font-size:12px;" onclick="openStudentModal('${alt.studentId}')">
-                📋 Expediente
-              </button>
-              <button class="btn-resolve-alert" onclick="resolveAlert('${alt.id}')" title="Marcar como atendida una vez contactado el alumno">
-                ✓ Atendida
-              </button>
+          `}).join('')}
+        </div>
+      </div>
+    `;
+  } else {
+    urgentAlertsHTML = `
+      <div class="coord-status-box" style="background:#FFFFFF;border:1px solid #E8E5DF;border-radius:12px;padding:20px 24px;margin-bottom:24px;box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+          <div style="display:flex;align-items:flex-start;gap:14px;max-width:680px;">
+            <span style="font-size:28px;line-height:1;">🩺</span>
+            <div>
+              <h4 style="margin:0 0 5px 0;font-size:15px;color:var(--ink);font-weight:700;">
+                ${myStudents.length === 0 ? `Panel de Orientación: ${escapeHTML(user.nombre)} · Sin estudiantes asignados actualmente` : 'Todo al día con tus estudiantes asignados'}
+              </h4>
+              <p style="margin:0;font-size:13px;color:var(--ink-soft);line-height:1.5;">
+                ${myStudents.length === 0 
+                  ? `Tu cuenta de orientador(a) está activa en la base de datos oficial. En cuanto un alumno seleccione a <strong>${escapeHTML(user.nombre)}</strong> como su orientador al registrarse, sus expedientes, check-ins y alertas socioemocionales se asignarán automáticamente a tu panel.` 
+                  : 'No tienes alertas socioemocionales prioritarias ni situaciones de riesgo pendientes de atender en tus alumnos asignados.'}
+              </p>
             </div>
           </div>
-        `}).join('')}
+          ${allPendingAlerts.length > 0 ? `
+            <button class="btn-outline-maroon" style="font-size:12px;padding:6px 12px;white-space:nowrap;" onclick="setAdminAlertsScope('plantel')">
+              👁️ Supervisar alertas globales del plantel (${allPendingAlerts.length}) →
+            </button>
+          ` : ''}
+        </div>
       </div>
-    </div>
-  ` : '';
+    `;
+  }
 
   const AVATAR_TONES = ['tone-a','tone-b','tone-c'];
-  const segRows = list.map((s,i)=>`
+  const segStudents = myStudents.length ? myStudents : [];
+  const segRows = segStudents.map((s,i)=>`
     <div class="follow-row" onclick="openStudentModal('${s.matricula}')">
       <div class="f-avatar ${AVATAR_TONES[i % 3]}">${initialOf(s.display)}</div>
       <div class="f-body">
@@ -196,7 +288,7 @@ function renderAdminInicio(){
         <span class="f-grupo">${s.grupo} · ${s.carrera || ''}</span>
       </div>
       <div class="f-meta">
-        <span class="f-date">${s.segFecha}</span>
+        <span class="f-date">${s.segFecha || 'Pendiente'}</span>
         <span class="prio-chip ${s.prioridad}">${s.prioridad.charAt(0).toUpperCase()+s.prioridad.slice(1)}</span>
       </div>
     </div>`).join('');
@@ -217,8 +309,8 @@ function renderAdminInicio(){
     <div class="b-icon">◎</div>
     <div class="b-body">
       <span class="b-tag">Seguimiento prioritario</span>
-      <div class="b-title">${rev} ${rev === 1 ? 'estudiante requiere' : 'estudiantes requieren'} revisión activa</div>
-      <div class="b-desc">Consulta los casos priorizados y registra las acciones y bitácoras institucionales.</div>
+      <div class="b-title">${myStudents.length ? `${rev} ${rev === 1 ? 'estudiante asignado requiere' : 'estudiantes asignados requieren'} revisión activa` : 'Sin casos asignados actualmente'}</div>
+      <div class="b-desc">${myStudents.length ? 'Consulta los casos priorizados de tu alumnado y registra las bitácoras institucionales.' : 'En cuanto tengas estudiantes asignados, aquí se calcularán sus casos prioritarios.'}</div>
     </div>
     <button class="btn-maroon" onclick="nav('alumnos')">Ver Protoestrellas →</button>
   </div>
@@ -226,9 +318,21 @@ function renderAdminInicio(){
   <span class="section-label">Panorama institucional</span>
   <h2 class="section-title">Estado operativo</h2>
   <div class="stat-grid">
-    <div class="stat-card"><div class="s-icon teal">◇</div><div class="s-num">${list.length}</div><div class="s-lbl">Protoestrellas registradas</div></div>
-    <div class="stat-card"><div class="s-icon maroon">◎</div><div class="s-num">${rev}</div><div class="s-lbl">Por revisar</div></div>
-    <div class="stat-card"><div class="s-icon green">◔</div><div class="s-num">${bien}%</div><div class="s-lbl">Bienestar promedio</div></div>
+    <div class="stat-card">
+      <div class="s-icon teal">◇</div>
+      <div class="s-num">${myStudents.length}</div>
+      <div class="s-lbl">Tus alumnos asignados <span style="font-size:11px;opacity:0.75;display:block;">(${allStudents.length} en el plantel)</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon maroon">◎</div>
+      <div class="s-num">${myPendingAlerts.length}</div>
+      <div class="s-lbl">Tus alertas prioritarias</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon green">◔</div>
+      <div class="s-num">${myStudents.length ? bien + '%' : '—'}</div>
+      <div class="s-lbl">${myStudents.length ? 'Bienestar de tus alumnos' : 'Sin alumnos asignados'}</div>
+    </div>
   </div>
 
   <span class="section-label">Accesos rápidos</span>
@@ -288,29 +392,64 @@ async function resolveAlert(alertId){
   nav('inicio');
 }
 
+let protoestrellasTab = 'mis_alumnos';
+
+function setProtoTab(tab){
+  protoestrellasTab = tab;
+  const el = document.getElementById('content');
+  if(el) el.innerHTML = renderProtoestrellas();
+}
+
 /* ---------- VISTA: PROTOESTRELLAS ---------- */
 function renderProtoestrellas(){
-  const list = studentsList();
+  const user = getCurrentUser();
+  const allStudents = studentsList();
+  const myStudents = myStudentsList();
+  const isMine = protoestrellasTab === 'mis_alumnos';
+  const list = isMine ? myStudents : allStudents;
 
-  const rows = list.map(s => `
+  const rows = list.map(s => {
+    const isAssignedToCurrent = isStudentAssignedToMe(s, user);
+    return `
     <tr>
-      <td class="pt-name">${s.nombre}</td>
+      <td class="pt-name">
+        ${s.nombre}
+        ${isAssignedToCurrent ? '<span style="color:var(--green);font-size:11px;font-weight:700;margin-left:6px;">(Tu alumno)</span>' : ''}
+      </td>
       <td class="pt-mat mono">${s.matricula}</td>
       <td>${s.grupo} · ${s.carrera || 'Sin carrera'}</td>
-      <td>${s.guardian || 'Sin asignar'}</td>
+      <td>
+        <span style="font-weight:${isAssignedToCurrent ? '700' : '400'};">
+          ${s.guardian || 'Por asignar'}
+        </span>
+      </td>
       <td class="pt-action">
         <button class="btn-outline-maroon" onclick="openStudentModal('${s.matricula}')">Abrir expediente</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   const emptyState = `
     <tr class="proto-empty-row">
       <td colspan="5">
-        <div class="proto-empty">
-          <div class="pe-icon">✦</div>
-          <h3>Aún no hay Protoestrellas registradas</h3>
-          <p>Puedes registrar un nuevo expediente para comenzar a darle seguimiento.</p>
-          <button class="btn-maroon" onclick="quickNuevaProtoestrella()">+ Nueva Protoestrella</button>
+        <div class="proto-empty" style="padding:36px 20px;text-align:center;">
+          <div class="pe-icon" style="font-size:28px;margin-bottom:8px;">✦</div>
+          <h3 style="margin:0 0 6px 0;font-size:16px;">
+            ${isMine ? 'No tienes alumnos asignados todavía' : 'Aún no hay Protoestrellas registradas'}
+          </h3>
+          <p style="color:var(--ink-soft);max-width:500px;margin:0 auto 16px auto;font-size:13px;line-height:1.5;">
+            ${isMine 
+              ? `En cuanto los alumnos se registren y seleccionen a <strong>${escapeHTML(user.nombre)}</strong> como su orientador, aparecerán aquí para gestionar sus expedientes.` 
+              : 'Puedes registrar un nuevo expediente para comenzar a darle seguimiento.'}
+          </p>
+          <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
+            ${isMine && allStudents.length > 0 ? `
+              <button class="btn-outline-maroon" onclick="setProtoTab('todos')">
+                Ver los ${allStudents.length} estudiantes del plantel →
+              </button>
+            ` : ''}
+            <button class="btn-maroon" onclick="quickNuevaProtoestrella()">+ Nueva Protoestrella</button>
+          </div>
         </div>
       </td>
     </tr>`;
@@ -331,7 +470,17 @@ function renderProtoestrellas(){
     <button class="btn-maroon" onclick="quickNuevaProtoestrella()">+ Nueva Protoestrella</button>
   </div>
 
-  <h2 class="proto-community-title">Comunidad Estudiantil</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:20px 0 14px;">
+    <h2 class="proto-community-title" style="margin:0;">Comunidad Estudiantil</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-outline-maroon" style="padding:6px 14px;border-radius:100px;font-size:12.5px;font-weight:600;background:${isMine ? 'var(--maroon)' : '#FFF'};color:${isMine ? '#FFF' : 'var(--maroon)'};border-color:var(--maroon);" onclick="setProtoTab('mis_alumnos')">
+        📌 Mis Alumnos Asignados (${myStudents.length})
+      </button>
+      <button class="btn-outline-maroon" style="padding:6px 14px;border-radius:100px;font-size:12.5px;font-weight:600;background:${!isMine ? 'var(--maroon)' : '#FFF'};color:${!isMine ? '#FFF' : 'var(--maroon)'};border-color:var(--maroon);" onclick="setProtoTab('todos')">
+        🌐 Todos los Alumnos del Plantel (${allStudents.length})
+      </button>
+    </div>
+  </div>
 
   <div class="proto-table-wrap">
     <table class="proto-table">
@@ -340,7 +489,7 @@ function renderProtoestrellas(){
           <th>Nombre</th>
           <th>Matrícula</th>
           <th>Grupo / Carrera</th>
-          <th>Guardián</th>
+          <th>Orientador Asignado</th>
           <th></th>
         </tr>
       </thead>
@@ -394,7 +543,7 @@ function quickNuevaProtoestrella(){
 
       <div class="proto-form-field">
         <label for="pfGuardian">Guardián / Orientador asignado</label>
-        <input type="text" id="pfGuardian" value="Psic. Mariana Estrada" maxlength="60">
+        <input type="text" id="pfGuardian" value="${escapeHTML(getCurrentUser()?.nombre || 'Orientador Educativo')}" maxlength="60">
       </div>
 
       <div class="proto-form-error" id="pfError"></div>
@@ -412,7 +561,7 @@ function saveProtoestrella(){
   const matricula = document.getElementById('pfMatricula').value.trim();
   const grupo     = document.getElementById('pfGrupo').value.trim();
   const carrera   = document.getElementById('pfCarrera').value;
-  const guardian  = document.getElementById('pfGuardian').value.trim() || 'Psic. Mariana Estrada';
+  const guardian  = document.getElementById('pfGuardian').value.trim() || getCurrentUser()?.nombre || 'Orientador Educativo';
   const err       = document.getElementById('pfError');
 
   if(!nombre || !matricula || !grupo || !carrera){
@@ -633,7 +782,14 @@ function openStudentModal(matricula, activeTab = 'checkins'){
           ${s.matricula} · Grupo ${s.grupo} · Carrera: ${s.carrera || 'Informática'}
         </div>
         <div style="font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <span>🛡️ Guardián: <strong>${s.guardian || 'Psic. Mariana Estrada'}</strong></span>
+          <span>🛡️ Orientador(a): <strong>${s.guardian || 'Por asignar'}</strong></span>
+          ${(!isStudentAssignedToMe(s)) ? `
+            <button class="btn-outline-maroon" style="padding:2px 8px;font-size:11px;border-radius:4px;" onclick="assignStudentToMe('${s.matricula}')">
+              📌 Asignar a mi tutoría
+            </button>
+          ` : `
+            <span style="color:var(--green);font-weight:600;font-size:11.5px;">✓ Asignado a ti</span>
+          `}
           <span>🏫 Plantel Mérida I (Matutino)</span>
         </div>
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
@@ -765,10 +921,34 @@ function saveNewTask(matricula){
     category,
     dueDate,
     desc,
-    assignedBy: getCurrentUser()?.display || 'Psic. Mariana Estrada'
+    assignedBy: getCurrentUser()?.display || 'Orientador Educativo'
   });
 
   openStudentModal(matricula, 'tareas');
+}
+
+/* ---------- Asignar Estudiante al Orientador Actual ---------- */
+async function assignStudentToMe(matricula){
+  const user = getCurrentUser();
+  if(!user || !db.students[matricula]) return;
+  db.students[matricula].guardian = user.nombre;
+  db.students[matricula].guardianEmail = user.email;
+  if(db.users[matricula]){
+    db.users[matricula].guardian = user.nombre;
+    db.users[matricula].guardianEmail = user.email;
+  }
+  saveDB();
+  if(typeof isSupabaseLive === 'function' && isSupabaseLive()){
+    const client = typeof getActiveSupabaseClient === 'function' ? getActiveSupabaseClient() : null;
+    if(client){
+      await client.from('students').update({
+        guardian: user.nombre
+      }).eq('matricula', matricula);
+    }
+  }
+  alert(`✅ Estudiante asignado exitosamente a tu acompañamiento (${user.nombre}).`);
+  renderAdminSidebar();
+  openStudentModal(matricula);
 }
 
 /* ---------- MODAL: VISTA PREVIA DEL CORREO INSTITUCIONAL DE ALERTA ---------- */
@@ -777,8 +957,8 @@ function openAlertEmailModal(alertId){
   if(!alt) return;
 
   const s = db.students[alt.studentId] || {};
-  const psychName = alt.psychologistName || s.guardian || 'Psic. Mariana Estrada';
-  const psychEmail = alt.psychologistEmail || 'mariana.estrada@conalep.edu.mx';
+  const psychName = alt.psychologistName || s.guardian || 'Orientador Educativo';
+  const psychEmail = alt.psychologistEmail || '221k0049@itscarrillopuerto.edu.mx';
   const isUrgent = alt.level === 'urgente';
 
   openModal(`
@@ -1409,7 +1589,7 @@ function openOfficialReportModal(matricula, docTitle = null){
     matricula: 'CONALEP-MID1',
     grupo: '—',
     carrera: 'Orientación Educativa',
-    guardian: getCurrentUser()?.nombre || 'Psic. Mariana Estrada'
+    guardian: getCurrentUser()?.nombre || 'Orientador Educativo'
   };
 
   const tasks = getStudentTasks(s.matricula);
@@ -1481,7 +1661,7 @@ function openOfficialReportModal(matricula, docTitle = null){
         </tr>
         <tr>
           <td class="sit-lbl">Orientador(a) Asignado:</td>
-          <td class="sit-val">${s.guardian || 'Psic. Mariana Estrada'}</td>
+          <td class="sit-val">${s.guardian || 'Por asignar'}</td>
           <td class="sit-lbl">Estatus de Apoyo:</td>
           <td class="sit-val">Acompañamiento Activo</td>
         </tr>
@@ -1554,8 +1734,8 @@ function openOfficialReportModal(matricula, docTitle = null){
       <div class="sheet-signatures">
         <div class="sheet-sig-box">
           <div class="sheet-sig-line"></div>
-          <div class="sheet-sig-name">Psic. Mariana Estrada</div>
-          <div class="sheet-sig-title">Orientadora Educativa y Tutorías</div>
+          <div class="sheet-sig-name">${getCurrentUser()?.nombre || s.guardian || 'Orientador(a) Institucional'}</div>
+          <div class="sheet-sig-title">${getCurrentUser()?.cargo || 'Orientación Educativa y Tutorías'}</div>
           <div class="sheet-sig-stamp">✦ SELLO DIGITAL PIOE MER-1 ✦</div>
         </div>
         <div class="sheet-sig-box">
@@ -1668,7 +1848,7 @@ function submitUploadDocument(){
     fileName,
     fileSize,
     notes,
-    author: getCurrentUser()?.display || 'Psic. Mariana Estrada'
+    author: getCurrentUser()?.display || 'Orientador Educativo'
   });
 
   alert('¡Documento adjuntado exitosamente al expediente de la Protoestrella!');

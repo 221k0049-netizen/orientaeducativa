@@ -109,7 +109,7 @@ function renderStudentInicio(){
     <div class="ai-alert-confirmed-notice" style="margin-bottom:24px;">
       <span style="font-size:22px;">🛡️</span>
       <div>
-        <strong>Acompañamiento escolar en curso:</strong> Tu orientadora (<em>${s.guardian || 'Psic. Mariana Estrada'}</em>) tiene conocimiento de tu reporte de ${pendingAlert.moodLabel}. Recuerda que estamos aquí para ti y puedes solicitar una plática en cualquier momento.
+        <strong>Acompañamiento escolar en curso:</strong> Tu orientador(a) (<em>${s.guardian || 'Orientador(a) Institucional'}</em>) tiene conocimiento de tu reporte de ${pendingAlert.moodLabel}. Recuerda que estamos aquí para ti y puedes solicitar una plática en cualquier momento.
       </div>
     </div>
   ` : '';
@@ -132,7 +132,7 @@ function renderStudentInicio(){
         <span class="sh-meta-item">Matrícula: <strong>${s.matricula || 'PTB-Demo'}</strong></span>
         <span class="sh-meta-item">Grupo: <strong>${s.grupo || '4B'}</strong></span>
         <span class="sh-meta-item">Carrera: <strong>${s.carrera || 'Informática'}</strong></span>
-        <span class="sh-meta-item">Orientador(a): <strong>${s.guardian || 'Psic. Mariana Estrada'}</strong></span>
+        <span class="sh-meta-item">Orientador(a): <strong>${s.guardian || 'Por asignar'}</strong></span>
       </div>
     </div>
   </div>
@@ -221,7 +221,7 @@ function renderStudentInicio(){
             ${t.desc ? `<p class="st-desc">${escapeHTML(t.desc)}</p>` : ''}
             <div class="st-footer">
               <span>📅 Entrega / Revisión: <strong>${t.dueDate || 'Esta semana'}</strong></span>
-              <span>· Asignado por: <strong>${t.assignedBy || 'Psic. Mariana Estrada'}</strong></span>
+              <span>· Asignado por: <strong>${t.assignedBy || 'Orientador Educativo'}</strong></span>
               ${t.completed ? `<span class="st-completed-badge">✓ ¡Cumplido!</span>` : ''}
             </div>
           </div>
@@ -385,7 +385,7 @@ function openOfficialReportModal(matricula, docTitle = null){
         </tr>
         <tr>
           <td class="sit-lbl">Orientador(a) Asignado:</td>
-          <td class="sit-val">${s.guardian || 'Psic. Mariana Estrada'}</td>
+          <td class="sit-val">${s.guardian || 'Por asignar'}</td>
           <td class="sit-lbl">Estatus de Apoyo:</td>
           <td class="sit-val">Acompañamiento Activo</td>
         </tr>
@@ -454,8 +454,8 @@ function openOfficialReportModal(matricula, docTitle = null){
       <div class="sheet-signatures">
         <div class="sheet-sig-box">
           <div class="sheet-sig-line"></div>
-          <div class="sheet-sig-name">Psic. Mariana Estrada</div>
-          <div class="sheet-sig-title">Orientadora Educativa y Tutorías</div>
+          <div class="sheet-sig-name">${s.guardian || 'Orientador(a) Institucional'}</div>
+          <div class="sheet-sig-title">Orientación Educativa y Tutorías</div>
           <div class="sheet-sig-stamp">✦ SELLO DIGITAL PIOE MER-1 ✦</div>
         </div>
         <div class="sheet-sig-box">
@@ -981,7 +981,7 @@ function requestCounselorSupport(){
       <div style="font-size:44px;margin-bottom:12px;">🤝</div>
       <h3 style="font-size:20px;margin-bottom:8px;">Solicitud recibida con éxito</h3>
       <p style="font-size:14px;color:var(--ink-soft);line-height:1.6;margin-bottom:20px;">
-        Tu orientadora <strong>${s.guardian || 'Psic. Mariana Estrada'}</strong> ha recibido tu notificación prioritaria. Se pondrá en contacto contigo de forma privada y discreta en el plantel escolar.
+        Tu orientador(a) <strong>${s.guardian || 'Orientador(a) Institucional'}</strong> ha recibido tu notificación prioritaria. Se pondrá en contacto contigo de forma privada y discreta en el plantel escolar.
       </p>
       <button class="btn-maroon" style="width:100%;" onclick="closeModal()">Entendido</button>
     </div>

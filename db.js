@@ -31,21 +31,21 @@ const DEFAULT_AVATAR = {
 
 /* ---------- Datos Iniciales (Plantel Mérida I) ---------- */
 const SEED_USERS = {
-  'usr_coord_1': {
-    id: 'usr_coord_1',
-    nombre: 'Psic. Mariana Estrada',
-    display: 'Psic. Mariana E.',
-    email: 'mariana.estrada@conalep.edu.mx',
-    password: '1234',
-    rol: 'coordinador',
-    cargo: 'Coordinadora de Orientación Educativa',
-    plantel: 'CONALEP Mérida I'
-  },
   'usr_coord_victor': {
     id: 'usr_coord_victor',
     nombre: 'Victor Tuz',
     display: 'Victor T.',
     email: '221k0049@itscarrillopuerto.edu.mx',
+    password: '1234',
+    rol: 'coordinador',
+    cargo: 'Orientador Educativo',
+    plantel: 'CONALEP Mérida I'
+  },
+  'usr_coord_adan': {
+    id: 'usr_coord_adan',
+    nombre: 'Adan Mo',
+    display: 'Adan M.',
+    email: 'adanm.noh150903@gmail.com',
     password: '1234',
     rol: 'coordinador',
     cargo: 'Orientador Educativo',
@@ -69,12 +69,13 @@ function loadDB(){
         if(!parsed.students) parsed.students = {};
         if(!parsed.users) parsed.users = {};
 
-        // Eliminar completamente cualquier dato o rastro de alumnos simulados
+        // Eliminar completamente cualquier dato o rastro de alumnos simulados y coordinadores viejos
         ['PTB-26001', 'PTB-26002', 'PTB-26003'].forEach(mat => {
           delete parsed.students[mat];
           delete parsed.users[mat];
           delete parsed.tasks[mat];
         });
+        delete parsed.users['usr_coord_1'];
         delete parsed.users['usr_coord_2'];
         delete parsed.users['usr_coord_3'];
 
@@ -85,9 +86,8 @@ function loadDB(){
           parsed.documents = parsed.documents.filter(d => !['PTB-26001', 'PTB-26002', 'PTB-26003'].includes(d.studentId));
         }
 
-        if(['PTB-26001', 'PTB-26002', 'PTB-26003'].includes(parsed.currentUserId)){
-          const realFirst = Object.keys(parsed.students)[0];
-          parsed.currentUserId = realFirst || 'usr_coord_1';
+        if(['PTB-26001', 'PTB-26002', 'PTB-26003', 'usr_coord_1'].includes(parsed.currentUserId)){
+          parsed.currentUserId = 'usr_coord_victor';
         }
 
         return parsed;
@@ -104,7 +104,7 @@ function loadDB(){
     documents: [],
     diary: {},
     supportRequests: [],
-    currentUserId: 'usr_coord_1'
+    currentUserId: 'usr_coord_victor'
   };
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(initial)); }catch(e){}
   return initial;
@@ -127,7 +127,7 @@ function resetDB(){
 
 /* ---------- Sesión y Roles ---------- */
 function getCurrentUser(){
-  return db.users[db.currentUserId] || db.students[db.currentUserId] || db.users['usr_coord_1'];
+  return db.users[db.currentUserId] || db.students[db.currentUserId] || Object.values(db.users).find(u => u.rol === 'coordinador') || Object.values(db.users)[0];
 }
 
 function setCurrentUser(userId){
@@ -167,7 +167,7 @@ async function getActivePsychologists(){
 
   // 2. Fallback local solo si Supabase no responde: únicamente los coordinadores reales sin simulaciones
   return Object.values(db.users || {})
-    .filter(u => u.rol === 'coordinador' && !['usr_coord_2', 'usr_coord_3'].includes(u.id))
+    .filter(u => u.rol === 'coordinador' && !['usr_coord_1', 'usr_coord_2', 'usr_coord_3'].includes(u.id))
     .map(c => ({
       id: c.id,
       nombre: c.nombre,
@@ -332,7 +332,7 @@ async function registerUser(data){
             email: emailNorm,
             grupo: data.grupo || '4B',
             carrera: data.carrera || 'Informática',
-            guardian: data.guardian || 'Psic. Mariana Estrada',
+            guardian: data.guardian || 'Por asignar',
             prioridad: 'bajo',
             seg_fecha: 'Hoy'
           }, { onConflict: 'matricula' }).select();
@@ -382,7 +382,7 @@ async function registerUser(data){
     matricula: data.rol === 'estudiante' ? id : null,
     grupo: data.grupo || '2A',
     carrera: data.carrera || 'Informática',
-    guardian: data.guardian || 'Psic. Mariana Estrada',
+    guardian: data.guardian || 'Por asignar',
     guardianEmail: data.guardianEmail || null,
     plantel: 'CONALEP Mérida I',
     prioridad: 'bajo',
@@ -515,7 +515,7 @@ function addStudentTask(matricula, taskData){
     title: taskData.title.trim(),
     desc: (taskData.desc || '').trim(),
     category: taskData.category || 'General',
-    assignedBy: taskData.assignedBy || 'Psic. Mariana Estrada',
+    assignedBy: taskData.assignedBy || 'Orientador Educativo',
     dueDate: taskData.dueDate || 'Próxima sesión',
     completed: false,
     createdAt: new Date().toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' })
@@ -607,7 +607,7 @@ function addStudentDocument(docData){
     fileName: docData.fileName || (docData.title.replace(/\s+/g,'_') + '.pdf'),
     fileSize: docData.fileSize || '150 KB',
     date: new Date().toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' }),
-    author: docData.author || 'Psic. Mariana Estrada',
+    author: docData.author || 'Orientador Educativo',
     notes: (docData.notes || '').trim()
   };
 
@@ -683,26 +683,28 @@ function getAssignedPsychologist(student){
   }
 
   // 2. Buscar por nombre o coincidencia en db.users (cargado dinámicamente desde Supabase)
-  const guardian = guardianName || 'Psic. Mariana Estrada';
-  const found = users.find(u =>
-    u.rol === 'coordinador' && (
-      u.nombre === guardian ||
-      u.display === guardian ||
-      (u.email && u.email.toLowerCase() === guardian.toLowerCase()) ||
-      (u.nombre && guardian.toLowerCase().includes(u.nombre.toLowerCase())) ||
-      (u.nombre && u.nombre.toLowerCase().includes(guardian.toLowerCase()))
-    )
-  );
+  const guardian = guardianName || '';
+  if(guardian){
+    const found = users.find(u =>
+      u.rol === 'coordinador' && (
+        u.nombre === guardian ||
+        u.display === guardian ||
+        (u.email && u.email.toLowerCase() === guardian.toLowerCase()) ||
+        (u.nombre && guardian.toLowerCase().includes(u.nombre.toLowerCase())) ||
+        (u.nombre && u.nombre.toLowerCase().includes(guardian.toLowerCase()))
+      )
+    );
 
-  if(found){
-    return {
-      id: found.id,
-      nombre: found.nombre,
-      display: found.display || found.nombre,
-      email: found.email || (found.nombre.toLowerCase().includes('victor') ? '221k0049@itscarrillopuerto.edu.mx' : 'mariana.estrada@conalep.edu.mx'),
-      cargo: found.cargo || 'Orientador Educativo',
-      plantel: found.plantel || 'CONALEP Mérida I'
-    };
+    if(found){
+      return {
+        id: found.id,
+        nombre: found.nombre,
+        display: found.display || found.nombre,
+        email: found.email || (found.nombre.toLowerCase().includes('victor') ? '221k0049@itscarrillopuerto.edu.mx' : 'adanm.noh150903@gmail.com'),
+        cargo: found.cargo || 'Orientador Educativo',
+        plantel: found.plantel || 'CONALEP Mérida I'
+      };
+    }
   }
 
   if(guardian.toLowerCase().includes('victor')){
@@ -716,12 +718,25 @@ function getAssignedPsychologist(student){
     };
   }
 
+  // 3. Fallback: usar el primer orientador activo registrado en el sistema
+  const activeCoord = users.find(u => u.rol === 'coordinador');
+  if(activeCoord){
+    return {
+      id: activeCoord.id,
+      nombre: activeCoord.nombre,
+      display: activeCoord.display || activeCoord.nombre,
+      email: activeCoord.email || '221k0049@itscarrillopuerto.edu.mx',
+      cargo: activeCoord.cargo || 'Orientador Educativo',
+      plantel: activeCoord.plantel || 'CONALEP Mérida I'
+    };
+  }
+
   return {
-    id: 'usr_coord_1',
-    nombre: 'Psic. Mariana Estrada',
-    display: 'Psic. Mariana E.',
-    email: 'mariana.estrada@conalep.edu.mx',
-    cargo: 'Coordinadora de Orientación Educativa',
+    id: 'usr_coord_default',
+    nombre: guardianName || 'Orientador Educativo',
+    display: guardianName || 'Orientador',
+    email: '221k0049@itscarrillopuerto.edu.mx',
+    cargo: 'Orientador Educativo',
     plantel: 'CONALEP Mérida I'
   };
 }
@@ -871,7 +886,7 @@ async function seedSupabaseFromLocal(){
       email: s.email,
       grupo: s.grupo,
       carrera: s.carrera || 'Informática',
-      guardian: s.guardian || 'Psic. Mariana Estrada',
+      guardian: s.guardian || 'Por asignar',
       prioridad: s.prioridad || 'bajo',
       seg_fecha: s.segFecha || 'Hoy',
       avatar_config: s.avatar || {}
@@ -889,7 +904,7 @@ async function seedSupabaseFromLocal(){
           title: t.title,
           description: t.desc || '',
           category: t.category || 'Bienestar',
-          assigned_by: t.assignedBy || 'Psic. Mariana Estrada',
+          assigned_by: t.assignedBy || 'Orientador Educativo',
           due_date: t.dueDate || 'Próxima sesión',
           completed: Boolean(t.completed)
         });
@@ -907,7 +922,7 @@ async function seedSupabaseFromLocal(){
       file_name: d.fileName || 'archivo.pdf',
       file_size: d.fileSize || '150 KB',
       notes: d.notes || '',
-      author: d.author || 'Psic. Mariana Estrada'
+      author: d.author || 'Orientador Educativo'
     }));
     if(docsToInsert.length > 0){
       await client.from('documents').upsert(docsToInsert);
@@ -942,7 +957,7 @@ async function pullSupabaseToLocal(){
           email: s.email,
           grupo: s.grupo || '4B',
           carrera: s.carrera || 'Informática',
-          guardian: s.guardian || 'Psic. Mariana Estrada',
+          guardian: s.guardian || 'Por asignar',
           prioridad: s.prioridad || 'bajo',
           seg_fecha: s.segFecha || 'Hoy',
           avatar_config: s.avatar || {}
@@ -976,7 +991,13 @@ async function pullSupabaseToLocal(){
 
     // Coordinadores / Profesores
     const { data: coordData, error: coordErr } = await client.from('coordinadores').select('*');
-    if(!coordErr && coordData && coordData.length > 0){
+    if(!coordErr && coordData){
+      // Limpiar coordinadores locales para que solo existan los que están en la base de datos
+      Object.keys(db.users).forEach(uid => {
+        if(db.users[uid] && db.users[uid].rol === 'coordinador'){
+          delete db.users[uid];
+        }
+      });
       coordData.forEach(c => {
         db.users[c.id || c.email] = {
           id: c.id || c.email,
