@@ -5,6 +5,29 @@
    ============================================================ */
 
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
+
+// Cargar .env.local si existe (para pruebas locales con Node/Vercel CLI)
+if (!process.env.SMTP_USER) {
+  try {
+    const envPath = path.resolve(process.cwd(), '.env.local');
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      content.split(/\r?\n/).forEach(line => {
+        const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+        if (match) {
+          const key = match[1];
+          let val = match[2] || '';
+          if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+            val = val.slice(1, -1);
+          }
+          if (!process.env[key]) process.env[key] = val.trim();
+        }
+      });
+    }
+  } catch (e) {}
+}
 
 module.exports = async function handler(req, res) {
   // Configuración de CORS
