@@ -113,7 +113,7 @@
             <span>🩺 Psicólogo / Orientador asignado</span>
             <span class="login-active-badge"><span class="badge-dot"></span>En Base de Datos</span>
           </label>
-          <select id="regGuardian" required>
+          <select id="regGuardian">
             <option value="" disabled selected>— Selecciona a tu orientador(a) —</option>
             <!-- Llenado dinámicamente con los orientadores de la base de datos -->
           </select>
@@ -167,9 +167,11 @@ function switchLoginTab(tab){
 function toggleRegRoleFields(rol){
   const sF = document.getElementById('regStudentFields');
   const cF = document.getElementById('regCoordFields');
+  const guardianEl = document.getElementById('regGuardian');
   if(rol === 'coordinador'){
     if(sF) sF.style.display = 'none';
     if(cF) cF.style.display = 'block';
+    if(guardianEl) guardianEl.required = false;
   } else {
     if(sF) sF.style.display = 'block';
     if(cF) cF.style.display = 'none';
@@ -208,19 +210,43 @@ async function initPsychologistSelector(){
 
 async function handleLoginSubmit(e){
   e.preventDefault();
+  const alertBox = document.getElementById('loginAlertBox');
+  if(alertBox) alertBox.style.display = 'none';
+
   const userVal = document.getElementById('loginUser').value.trim();
   const passVal = document.getElementById('loginPass').value.trim();
+  const submitBtn = e.target.querySelector('button[type="submit"]');
 
-  const res = await loginUser(userVal, passVal);
-  if(res.success){
-    window.location.href = res.redirectUrl;
-  } else {
-    showError(res.error);
+  if(submitBtn){
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Iniciando sesión...';
+  }
+
+  try{
+    const res = await loginUser(userVal, passVal);
+    if(res.success){
+      window.location.href = res.redirectUrl;
+    } else {
+      showError(res.error);
+      if(submitBtn){
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Entrar a NAIMA OS →';
+      }
+    }
+  }catch(err){
+    showError(err.message || 'Error al iniciar sesión.');
+    if(submitBtn){
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Entrar a NAIMA OS →';
+    }
   }
 }
 
 async function handleRegisterSubmit(e){
   e.preventDefault();
+  const alertBox = document.getElementById('loginAlertBox');
+  if(alertBox) alertBox.style.display = 'none';
+
   const rol = document.getElementById('regRol').value;
   const nombre = document.getElementById('regNombre').value.trim();
   const email = document.getElementById('regEmail').value.trim();
@@ -236,25 +262,45 @@ async function handleRegisterSubmit(e){
 
   if(rol === 'estudiante' && !guardian){
     showError('Por favor selecciona a un psicólogo u orientador de la lista.');
+    if(guardianEl) guardianEl.focus();
     return;
   }
 
-  const res = await registerUser({
-    rol,
-    nombre,
-    email,
-    password,
-    matricula,
-    grupo,
-    carrera,
-    cargo,
-    guardian: guardian || 'Psic. Mariana Estrada',
-    guardianEmail: guardianEmail || ''
-  });
-  if(res.success){
-    window.location.href = res.redirectUrl;
-  } else {
-    showError(res.error);
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if(submitBtn){
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creando cuenta e ingresando...';
+  }
+
+  try{
+    const res = await registerUser({
+      rol,
+      nombre,
+      email,
+      password,
+      matricula,
+      grupo,
+      carrera,
+      cargo,
+      guardian: guardian || 'Psic. Mariana Estrada',
+      guardianEmail: guardianEmail || ''
+    });
+
+    if(res.success){
+      window.location.href = res.redirectUrl;
+    } else {
+      showError(res.error || 'Error al registrar.');
+      if(submitBtn){
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Crear Cuenta e Ingresar →';
+      }
+    }
+  }catch(err){
+    showError(err.message || 'Error de conexión.');
+    if(submitBtn){
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Crear Cuenta e Ingresar →';
+    }
   }
 }
 
