@@ -199,7 +199,7 @@ async function initPsychologistSelector(){
   selectEl.innerHTML = `
     <option value="" disabled selected>— Selecciona a tu orientador(a) —</option>
     ${psychs.map(p => `
-      <option value="${escapeHTML(p.nombre)}">
+      <option value="${escapeHTML(p.nombre)}" data-email="${escapeHTML(p.email || '')}">
         🩺 ${escapeHTML(p.nombre)} (${escapeHTML(p.cargo || 'Orientador Educativo')})
       </option>
     `).join('')}
@@ -229,14 +229,28 @@ async function handleRegisterSubmit(e){
   const grupo = document.getElementById('regGrupo') ? document.getElementById('regGrupo').value.trim() : null;
   const carrera = document.getElementById('regCarrera') ? document.getElementById('regCarrera').value : null;
   const cargo = document.getElementById('regCargo') ? document.getElementById('regCargo').value.trim() : null;
-  const guardian = document.getElementById('regGuardian') ? document.getElementById('regGuardian').value.trim() : '';
+  const guardianEl = document.getElementById('regGuardian');
+  const guardian = guardianEl ? guardianEl.value.trim() : '';
+  const selectedOpt = guardianEl && guardianEl.selectedIndex >= 0 ? guardianEl.options[guardianEl.selectedIndex] : null;
+  const guardianEmail = selectedOpt ? (selectedOpt.getAttribute('data-email') || '') : '';
 
   if(rol === 'estudiante' && !guardian){
     showError('Por favor selecciona a un psicólogo u orientador de la lista.');
     return;
   }
 
-  const res = await registerUser({ rol, nombre, email, password, matricula, grupo, carrera, cargo, guardian: guardian || 'Psic. Mariana Estrada' });
+  const res = await registerUser({
+    rol,
+    nombre,
+    email,
+    password,
+    matricula,
+    grupo,
+    carrera,
+    cargo,
+    guardian: guardian || 'Psic. Mariana Estrada',
+    guardianEmail: guardianEmail || ''
+  });
   if(res.success){
     window.location.href = res.redirectUrl;
   } else {

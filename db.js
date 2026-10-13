@@ -383,6 +383,7 @@ async function registerUser(data){
     grupo: data.grupo || '2A',
     carrera: data.carrera || 'Informática',
     guardian: data.guardian || 'Psic. Mariana Estrada',
+    guardianEmail: data.guardianEmail || null,
     plantel: 'CONALEP Mérida I',
     prioridad: 'bajo',
     segFecha: 'Hoy',
@@ -654,14 +655,40 @@ function deleteStudentDocument(docId){
    ============================================================ */
 
 function getAssignedPsychologist(student){
-  const guardian = (student && student.guardian) ? student.guardian.trim() : 'Psic. Mariana Estrada';
   const users = Object.values(db.users || {});
-  
-  // Buscar en db.users coincidencia de coordinador
+  const guardianName = (student && student.guardian) ? student.guardian.trim() : '';
+  const guardianEmail = (student && student.guardianEmail) ? student.guardianEmail.trim() : '';
+
+  // 1. Coincidencia directa por correo del orientador si fue registrado
+  if(guardianEmail){
+    const matchByEmail = users.find(u => u.rol === 'coordinador' && u.email && u.email.toLowerCase() === guardianEmail.toLowerCase());
+    if(matchByEmail){
+      return {
+        id: matchByEmail.id,
+        nombre: matchByEmail.nombre,
+        display: matchByEmail.display || matchByEmail.nombre,
+        email: matchByEmail.email,
+        cargo: matchByEmail.cargo || 'Orientador Educativo',
+        plantel: matchByEmail.plantel || 'CONALEP Mérida I'
+      };
+    }
+    return {
+      id: 'coord_' + guardianEmail.replace(/[^a-zA-Z0-9]/g, '_'),
+      nombre: guardianName || 'Orientador Educativo',
+      display: guardianName || 'Orientador',
+      email: guardianEmail,
+      cargo: 'Orientador Educativo',
+      plantel: 'CONALEP Mérida I'
+    };
+  }
+
+  // 2. Buscar por nombre o coincidencia en db.users (cargado dinámicamente desde Supabase)
+  const guardian = guardianName || 'Psic. Mariana Estrada';
   const found = users.find(u =>
     u.rol === 'coordinador' && (
       u.nombre === guardian ||
       u.display === guardian ||
+      (u.email && u.email.toLowerCase() === guardian.toLowerCase()) ||
       (u.nombre && guardian.toLowerCase().includes(u.nombre.toLowerCase())) ||
       (u.nombre && u.nombre.toLowerCase().includes(guardian.toLowerCase()))
     )
@@ -925,7 +952,8 @@ async function pullSupabaseToLocal(){
 
       // 2. Traer todos los alumnos reales de la nube al estado local
       stData.filter(st => !['PTB-26001','PTB-26002','PTB-26003'].includes(st.matricula)).forEach(st => {
-        const existingHist = db.students[st.matricula]?.historial || [];
+        const existing = db.students[st.matricula];
+        const existingHist = existing?.historial || [];
         db.students[st.matricula] = {
           id: st.matricula,
           matricula: st.matricula,
@@ -936,6 +964,7 @@ async function pullSupabaseToLocal(){
           grupo: st.grupo,
           carrera: st.carrera,
           guardian: st.guardian,
+          guardianEmail: existing?.guardianEmail || st.guardian_email || null,
           prioridad: st.prioridad,
           segFecha: st.seg_fecha,
           avatar: st.avatar_config || DEFAULT_AVATAR,
