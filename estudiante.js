@@ -538,6 +538,27 @@ function selectStudentMood(moodId){
   if(target) target.classList.add('active');
 }
 
+/* ---------- Servicio de Envío de Correo Real vía API Serverless ---------- */
+async function dispatchApiEmailNotification(payload){
+  try{
+    const res = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok){
+      console.warn('Aviso en /api/send-email:', data);
+      return { success: false, ...data };
+    }
+    console.log('✅ Correo entregado al orientador vía /api/send-email:', data);
+    return data;
+  }catch(err){
+    console.warn('Aviso: /api/send-email no está disponible en servidor local sin Node/Vercel:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
 function submitStudentCheckin(){
   if(!selectedStudentMood){
     alert('Por favor selecciona una emoción antes de guardar.');
@@ -619,6 +640,23 @@ function submitStudentCheckin(){
       date: fechaStr,
       mood: selectedStudentMood,
       status: 'Entregado'
+    });
+
+    // Despachar el correo real hacia la bandeja de entrada del psicólogo a través de la API Serverless
+    dispatchApiEmailNotification({
+      to: psychInfo.email,
+      toName: psychInfo.nombre,
+      studentName: s.nombre,
+      matricula: s.matricula,
+      grupo: s.grupo,
+      carrera: s.carrera,
+      studentEmail: s.email,
+      mood: selectedStudentMood,
+      moodEmoji: moodObj.emoji,
+      moodLabel: moodObj.label,
+      note: note,
+      level: alertLevel,
+      subject: emailData.subject
     });
   } else {
     s.prioridad = 'bajo';

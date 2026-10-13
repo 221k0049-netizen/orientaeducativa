@@ -45,7 +45,7 @@ const SEED_USERS = {
     id: 'usr_coord_victor',
     nombre: 'Victor Tuz',
     display: 'Victor T.',
-    email: 'victor.tuz@conalep.edu.mx',
+    email: '221k0049@itscarrillopuerto.edu.mx',
     password: '1234',
     rol: 'coordinador',
     cargo: 'Orientador Educativo',
@@ -672,7 +672,7 @@ function getAssignedPsychologist(student){
       id: found.id,
       nombre: found.nombre,
       display: found.display || found.nombre,
-      email: found.email || (found.nombre.toLowerCase().includes('victor') ? 'victor.tuz@conalep.edu.mx' : 'mariana.estrada@conalep.edu.mx'),
+      email: found.email || (found.nombre.toLowerCase().includes('victor') ? '221k0049@itscarrillopuerto.edu.mx' : 'mariana.estrada@conalep.edu.mx'),
       cargo: found.cargo || 'Orientador Educativo',
       plantel: found.plantel || 'CONALEP Mérida I'
     };
@@ -683,7 +683,7 @@ function getAssignedPsychologist(student){
       id: 'usr_coord_victor',
       nombre: 'Victor Tuz',
       display: 'Victor T.',
-      email: 'victor.tuz@conalep.edu.mx',
+      email: '221k0049@itscarrillopuerto.edu.mx',
       cargo: 'Orientador Educativo',
       plantel: 'CONALEP Mérida I'
     };

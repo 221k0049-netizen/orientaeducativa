@@ -7,6 +7,12 @@ npm-debug.log*
 Thumbs.db
 desktop.ini
 
+# Node & Environment
+node_modules/
+.env
+.env.local
+.env.*.local
+
 # Editor directories
 .vscode/
 .idea/

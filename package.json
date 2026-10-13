@@ -1,0 +1,24 @@
+{
+  "name": "proyecto-residencia",
+  "version": "1.0.0",
+  "description": "**Proyecto de Residencia Profesional — Acompañamiento Socioemocional y Tutorías (PIOE)**",
+  "main": "admin.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/221k0049-netizen/orientaeducativa.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/221k0049-netizen/orientaeducativa/issues"
+  },
+  "homepage": "https://github.com/221k0049-netizen/orientaeducativa#readme",
+  "dependencies": {
+    "nodemailer": "^10.1.0"
+  }
+}
