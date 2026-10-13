@@ -16,6 +16,11 @@ const MOODS = [
 ];
 const MOOD_W = { feliz:100, tranquilo:85, neutral:70, estresado:45, triste:35, enojado:40 };
 const NEGATIVE = ['triste','estresado','enojado'];
+const MOODS_REQUIRING_ATTENTION = ['neutral', 'triste', 'estresado', 'enojado'];
+
+function moodRequiresAttention(moodId){
+  return MOODS_REQUIRING_ATTENTION.includes(moodId);
+}
 
 /* ---------- Configuración de Avatar por Defecto ---------- */
 const DEFAULT_AVATAR = {
@@ -34,6 +39,16 @@ const SEED_USERS = {
     password: '1234',
     rol: 'coordinador',
     cargo: 'Coordinadora de Orientación Educativa',
+    plantel: 'CONALEP Mérida I'
+  },
+  'usr_coord_victor': {
+    id: 'usr_coord_victor',
+    nombre: 'Victor Tuz',
+    display: 'Victor T.',
+    email: 'victor.tuz@conalep.edu.mx',
+    password: '1234',
+    rol: 'coordinador',
+    cargo: 'Orientador Educativo',
     plantel: 'CONALEP Mérida I'
   }
 };
@@ -635,6 +650,170 @@ function deleteStudentDocument(docId){
 }
 
 /* ============================================================
+   GESTIÓN DE ALERTAS, ORIENTADORES Y NOTIFICACIONES POR CORREO
+   ============================================================ */
+
+function getAssignedPsychologist(student){
+  const guardian = (student && student.guardian) ? student.guardian.trim() : 'Psic. Mariana Estrada';
+  const users = Object.values(db.users || {});
+  
+  // Buscar en db.users coincidencia de coordinador
+  const found = users.find(u =>
+    u.rol === 'coordinador' && (
+      u.nombre === guardian ||
+      u.display === guardian ||
+      (u.nombre && guardian.toLowerCase().includes(u.nombre.toLowerCase())) ||
+      (u.nombre && u.nombre.toLowerCase().includes(guardian.toLowerCase()))
+    )
+  );
+
+  if(found){
+    return {
+      id: found.id,
+      nombre: found.nombre,
+      display: found.display || found.nombre,
+      email: found.email || (found.nombre.toLowerCase().includes('victor') ? 'victor.tuz@conalep.edu.mx' : 'mariana.estrada@conalep.edu.mx'),
+      cargo: found.cargo || 'Orientador Educativo',
+      plantel: found.plantel || 'CONALEP Mérida I'
+    };
+  }
+
+  if(guardian.toLowerCase().includes('victor')){
+    return {
+      id: 'usr_coord_victor',
+      nombre: 'Victor Tuz',
+      display: 'Victor T.',
+      email: 'victor.tuz@conalep.edu.mx',
+      cargo: 'Orientador Educativo',
+      plantel: 'CONALEP Mérida I'
+    };
+  }
+
+  return {
+    id: 'usr_coord_1',
+    nombre: 'Psic. Mariana Estrada',
+    display: 'Psic. Mariana E.',
+    email: 'mariana.estrada@conalep.edu.mx',
+    cargo: 'Coordinadora de Orientación Educativa',
+    plantel: 'CONALEP Mérida I'
+  };
+}
+
+function createPsychologistAlertEmail({ student, moodObj, note, psychologist, alertLevel }){
+  const isUrgent = alertLevel === 'urgente';
+  const subject = isUrgent
+    ? `🚨 [ALERTA SOCIOEMOCIONAL CRÍTICA] Check-in de ${student.nombre} (${student.grupo} · ${student.carrera || 'Informática'})`
+    : `⚠️ [SEGUIMIENTO SOCIOEMOCIONAL PREVENTIVO] Check-in Neutral de ${student.nombre} (${student.grupo} · ${student.carrera || 'Informática'})`;
+
+  const body = `
+COLEGIO NACIONAL DE EDUCACIÓN PROFESIONAL TÉCNICA
+PLANTEL MÉRIDA I · DEPARTAMENTO DE ORIENTACIÓN EDUCATIVA Y TUTORÍAS
+========================================================================
+
+Estimado/a ${psychologist.nombre},
+
+El sistema inteligente NAIMA OS ha registrado un nuevo Check-in Emocional que requiere tu atención y seguimiento institucional conforme a los protocolos del PIOE.
+
+INFORMACIÓN DEL ESTUDIANTE:
+------------------------------------------------------------------------
+• Nombre completo: ${student.nombre}
+• Matrícula: ${student.matricula}
+• Grupo y Carrera: ${student.grupo} · ${student.carrera || 'Informática'}
+• Correo del alumno: ${student.email || 'No registrado'}
+• Orientador(a) Asignado(a): ${psychologist.nombre}
+
+DETALLE DEL ESTADO EMOCIONAL:
+------------------------------------------------------------------------
+• Estado reportado: ${moodObj.emoji} ${moodObj.label} (${isUrgent ? 'Prioridad Alta / Requiere Apoyo Inmediato' : 'Prioridad Media / Atención Preventiva'})
+• Comentario del estudiante: "${note || (moodObj.id === 'neutral' ? 'Reportó estado Neutral (sin comentario adicional)' : 'Reportó estado negativo sin comentario adicional')}"
+
+INTERVENCIÓN INICIAL DE IA (Eirén & Orión):
+------------------------------------------------------------------------
+Las IAs institucionales brindaron contención empática inicial y técnicas de respiración/organización en la plataforma.
+
+🔔 ACCIÓN REQUERIDA POR LA PLATAFORMA:
+------------------------------------------------------------------------
+Por favor comunícate a la brevedad con el/la estudiante (${student.nombre}) a través de su correo institucional o citándolo/a en el cubículo de Orientación Educativa para brindarle acompañamiento humano presencial o virtual.
+
+Plataforma NAIMA OS · CONALEP Mérida I
+`;
+
+  return {
+    subject,
+    body,
+    to: psychologist.email,
+    toName: psychologist.nombre,
+    from: 'sistema.alertas@conalep.edu.mx',
+    date: new Date().toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' }) + ' · ' + new Date().toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' })
+  };
+}
+
+async function resolveAlertInDb(alertId, contactNote = ''){
+  if(!db.alerts) db.alerts = [];
+  const alt = db.alerts.find(a => a.id === alertId);
+  if(!alt) return false;
+
+  alt.status = 'atendida';
+  alt.resolvedAt = new Date().toISOString();
+  alt.contactNote = contactNote;
+
+  const stMat = alt.studentId;
+  const s = db.students[stMat];
+
+  // Si se dejó una nota de contacto, registrarla como tarea/acuerdo completado en el expediente
+  if(contactNote && contactNote.trim() && s){
+    if(!db.tasks) db.tasks = {};
+    if(!db.tasks[stMat]) db.tasks[stMat] = [];
+    const currentUser = (typeof getCurrentUser === 'function') ? getCurrentUser() : { nombre: 'Orientador Educativo' };
+    db.tasks[stMat].unshift({
+      id: 'tsk_' + Date.now(),
+      title: `Contacto y Acompañamiento (${alt.moodLabel || alt.mood})`,
+      desc: contactNote.trim(),
+      category: 'Bienestar',
+      assignedBy: currentUser.nombre || 'Orientación Educativa',
+      dueDate: 'Atendido',
+      completed: true,
+      completedAt: new Date().toISOString()
+    });
+  }
+
+  // Verificar si le quedan otras alertas pendientes a este alumno
+  const remainingPending = db.alerts.filter(a => a.studentId === stMat && a.status === 'pendiente');
+  if(remainingPending.length === 0 && s){
+    s.prioridad = 'bajo';
+  }
+
+  saveDB();
+
+  // Sincronizar en Supabase
+  if(isSupabaseLive()){
+    const client = getActiveSupabaseClient();
+    if(client){
+      if(alertId && !alertId.startsWith('alt_')){
+        client.from('alerts').update({
+          status: 'atendida',
+          resolved_at: new Date().toISOString()
+        }).eq('id', alertId).then(()=>{}).catch(err=>console.warn('Error resolviendo alerta en Supabase:', err));
+      } else {
+        client.from('alerts').update({
+          status: 'atendida',
+          resolved_at: new Date().toISOString()
+        }).eq('student_id', stMat).eq('status', 'pendiente').then(()=>{}).catch(()=>{});
+      }
+
+      if(remainingPending.length === 0 && s){
+        client.from('students').update({
+          prioridad: 'bajo',
+          seg_fecha: 'Hoy'
+        }).eq('matricula', stMat).then(()=>{}).catch(()=>{});
+      }
+    }
+  }
+
+  return true;
+}
+
+/* ============================================================
    INTEGRACIÓN OFICIAL CON SUPABASE (VIA supabase.js)
    ============================================================ */
 
@@ -818,6 +997,43 @@ async function pullSupabaseToLocal(){
         author: d.author,
         date: new Date(d.created_at).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' })
       }));
+    }
+
+    // Alertas Tempranas Socioemocionales
+    const { data: altData } = await client.from('alerts').select('*').order('created_at', { ascending: false });
+    if(altData && altData.length > 0){
+      db.alerts = altData.map(a => {
+        const st = db.students[a.student_id] || {};
+        const moodObj = MOODS.find(m => m.id === a.mood) || { emoji: a.mood_emoji || '⚠️', label: a.mood_label || a.mood };
+        const psychInfo = getAssignedPsychologist(st);
+        const emailInfo = createPsychologistAlertEmail({
+          student: st,
+          moodObj,
+          note: a.note,
+          psychologist: psychInfo,
+          alertLevel: a.level || 'urgente'
+        });
+        return {
+          id: a.id,
+          studentId: a.student_id,
+          studentName: st.nombre || 'Estudiante',
+          studentEmail: st.email || '',
+          grupo: st.grupo || '4B',
+          carrera: st.carrera || 'Informática',
+          mood: a.mood,
+          moodEmoji: a.mood_emoji || moodObj.emoji,
+          moodLabel: a.mood_label || moodObj.label,
+          level: a.level || 'urgente',
+          status: a.status || 'pendiente',
+          date: new Date(a.created_at).toLocaleDateString('es-MX', { day:'2-digit', month:'short' }) + ' · ' + new Date(a.created_at).toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' }),
+          note: a.note || '',
+          psychologistName: psychInfo.nombre,
+          psychologistEmail: psychInfo.email,
+          emailSubject: emailInfo.subject,
+          emailBody: emailInfo.body,
+          emailDate: new Date(a.created_at).toLocaleDateString('es-MX', { day:'2-digit', month:'short' })
+        };
+      });
     }
 
     saveDB();

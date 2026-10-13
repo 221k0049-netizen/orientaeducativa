@@ -48,6 +48,18 @@ function renderAdminSidebar(){
   if(!navEl) return;
   const pendingAlerts = (db.alerts || []).filter(a => a.status === 'pendiente').length;
 
+  // Actualizar botón de alerta en la barra superior si existe
+  const topAlertBtn = document.getElementById('topNavAlertBtn');
+  const topAlertCount = document.getElementById('topNavAlertCount');
+  if(topAlertBtn && topAlertCount){
+    if(pendingAlerts > 0){
+      topAlertBtn.style.display = 'inline-flex';
+      topAlertCount.textContent = pendingAlerts;
+    } else {
+      topAlertBtn.style.display = 'none';
+    }
+  }
+
   navEl.innerHTML = SECTIONS_ADMIN.map(s => {
     const sep = s.sep ? `<div class="nav-sep">${s.sep}</div>` : '';
     const alertChip = (s.id === 'inicio' && pendingAlerts > 0)
@@ -117,38 +129,60 @@ function renderAdminInicio(){
   const bien = bienestarPromedio();
   const pendingAlerts = (db.alerts || []).filter(a => a.status === 'pendiente');
 
-  // Alertas prioritarias provocadas por check-ins negativos
+  // Alertas prioritarias provocadas por check-ins neutros o negativos
   const urgentAlertsHTML = pendingAlerts.length ? `
     <div class="coord-urgent-box">
       <div class="cub-head">
         <div class="cub-title">
-          <span>🚨</span> Alertas Socioemocionales Recientes
+          <span>🚨</span> Alertas Socioemocionales y Solicitudes de Contacto
         </div>
         <span class="cub-badge">${pendingAlerts.length} ${pendingAlerts.length === 1 ? 'caso requiere atención' : 'casos requieren atención'}</span>
       </div>
       <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">
-        Los siguientes estudiantes registraron estados de ánimo negativos en su check-in. Las IAs Eirén y Orión brindaron contención inicial; ahora corresponde la intervención y seguimiento del orientador(a).
+        Los siguientes estudiantes registraron estados de ánimo que requieren atención socioemocional (neutro o negativo). La plataforma ha notificado por correo a su orientador(a) y solicita tu comunicación directa con el estudiante.
       </p>
       <div class="cub-list">
-        ${pendingAlerts.map(alt => `
-          <div class="cub-item">
+        ${pendingAlerts.map(alt => {
+          const s = db.students[alt.studentId] || {};
+          const isUrgent = alt.level === 'urgente';
+          const psychName = alt.psychologistName || s.guardian || 'Psic. Mariana Estrada';
+          return `
+          <div class="cub-item ${isUrgent ? 'cub-item-urgent' : 'cub-item-neutral'}">
             <div class="cub-item-info">
               <div class="cub-mood-dot">${alt.moodEmoji || '⚠️'}</div>
               <div>
-                <span class="cub-student-name">${alt.studentName} (${alt.grupo} · ${alt.carrera})</span>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <span class="cub-student-name">${alt.studentName} (${alt.grupo} · ${alt.carrera || 'Informática'})</span>
+                  <span class="prio-chip ${isUrgent ? 'alto' : 'medio'}" style="font-size:10.5px;padding:2px 7px;">
+                    ${isUrgent ? '🔴 Atención Urgente' : '🟡 Seguimiento Preventivo'}
+                  </span>
+                </div>
                 <span class="cub-student-sub">
                   Reportó: <strong>${alt.moodLabel || alt.mood}</strong> · ${alt.date} 
                   ${alt.note ? `— <em>"${escapeHTML(alt.note)}"</em>` : ''}
                 </span>
+                <div style="font-size:11.8px;color:var(--ink-soft);margin-top:3px;">
+                  🩺 <strong>Orientador(a) asignado(a):</strong> ${psychName}
+                  <span style="color:var(--green);font-weight:600;margin-left:8px;">✓ Correo notificado</span>
+                </div>
               </div>
             </div>
             <div class="cub-item-actions">
-              <button class="btn-outline-maroon" style="padding:6px 12px;font-size:12px;" onclick="openAlertEmailModal('${alt.id}')">✉️ Correo Notificado</button>
-              <button class="btn-outline-maroon" style="padding:6px 14px;font-size:12px;" onclick="openStudentModal('${alt.studentId}')">Ver expediente</button>
-              <button class="btn-resolve-alert" onclick="resolveAlert('${alt.id}')">✓ Marcar atendida</button>
+              <button class="btn-maroon" style="padding:7px 14px;font-size:12.5px;display:flex;align-items:center;gap:6px;" onclick="openContactStudentModal('${alt.id}')">
+                📞 Comunicarse con el Alumno
+              </button>
+              <button class="btn-outline-maroon" style="padding:6px 11px;font-size:12px;" onclick="openAlertEmailModal('${alt.id}')" title="Ver correo institucional de alerta">
+                ✉️ Ver Correo
+              </button>
+              <button class="btn-outline-maroon" style="padding:6px 12px;font-size:12px;" onclick="openStudentModal('${alt.studentId}')">
+                📋 Expediente
+              </button>
+              <button class="btn-resolve-alert" onclick="resolveAlert('${alt.id}')" title="Marcar como atendida una vez contactado el alumno">
+                ✓ Atendida
+              </button>
             </div>
           </div>
-        `).join('')}
+        `}).join('')}
       </div>
     </div>
   ` : '';
@@ -248,14 +282,10 @@ function renderAdminInicio(){
   <p class="foot-note"><span class="spark">✦</span> NAIMA apoya la organización del trabajo; las decisiones de acompañamiento corresponden siempre al personal profesional.</p>`;
 }
 
-function resolveAlert(alertId){
-  const alt = (db.alerts || []).find(a => a.id === alertId);
-  if(alt){
-    alt.status = 'atendida';
-    saveDB();
-    renderAdminSidebar();
-    nav('inicio');
-  }
+async function resolveAlert(alertId){
+  await resolveAlertInDb(alertId, 'Atendida y seguimiento registrado por el orientador(a).');
+  renderAdminSidebar();
+  nav('inicio');
 }
 
 /* ---------- VISTA: PROTOESTRELLAS ---------- */
@@ -747,6 +777,9 @@ function openAlertEmailModal(alertId){
   if(!alt) return;
 
   const s = db.students[alt.studentId] || {};
+  const psychName = alt.psychologistName || s.guardian || 'Psic. Mariana Estrada';
+  const psychEmail = alt.psychologistEmail || 'mariana.estrada@conalep.edu.mx';
+  const isUrgent = alt.level === 'urgente';
 
   openModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
@@ -758,7 +791,7 @@ function openAlertEmailModal(alertId){
           <strong>Correo Institucional CONALEP</strong>
         </div>
         <span class="mono" style="font-size:11px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:100px;">
-          Alerta Temprana · PIOE
+          ${isUrgent ? 'Alerta Crítica · PIOE' : 'Seguimiento Preventivo · PIOE'}
         </span>
       </div>
 
@@ -770,7 +803,7 @@ function openAlertEmailModal(alertId){
         </div>
         <div class="email-meta-row">
           <span class="em-lbl">Para:</span>
-          <span class="em-val">mariana.estrada@conalep.edu.mx (Psic. Mariana Estrada · Coordinadora PIOE)</span>
+          <span class="em-val"><strong>${psychEmail}</strong> (${psychName} · Orientador(a) PIOE)</span>
         </div>
         <div class="email-meta-row">
           <span class="em-lbl">Fecha:</span>
@@ -778,7 +811,7 @@ function openAlertEmailModal(alertId){
         </div>
         <div class="email-meta-row">
           <span class="em-lbl">Asunto:</span>
-          <span class="em-subject">🚨 [ALERTA SOCIOEMOCIONAL CRÍTICA] Check-in de ${alt.studentName} (${alt.grupo} · ${alt.carrera})</span>
+          <span class="em-subject">${alt.emailSubject || (isUrgent ? `🚨 [ALERTA SOCIOEMOCIONAL CRÍTICA] Check-in de ${alt.studentName}` : `⚠️ [SEGUIMIENTO SOCIOEMOCIONAL] Check-in de ${alt.studentName}`)}</span>
         </div>
       </div>
 
@@ -790,8 +823,8 @@ function openAlertEmailModal(alertId){
         </div>
 
         <p style="font-size:13.5px;line-height:1.6;color:var(--ink);margin-bottom:14px;">
-          Estimada <strong>Psic. Mariana Estrada</strong>,<br>
-          El sistema inteligente NAIMA OS ha registrado un check-in de bienestar que coincide con criterios de atención prioritaria según el protocolo institucional del PIOE.
+          Estimado/a <strong>${psychName}</strong>,<br>
+          El sistema inteligente NAIMA OS ha registrado un check-in de bienestar que coincide con criterios de atención ${isUrgent ? 'prioritaria y urgente' : 'preventiva y seguimiento'} según el protocolo institucional del PIOE.
         </p>
 
         <div class="email-student-card">
@@ -800,12 +833,12 @@ function openAlertEmailModal(alertId){
             <div>
               <div style="font-size:15px;font-weight:700;color:var(--ink);">${alt.studentName}</div>
               <div class="mono" style="font-size:12px;color:var(--ink-soft);">
-                Matrícula: ${alt.studentId} · Grupo: ${alt.grupo} · Carrera: ${alt.carrera}
+                Matrícula: ${alt.studentId} · Grupo: ${alt.grupo} · Carrera: ${alt.carrera} · Correo: ${alt.studentEmail || s.email || 'No registrado'}
               </div>
             </div>
           </div>
           <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:13px;">
-            <div>Estado reportado: <strong style="color:var(--danger);">${alt.moodLabel || alt.mood}</strong></div>
+            <div>Estado reportado: <strong style="color:${isUrgent ? 'var(--danger)' : '#B7791F'};">${alt.moodLabel || alt.mood}</strong> (${isUrgent ? 'Requiere Apoyo Inmediato' : 'Atención Preventiva'})</div>
             <div style="margin-top:4px;">Comentario del estudiante: <em>"${escapeHTML(alt.note || 'Sin nota adicional')}"</em></div>
           </div>
         </div>
@@ -815,20 +848,20 @@ function openAlertEmailModal(alertId){
             🌿 Contención Inicial de IAs Activada en Plataforma:
           </div>
           <ul style="padding-left:18px;font-size:12px;line-height:1.55;color:var(--ink-soft);">
-            <li><strong>Eirén:</strong> Validó la emoción del alumno, redujo la exigencia cognitiva y brindó ejercicio guiado de respiración diafragmática.</li>
-            <li><strong>Orión:</strong> Ofreció recomendaciones prácticas de organización académica y recordó los canales oficiales de orientación.</li>
+            <li><strong>Eirén:</strong> Validó la emoción del alumno, redujo la exigencia cognitiva y brindó acompañamiento empático.</li>
+            <li><strong>Orión:</strong> Ofreció recomendaciones prácticas de organización académica y recordó que su orientador(a) ${psychName} está disponible.</li>
           </ul>
         </div>
 
-        <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin-top:14px;">
-          <strong>Acción recomendada:</strong> Citar al estudiante para entrevista de seguimiento, verificar acuerdos y adjuntar bitácora al expediente digital.
-        </p>
+        <div style="margin-top:14px;padding:12px 14px;background:#FFFBF0;border:1px solid #FFE082;border-radius:8px;font-size:12.8px;line-height:1.55;color:#7B341E;">
+          🔔 <strong>Acción requerida por la plataforma:</strong> Por favor comunícate a la brevedad con el/la estudiante (${alt.studentName}) a su correo o en persona para brindarle acompañamiento humano y registrar la bitácora correspondiente en NAIMA OS.
+        </div>
       </div>
 
       <!-- Pie de acciones -->
       <div class="email-footer-actions">
-        <button class="btn-maroon" style="padding:9px 18px;font-size:12.5px;" onclick="closeModal();openStudentModal('${alt.studentId}');">
-          Abrir Expediente de ${alt.studentName.split(' ')[0]} →
+        <button class="btn-maroon" style="padding:9px 18px;font-size:12.5px;" onclick="closeModal();openContactStudentModal('${alt.id}');">
+          📞 Comunicarse con ${alt.studentName.split(' ')[0]} Ahora →
         </button>
         <button class="btn-ghost" style="padding:9px 16px;font-size:12.5px;" onclick="closeModal();">
           Cerrar
@@ -836,6 +869,163 @@ function openAlertEmailModal(alertId){
       </div>
     </div>
   `);
+}
+
+/* ---------- MODAL: COMUNICARSE DIRECTAMENTE CON EL ALUMNO ---------- */
+function openContactStudentModal(alertId){
+  const alt = (db.alerts || []).find(a => a.id === alertId);
+  if(!alt) return;
+
+  const s = db.students[alt.studentId] || {};
+  const currentUser = getCurrentUser();
+  const firstName = (alt.studentName || s.nombre || 'Alumno').split(' ')[0];
+  const psychName = alt.psychologistName || s.guardian || currentUser.nombre || 'Orientador Educativo';
+  const studentEmail = alt.studentEmail || s.email || `${(s.matricula || alt.studentId).toLowerCase()}@conalepmex.edu.mx`;
+  const isUrgent = alt.level === 'urgente';
+
+  // Mensaje de contacto institucional sugerido
+  const draftSubject = `Acompañamiento Socioemocional - Orientación Educativa CONALEP Mérida I`;
+  const draftBody = `Hola ${firstName}, te escribe ${currentUser.nombre || psychName} del departamento de Orientación Educativa de CONALEP Mérida I. Revisé en la plataforma tu check-in emocional del día de hoy (${alt.moodLabel || alt.mood}) y quiero que sepas que cuentas con todo nuestro respaldo. Me gustaría platicar contigo en el cubículo de Orientación para saber cómo estás y en qué podemos apoyarte. ¿En qué horario tienes un espacio libre el día de hoy o mañana? Recuerda que este espacio es confidencial y para tu bienestar. Un saludo afectuoso.`;
+
+  const mailtoUrl = `mailto:${encodeURIComponent(studentEmail)}?subject=${encodeURIComponent(draftSubject)}&body=${encodeURIComponent(draftBody)}`;
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <div class="contact-modal-wrapper">
+      <!-- Encabezado de la comunicación -->
+      <div class="contact-student-hero">
+        <div class="csh-avatar">${initialOf(alt.studentName || s.display)}</div>
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <h3 style="margin:0;font-size:18px;color:var(--ink);">${alt.studentName}</h3>
+            <span class="prio-chip ${isUrgent ? 'alto' : 'medio'}" style="font-size:11px;">
+              ${isUrgent ? '🔴 Atención Urgente' : '🟡 Seguimiento Preventivo'}
+            </span>
+          </div>
+          <div class="mono" style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">
+            Matrícula: <strong>${alt.studentId}</strong> · Grupo: <strong>${alt.grupo}</strong> · Carrera: <strong>${alt.carrera || 'Informática'}</strong>
+          </div>
+          <div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">
+            🩺 Orientador asignado: <strong>${psychName}</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumen de lo reportado -->
+      <div class="contact-mood-summary ${isUrgent ? 'urgent' : 'neutral'}">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:26px;">${alt.moodEmoji || '⚠️'}</span>
+          <div>
+            <div style="font-size:13.5px;font-weight:700;color:var(--ink);">
+              Reportó: ${alt.moodLabel || alt.mood} · <span style="font-weight:400;color:var(--ink-soft);font-size:12px;">${alt.date}</span>
+            </div>
+            <div style="font-size:12.5px;color:var(--ink);margin-top:2px;">
+              ${alt.note ? `Comentario del estudiante: <em>"${escapeHTML(alt.note)}"</em>` : '<em>El estudiante no agregó comentarios adicionales en su check-in.</em>'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canales de comunicación directa -->
+      <div style="margin-top:16px;">
+        <span class="section-label" style="margin-bottom:8px;">Canales de Contacto Directo</span>
+        
+        <!-- Canal 1: Correo Institucional -->
+        <div class="contact-channel-card">
+          <div class="ccc-head">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:18px;">✉️</span>
+              <div>
+                <strong>Correo Institucional del Alumno</strong>
+                <div class="mono" style="font-size:12px;color:var(--ink-soft);">${studentEmail}</div>
+              </div>
+            </div>
+            <a href="${mailtoUrl}" target="_blank" class="btn-maroon" style="padding:6px 14px;font-size:12px;text-decoration:none;">
+              Abrir Correo ↗
+            </a>
+          </div>
+
+          <div class="contact-draft-preview">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <span style="font-size:11.5px;font-weight:600;color:var(--ink-soft);">Borrador Institucional Sugerido:</span>
+              <button class="btn-copy-draft" onclick="copyContactDraftText('${escapeHTML(draftBody)}')">
+                📋 Copiar Mensaje
+              </button>
+            </div>
+            <div class="contact-draft-body" id="contactDraftBodyText">
+              ${escapeHTML(draftBody)}
+            </div>
+          </div>
+        </div>
+
+        <!-- Canal 2: WhatsApp o Llamada Telefónica -->
+        <div class="contact-channel-card" style="margin-top:10px;">
+          <div class="ccc-head">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:18px;">💬</span>
+              <div>
+                <strong>Contacto por WhatsApp / Teléfono</strong>
+                <div style="font-size:12px;color:var(--ink-soft);">Envío rápido de mensaje directo si cuentas con su número celular.</div>
+              </div>
+            </div>
+            <button class="btn-outline-maroon" style="padding:6px 14px;font-size:12px;" onclick="openWhatsAppDirectPrompt('${encodeURIComponent(draftBody)}')">
+              Enviar por WhatsApp ↗
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bitácora y Registro de Contacto -->
+      <div style="margin-top:18px;background:#F8F9FA;padding:14px;border-radius:10px;border:1px solid var(--line);">
+        <label for="contactActionNote" style="display:block;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:6px;">
+          📝 Registro de Intervención (Bitácora PIOE)
+        </label>
+        <textarea id="contactActionNote" style="width:100%;min-height:65px;padding:10px;font-size:12.8px;border:1px solid var(--line);border-radius:6px;resize:vertical;" placeholder="Describe la acción realizada. Ej: Se envió correo citando al alumno mañana a las 10:30 AM en el cubículo de orientación."></textarea>
+
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:12px;">
+          <button class="btn-ghost" style="padding:8px 16px;font-size:12.5px;" onclick="closeModal()">
+            Cancelar
+          </button>
+          <button class="btn-maroon" style="padding:8px 20px;font-size:12.5px;" onclick="handleContactSaveAndResolve('${alt.id}', '${alt.studentId}')">
+            ✓ Guardar Registro y Marcar Atendida
+          </button>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+function copyContactDraftText(text){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(() => {
+      alert('✓ Mensaje copiado al portapapeles. Puedes pegarlo en tu cliente de correo o mensajería.');
+    }).catch(() => {
+      prompt('Copia el siguiente texto:', text);
+    });
+  } else {
+    prompt('Copia el siguiente texto:', text);
+  }
+}
+
+function openWhatsAppDirectPrompt(encodedText){
+  const phone = prompt('Introduce el número de celular del alumno a 10 dígitos (Ej: 9991234567):');
+  if(phone && phone.trim()){
+    const cleanPhone = phone.replace(/\D/g, '');
+    const url = `https://wa.me/52${cleanPhone}?text=${encodedText}`;
+    window.open(url, '_blank');
+  }
+}
+
+async function handleContactSaveAndResolve(alertId, studentId){
+  const noteEl = document.getElementById('contactActionNote');
+  const noteText = noteEl ? noteEl.value.trim() : '';
+
+  await resolveAlertInDb(alertId, noteText || 'Contacto y seguimiento socioemocional realizado.');
+  closeModal();
+  renderAdminSidebar();
+  nav('inicio');
+
+  alert('✓ ¡Excelente! Se registró el contacto y la alerta socioemocional ha sido marcada como atendida.');
 }
 
 function markReviewed(matricula){

@@ -496,15 +496,20 @@ function renderStudentCheckin(){
     </div>
 
     <div class="student-mood-grid">
-      ${MOODS.map(m => `
-        <div class="student-mood-card ${NEGATIVE.includes(m.id) ? 'is-negative' : ''}" 
+      ${MOODS.map(m => {
+        const isNeg = NEGATIVE.includes(m.id);
+        const isNeu = m.id === 'neutral';
+        const tagText = isNeg ? 'Requiere apoyo' : (isNeu ? 'Atención preventiva' : 'Equilibrio');
+        const cardClass = isNeg ? 'is-negative' : (isNeu ? 'is-neutral' : '');
+        return `
+        <div class="student-mood-card ${cardClass}" 
              id="smCard_${m.id}" 
              onclick="selectStudentMood('${m.id}')">
           <span class="smc-emoji">${m.emoji}</span>
           <span class="smc-label">${m.label}</span>
-          <span class="smc-tag">${NEGATIVE.includes(m.id) ? 'Requiere apoyo' : 'Equilibrio'}</span>
+          <span class="smc-tag">${tagText}</span>
         </div>
-      `).join('')}
+      `}).join('')}
     </div>
 
     <div class="student-note-field">
@@ -560,25 +565,61 @@ function submitStudentCheckin(){
   });
 
   const isNeg = NEGATIVE.includes(selectedStudentMood);
+  const isNeutral = selectedStudentMood === 'neutral';
+  const requiresSupport = isNeg || isNeutral;
 
-  if(isNeg){
-    s.prioridad = 'alto';
+  const psychInfo = getAssignedPsychologist(s);
+  let newAlert = null;
+
+  if(requiresSupport){
+    s.prioridad = isNeg ? 'alto' : 'medio';
+    const alertLevel = isNeg ? 'urgente' : 'preventivo';
     if(!db.alerts) db.alerts = [];
-    const newAlert = {
+
+    const emailData = createPsychologistAlertEmail({
+      student: s,
+      moodObj,
+      note,
+      psychologist: psychInfo,
+      alertLevel
+    });
+
+    newAlert = {
       id: 'alt_' + Date.now(),
       studentId: s.matricula,
       studentName: s.nombre,
+      studentEmail: s.email,
       grupo: s.grupo,
       carrera: s.carrera,
       mood: selectedStudentMood,
       moodEmoji: moodObj.emoji,
       moodLabel: moodObj.label,
-      level: 'urgente',
+      level: alertLevel,
       status: 'pendiente',
       date: fechaStr,
-      note: note || 'Reportó estado negativo en check-in'
+      note: note || (isNeutral ? 'Reportó estado Neutral en check-in (requiere seguimiento preventivo)' : 'Reportó estado negativo en check-in'),
+      psychologistName: psychInfo.nombre,
+      psychologistEmail: psychInfo.email,
+      emailSubject: emailData.subject,
+      emailBody: emailData.body,
+      emailDate: fechaStr
     };
     db.alerts.unshift(newAlert);
+
+    if(!db.sentEmails) db.sentEmails = [];
+    db.sentEmails.unshift({
+      id: 'eml_' + Date.now(),
+      alertId: newAlert.id,
+      studentId: s.matricula,
+      studentName: s.nombre,
+      to: psychInfo.email,
+      toName: psychInfo.nombre,
+      subject: emailData.subject,
+      body: emailData.body,
+      date: fechaStr,
+      mood: selectedStudentMood,
+      status: 'Entregado'
+    });
   } else {
     s.prioridad = 'bajo';
   }
@@ -593,23 +634,33 @@ function submitStudentCheckin(){
       client.from('checkins').insert({
         student_id: s.matricula,
         mood: selectedStudentMood,
-        note: (note || '').trim()
+        mood_label: moodObj.label,
+        mood_emoji: moodObj.emoji,
+        note: (note || '').trim(),
+        is_negative: requiresSupport
       }).then(({ error }) => {
         if(error) console.warn('Supabase checkin sync notice:', error.message);
         else console.log('✅ Check-in registrado en Supabase');
       }).catch(err => console.warn('Supabase checkin error:', err));
 
-      if(isNeg){
+      if(requiresSupport && newAlert){
         client.from('alerts').insert({
           student_id: s.matricula,
-          level: 'urgente',
+          level: newAlert.level,
           mood: selectedStudentMood,
-          note: (note || 'Reportó estado negativo en check-in').trim(),
+          mood_label: moodObj.label,
+          mood_emoji: moodObj.emoji,
+          note: newAlert.note,
           status: 'pendiente'
         }).then(({ error }) => {
           if(error) console.warn('Supabase alert sync notice:', error.message);
           else console.log('✅ Alerta registrada en Supabase');
         }).catch(err => console.warn('Supabase alert error:', err));
+
+        client.from('students').update({
+          prioridad: s.prioridad,
+          seg_fecha: 'Hoy'
+        }).eq('matricula', s.matricula).then(()=>{}).catch(()=>{});
       }
     }
   }
@@ -617,8 +668,8 @@ function submitStudentCheckin(){
   const resContainer = document.getElementById('studentCheckinResult');
   if(!resContainer) return;
 
-  if(isNeg){
-    resContainer.innerHTML = renderAiSupportContainer(s, moodObj, note);
+  if(requiresSupport){
+    resContainer.innerHTML = renderAiSupportContainer(s, moodObj, note, psychInfo, newAlert);
   } else {
     resContainer.innerHTML = renderPositiveAiSupport(s, moodObj, note);
   }
@@ -627,19 +678,22 @@ function submitStudentCheckin(){
 }
 
 /* --- Apoyo Emocional Inmediato (Eirén & Orión) --- */
-function renderAiSupportContainer(student, mood, note){
+function renderAiSupportContainer(student, mood, note, psychInfo, alertObj){
   const firstName = (student.display || student.nombre).split(' ')[0];
+  const psych = psychInfo || getAssignedPsychologist(student);
 
   const eireneMsgs = {
+    neutral: `Hola ${firstName}, los días neutros son completamente naturales y muy valiosos. A veces indican que llevas una carga pesada de tareas o que necesitas un momento de desconexión sin juzgarte. Tu orientador(a) ${psych.nombre} y yo estamos aquí para escucharte y acompañarte siempre. 🌿`,
     estresado: `Hola ${firstName}, te escucho con mucho cariño. El estrés en la escuela o en casa puede sentirse como una carga muy pesada, pero no tienes que resolver todo hoy ni hacerlo a solas. Respira hondo: eres una persona valiosa y capaz de superar esto a tu propio ritmo. 💚`,
     triste: `Hola ${firstName}, gracias por tener la valentía de compartir cómo te sientes. Está completamente bien no sentirse bien hoy. Tu tristeza es válida y no tienes por qué ocultarla. Aquí estoy contigo, sin juicios y a tu lado. Mereces un momento de calma hoy. 🌿`,
     enojado: `Hola ${firstName}, reconozco tu molestia y es normal sentir coraje o frustración ante situaciones difíciles. Tómate una pausa cómoda antes de tomar cualquier decisión. Vamos a cuidar tu energía para que recuperes tu tranquilidad. ✨`
   };
 
   const orionMsgs = {
-    estresado: `✧ Consejo de Orión: 'Las tormentas académicas más intensas son temporales'. Te sugiero dividir tus pendientes en partes pequeñas, tomar un vaso con agua y hacer 3 minutos de respiración. Recuerda que tu orientadora ${student.guardian || 'Psic. Mariana Estrada'} está disponible para respaldarte sin juzgarte.`,
-    triste: `✧ Consejo de Orión: 'Incluso en la noche más oscura, las estrellas siguen ahí'. Hoy no te exijas perfección. Hablar con alguien de confianza o escribir en tu diario personal te ayudará a ordenar lo que sientes. Tu equipo escolar está de tu lado.`,
-    enojado: `✧ Consejo de Orión: 'La pausa es la mayor muestra de fuerza'. Cuando sientas enojo, aléjate unos minutos de la fuente de tensión, camina o realiza una pausa activa. Recuerda que tienes una red de apoyo en CONALEP.`
+    neutral: `✧ Consejo de Orión: 'El punto medio es una oportunidad para recalibrar tu energía'. Si sientes apatía, dudas o falta de motivación con tus módulos de CONALEP, no te preocupes: tu orientador(a) ${psych.nombre} ya tiene tu reporte y te contactará para orientarte a fijar metas claras a tu ritmo.`,
+    estresado: `✧ Consejo de Orión: 'Las tormentas académicas más intensas son temporales'. Te sugiero dividir tus pendientes en partes pequeñas, tomar un vaso con agua y hacer 3 minutos de respiración. Tu orientador(a) ${psych.nombre} está disponible para respaldarte sin juzgarte.`,
+    triste: `✧ Consejo de Orión: 'Incluso en la noche más oscura, las estrellas siguen ahí'. Hoy no te exijas perfección. Tu orientador(a) ${psych.nombre} ha recibido tu reporte de check-in para coordinar una plática de apoyo contigo. Tu equipo escolar está de tu lado.`,
+    enojado: `✧ Consejo de Orión: 'La pausa es la mayor muestra de fuerza'. Cuando sientas enojo, aléjate unos minutos de la fuente de tensión, camina o realiza una pausa activa. Tu orientador(a) ${psych.nombre} te contactará para apoyarte en cualquier situación que estés viviendo.`
   };
 
   return `
@@ -647,8 +701,8 @@ function renderAiSupportContainer(student, mood, note){
     <div class="ai-support-banner">
       <div class="as-pulse-icon">💚</div>
       <div>
-        <h3 class="as-banner-title">Red de Apoyo Emocional Inmediata activada</h3>
-        <p class="as-banner-sub">Eirén y Orión están aquí para acompañarte mientras tu reporte es notificado de forma confidencial.</p>
+        <h3 class="as-banner-title">${mood.id === 'neutral' ? 'Acompañamiento Socioemocional Preventivo activado' : 'Red de Apoyo Emocional Inmediata activada'}</h3>
+        <p class="as-banner-sub">Eirén y Orión están aquí para acompañarte mientras tu reporte es notificado de forma confidencial a tu orientador(a).</p>
       </div>
     </div>
 
@@ -677,9 +731,21 @@ function renderAiSupportContainer(student, mood, note){
     </div>
 
     <div class="ai-alert-confirmed-notice">
-      <span style="font-size:22px;">📧</span>
+      <span style="font-size:26px;">📬</span>
       <div>
-        <strong>Alerta institucional y correo de seguimiento generados:</strong> Se notificó de forma confidencial al correo de Orientación Educativa (<em>orientacion.merida1@conalep.edu.mx</em> · <em>${student.guardian || 'Psic. Mariana Estrada'}</em>). Estamos aquí para respaldarte en cada paso sin juicios y a tu ritmo.
+        <div style="font-weight:700;color:var(--maroon);font-size:14px;margin-bottom:3px;">
+          Notificación institucional y correo electrónico enviados con éxito
+        </div>
+        <div style="font-size:12.8px;color:var(--ink);line-height:1.55;">
+          Se notificó a tu orientador(a) asignado(a) <strong>${psych.nombre}</strong> (<code>${psych.email}</code>). 
+          La plataforma le ha generado una alerta y un correo institucional para <strong>ponerse en contacto contigo a la brevedad</strong>.
+        </div>
+        ${alertObj ? `
+        <div style="margin-top:8px;">
+          <button class="btn-outline-maroon" style="padding:4px 12px;font-size:11.5px;background:#fff;" onclick="openStudentEmailPreviewModal('${alertObj.id}')">
+            ✉️ Ver copia del correo enviado a ${psych.nombre.split(' ')[0]}
+          </button>
+        </div>` : ''}
       </div>
     </div>
 
@@ -699,6 +765,80 @@ function renderAiSupportContainer(student, mood, note){
     </div>
   </div>
   `;
+}
+
+function openStudentEmailPreviewModal(alertId){
+  const alt = (db.alerts || []).find(a => a.id === alertId);
+  const psychName = alt?.psychologistName || 'Orientador Educativo';
+  const psychEmail = alt?.psychologistEmail || 'orientacion.merida1@conalep.edu.mx';
+  const subject = alt?.emailSubject || 'Alerta Socioemocional';
+  const dateStr = alt?.date || 'Hoy';
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <div class="email-preview-wrapper">
+      <div class="email-client-header">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:16px;">✉️</span>
+          <strong>Notificación Institucional Enviada</strong>
+        </div>
+        <span class="mono" style="font-size:11px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:100px;">
+          Enviado Automáticamente
+        </span>
+      </div>
+
+      <div class="email-meta-header">
+        <div class="email-meta-row">
+          <span class="em-lbl">De:</span>
+          <span class="em-val"><strong>sistema.alertas@conalep.edu.mx</strong> (NAIMA OS · Orientación)</span>
+        </div>
+        <div class="email-meta-row">
+          <span class="em-lbl">Para:</span>
+          <span class="em-val"><strong>${psychEmail}</strong> (${psychName})</span>
+        </div>
+        <div class="email-meta-row">
+          <span class="em-lbl">Fecha:</span>
+          <span class="em-val">${dateStr}</span>
+        </div>
+        <div class="email-meta-row">
+          <span class="em-lbl">Asunto:</span>
+          <span class="em-subject">${subject}</span>
+        </div>
+      </div>
+
+      <div class="email-body-content">
+        <div class="email-institutional-badge">
+          <div style="font-weight:700;color:var(--maroon);font-size:14px;">COLEGIO NACIONAL DE EDUCACIÓN PROFESIONAL TÉCNICA</div>
+          <div style="font-size:11.5px;color:var(--ink-soft);">PLANTEL MÉRIDA I · ORIENTACIÓN EDUCATIVA Y TUTORÍAS</div>
+        </div>
+
+        <p style="font-size:13px;line-height:1.6;color:var(--ink);margin-bottom:12px;">
+          Estimado/a <strong>${psychName}</strong>,<br>
+          El sistema inteligente NAIMA OS ha registrado un check-in de bienestar que requiere atención institucional.
+        </p>
+
+        <div class="email-student-card">
+          <div style="font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:4px;">
+            ${alt?.studentName || 'Estudiante'} (${alt?.grupo || ''} · ${alt?.carrera || ''})
+          </div>
+          <div style="font-size:12.5px;color:var(--ink-soft);">
+            Estado reportado: <strong>${alt?.moodEmoji || '⚠️'} ${alt?.moodLabel || alt?.mood || ''}</strong>
+            ${alt?.note ? `<br>Comentario del alumno: <em>"${escapeHTML(alt.note)}"</em>` : ''}
+          </div>
+        </div>
+
+        <div style="margin-top:14px;padding:10px 14px;background:#F0F8F4;border-radius:8px;border:1px solid rgba(23,121,91,.2);font-size:12.5px;color:var(--green);line-height:1.5;">
+          ✓ <strong>Acción institucional en proceso:</strong> Tu orientador(a) ${psychName} ha recibido esta solicitud en su panel y te contactará para darte seguimiento personal y confidencial.
+        </div>
+      </div>
+
+      <div class="email-footer-actions">
+        <button class="btn-maroon" style="padding:8px 18px;font-size:12.5px;" onclick="closeModal()">
+          Entendido ✓
+        </button>
+      </div>
+    </div>
+  `);
 }
 
 function renderPositiveAiSupport(student, mood, note){

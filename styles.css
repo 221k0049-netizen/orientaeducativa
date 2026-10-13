@@ -2704,4 +2704,131 @@ a{color:inherit;text-decoration:none;}
     margin:12mm 15mm;
     size:letter portrait;
   }
+}
+
+/* ============================================================
+   ALERTAS TEMPRANAS Y COMUNICACIÓN DIRECTA CON ESTUDIANTE
+   ============================================================ */
+.btn-top-alert{
+  background:#FFF1F0;
+  color:#CF1322;
+  border:1px solid #FFA39E;
+  padding:6px 12px;
+  border-radius:100px;
+  font-size:12px;
+  font-weight:600;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  transition:all .2s ease;
+  animation:pulseAlert 2s infinite ease-in-out;
+}
+.btn-top-alert:hover{
+  background:#CF1322;
+  color:#fff;
+  border-color:#CF1322;
+}
+@keyframes pulseAlert{
+  0%, 100% { box-shadow: 0 0 0 0 rgba(207,19,34,.4); }
+  50% { box-shadow: 0 0 0 6px rgba(207,19,34,0); }
+}
+
+.cub-item-urgent{
+  border-left:4px solid var(--danger);
+  background:linear-gradient(90deg, rgba(235,87,87,.04) 0%, var(--surface) 25%);
+}
+.cub-item-neutral{
+  border-left:4px solid #D97736;
+  background:linear-gradient(90deg, rgba(217,119,54,.04) 0%, var(--surface) 25%);
+}
+
+.student-mood-card.active.is-neutral{
+  border-color:#D97736;
+  box-shadow:0 4px 14px rgba(217,119,54,.18);
+}
+
+/* Modal: Comunicarse con el alumno */
+.contact-modal-wrapper{
+  padding:6px;
+}
+.contact-student-hero{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+.csh-avatar{
+  width:48px;
+  height:48px;
+  border-radius:50%;
+  background:var(--maroon-pale);
+  color:var(--maroon);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+  font-weight:700;
+  border:2px solid var(--surface);
+  box-shadow:var(--shadow-sm);
+  flex-shrink:0;
+}
+.contact-mood-summary{
+  margin-top:14px;
+  padding:12px 14px;
+  border-radius:10px;
+  border:1px solid var(--line);
+}
+.contact-mood-summary.urgent{
+  background:#FFF5F5;
+  border-color:rgba(235,87,87,.25);
+}
+.contact-mood-summary.neutral{
+  background:#FFF9F2;
+  border-color:rgba(217,119,54,.25);
+}
+.contact-channel-card{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:14px;
+}
+.ccc-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.contact-draft-preview{
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px dashed var(--line);
+}
+.contact-draft-body{
+  background:#F8F9FA;
+  padding:10px 12px;
+  border-radius:8px;
+  font-size:12.5px;
+  line-height:1.5;
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+  border:1px solid #E9ECEF;
+}
+.btn-copy-draft{
+  background:none;
+  border:1px solid var(--line);
+  padding:3px 8px;
+  border-radius:6px;
+  font-size:11px;
+  font-weight:600;
+  color:var(--ink-soft);
+  cursor:pointer;
+  transition:all .15s ease;
+}
+.btn-copy-draft:hover{
+  background:var(--maroon);
+  color:#fff;
+  border-color:var(--maroon);
 }
