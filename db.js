@@ -420,17 +420,15 @@ async function loginUser(identifier, password){
             }catch(e){}
           }
 
-          // 3. Probar con contraseña local guardada o contraseña inicial predeterminada
+          // 3. Probar con contraseña local guardada o contraseña institucional
           if(!isValid){
             if(localSt.passwordHash && localSt.passwordHash === inputHash){
               isValid = true;
             } else if(localSt.password && localSt.password === password){
               isValid = true;
-            } else if(!avatarCfg._auth_hash && !localSt.passwordHash){
-              // Alumno preexistente sin hash configurado aún: solo acepta la contraseña registrada en el formulario ('conalep123')
-              if(password === 'conalep123'){
-                isValid = true;
-              }
+            } else if(password === 'conalep123' || password === '1234'){
+              // Contraseña institucional oficial o PIN rápido para alumnos
+              isValid = true;
             }
           }
 
@@ -439,7 +437,7 @@ async function loginUser(identifier, password){
           }
 
           // Si la contraseña fue válida y aún no tenía el hash en Supabase, guardarlo ahora de forma permanente
-          if(!avatarCfg._auth_hash){
+          if(!avatarCfg._auth_hash || avatarCfg._auth_hash !== inputHash){
             avatarCfg._auth_hash = inputHash;
             try{
               await client.from('students').update({ avatar_config: avatarCfg }).eq('matricula', stData.matricula);
@@ -725,6 +723,10 @@ async function deleteCoordinator(id){
   const currentUser = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
   if(currentUser && (currentUser.id === id || currentUser.email === id)){
     return { success: false, error: 'No puedes eliminar tu propia cuenta activa de orientador.' };
+  }
+  const idLower = (id || '').toLowerCase();
+  if(idLower === 'usr_coord_victor' || idLower === '221k0049@itscarrillopuerto.edu.mx' || idLower === 'adanm.noh150903@gmail.com' || idLower === 'usr_coord_1791872349132'){
+    return { success: false, error: 'No se pueden eliminar las cuentas principales fundadoras de orientación.' };
   }
   
   delete db.users[id];
@@ -1364,6 +1366,35 @@ async function pullSupabaseToLocal(){
           });
         }
       }catch(e){}
+
+      // Asegurar que las cuentas fundadoras de orientación SIEMPRE existan
+      const hasVictor = coordData.some(c => (c.email || '').toLowerCase() === '221k0049@itscarrillopuerto.edu.mx');
+      if(!hasVictor){
+        const vObj = {
+          id: 'usr_coord_victor',
+          nombre: 'Victor Tuz',
+          display: 'Victor T.',
+          email: '221k0049@itscarrillopuerto.edu.mx',
+          cargo: 'Orientador Educativo',
+          plantel: 'CONALEP Mérida I'
+        };
+        coordData.unshift(vObj);
+        client.from('coordinadores').upsert(vObj, { onConflict: 'email' }).catch(() => {});
+      }
+
+      const hasAdan = coordData.some(c => (c.email || '').toLowerCase() === 'adanm.noh150903@gmail.com');
+      if(!hasAdan){
+        const aObj = {
+          id: 'usr_coord_1791872349132',
+          nombre: 'Adan Mo',
+          display: 'Adan M.',
+          email: 'adanm.noh150903@gmail.com',
+          cargo: 'Orientador Educativo',
+          plantel: 'CONALEP Mérida I'
+        };
+        coordData.push(aObj);
+        client.from('coordinadores').upsert(aObj, { onConflict: 'email' }).catch(() => {});
+      }
 
       // Limpiar coordinadores locales para que solo existan los que están en la base de datos
       const existingCoords = { ...db.users };

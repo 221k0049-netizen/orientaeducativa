@@ -1981,6 +1981,8 @@ function renderEquipoCoordinadores(){
 
   const rows = coords.map(c => {
     const isMe = (c.id === currentUser.id || c.email === currentUser.email);
+    const emailLower = (c.email || '').toLowerCase();
+    const isFounder = (emailLower === '221k0049@itscarrillopuerto.edu.mx' || emailLower === 'adanm.noh150903@gmail.com');
     let cPhoto = c.photo || c.avatar_url;
     if(cPhoto && typeof cPhoto === 'string' && cPhoto.trim().startsWith('{')){
       try{ cPhoto = JSON.parse(cPhoto).photo || null; }catch(e){}
@@ -2016,11 +2018,11 @@ function renderEquipoCoordinadores(){
           </span>
         </td>
         <td style="text-align:right;">
-          ${!isMe ? `
+          ${(!isMe && !isFounder) ? `
             <button class="btn-delete-task" onclick="handleEliminarCoordinador('${c.id}', '${escapeHTML(c.nombre)}')" title="Dar de baja orientador">
               ✕
             </button>
-          ` : '<span style="font-size:11.5px;color:var(--ink-muted);font-weight:500;">Sesión actual</span>'}
+          ` : `<span style="font-size:11.5px;color:var(--ink-muted);font-weight:500;">${isMe ? 'Sesión actual' : 'Fundador'}</span>`}
         </td>
       </tr>
     `;
