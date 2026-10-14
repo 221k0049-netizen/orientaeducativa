@@ -2937,4 +2937,128 @@ a{color:inherit;text-decoration:none;}
   background:var(--maroon);
   color:#fff;
   border-color:var(--maroon);
+}
+
+/* ============================================================
+   NAIMA OS · MÓDULOS DE PSICOLOGÍA ESCOLAR Y TAMIZAJE PIOE
+   ============================================================ */
+.clinical-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.clinical-card {
+  background: #FFF;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  transition: all .2s ease;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+.clinical-card:hover {
+  border-color: var(--teal);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.clinical-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 14px;
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+.clinical-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.clinical-card-desc {
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+  margin-bottom: 18px;
+  flex: 1;
+}
+.clinical-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.badge-tamizaje {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 100px;
+}
+.badge-tamizaje.bajo { background: #E8F8F1; color: #27AE60; }
+.badge-tamizaje.medio { background: #FEF9E7; color: #D4AC0D; }
+.badge-tamizaje.alto { background: #FDEDEC; color: #E74C3C; }
+.badge-tamizaje.crisis { background: #7A0F0F; color: #FFF; }
+
+.tamizaje-student-card {
+  background: #FFF;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.tamizaje-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.tamizaje-kpi-box {
+  background: #FAF8F5;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+.tamizaje-kpi-box .val {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--maroon);
+}
+.tamizaje-kpi-box .lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-top: 2px;
+}
+
+.embed-iframe-container {
+  width: 100%;
+  height: 820px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #FFF;
+  box-shadow: var(--shadow-sm);
+}
+.embed-iframe-container iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+@media (max-width: 768px) {
+  .embed-iframe-container { height: 600px; }
+  .clinical-card-grid { grid-template-columns: 1fr; }
 }

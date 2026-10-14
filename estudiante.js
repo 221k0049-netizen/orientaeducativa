@@ -13,6 +13,7 @@ if (!currentStudentUser || currentStudentUser.rol !== 'estudiante') {
 const SECTIONS_STUDENT = [
   { id:'student_inicio',  label:'Mi Espacio',        icon:'🏠' },
   { id:'student_checkin', label:'Check-in Emocional',icon:'💖' },
+  { id:'student_tamizaje',label:'Tamizaje PIOE',     icon:'📋' },
   { id:'student_eirene',  label:'Hablar con Eirén',  icon:'🌸', sep:'COMPAÑERAS IA' },
   { id:'student_orion',   label:'Consejos de Orión', icon:'✧' },
   { id:'student_campus3d',label:'Campus 3D & Juegos',icon:'🎮', sep:'ACTIVIDADES' },
@@ -69,12 +70,13 @@ function nav(sec){
   const el = document.getElementById('content');
   window.scrollTo(0,0);
 
-  if(sec === 'student_inicio')   el.innerHTML = renderStudentInicio();
-  else if(sec === 'student_checkin')  el.innerHTML = renderStudentCheckin();
-  else if(sec === 'student_eirene')   el.innerHTML = renderStudentEirene();
-  else if(sec === 'student_orion')    el.innerHTML = renderStudentOrion();
-  else if(sec === 'student_campus3d') el.innerHTML = renderStudentCampus3D();
-  else if(sec === 'student_diario')   el.innerHTML = renderStudentDiario();
+  if(sec === 'student_inicio')         el.innerHTML = renderStudentInicio();
+  else if(sec === 'student_checkin')   el.innerHTML = renderStudentCheckin();
+  else if(sec === 'student_tamizaje')  el.innerHTML = renderStudentTamizaje();
+  else if(sec === 'student_eirene')    el.innerHTML = renderStudentEirene();
+  else if(sec === 'student_orion')     el.innerHTML = renderStudentOrion();
+  else if(sec === 'student_campus3d')  el.innerHTML = renderStudentCampus3D();
+  else if(sec === 'student_diario')    el.innerHTML = renderStudentDiario();
 }
 
 function lastMood(s){
@@ -156,9 +158,30 @@ function renderStudentInicio(){
       </div>
     </div>
   </div>
-
   ${alertNote}
   ${moodBanner}
+
+  ${s.tamizaje ? `
+    <div class="banner" style="border-left-color:var(--teal);margin-bottom:20px;">
+      <div class="b-icon" style="background:var(--teal-soft);color:var(--teal);">📋</div>
+      <div class="b-body">
+        <span class="b-tag">Tamizaje Psicoemocional PIOE</span>
+        <div class="b-title">Tamizaje completado el ${new Date(s.tamizaje.fecha).toLocaleDateString('es-MX')}</div>
+        <div class="b-desc">Tus respuestas confidenciales fueron recibidas. Tu orientador(a) institucional está al tanto de tu bienestar.</div>
+      </div>
+      <button class="btn-maroon" onclick="nav('student_tamizaje')">Ver Mis Resultados →</button>
+    </div>
+  ` : `
+    <div class="banner" style="border-left-color:var(--maroon);margin-bottom:20px;">
+      <div class="b-icon" style="background:#FFF0F2;color:var(--maroon);">📋</div>
+      <div class="b-body">
+        <span class="b-tag">Evaluación de Bienestar PIOE</span>
+        <div class="b-title">¿Ya respondiste tu cuestionario estudiantil?</div>
+        <div class="b-desc">Toma 5 minutos para responder este tamizaje confidencial (PHQ-A y GAD-7) y recibir recomendaciones útiles.</div>
+      </div>
+      <button class="btn-maroon" onclick="nav('student_tamizaje')">Comenzar Tamizaje →</button>
+    </div>
+  `}
 
   <span class="section-label">Tus herramientas</span>
   <h2 class="section-title">¿Qué te gustaría hacer hoy?</h2>
@@ -169,6 +192,14 @@ function renderStudentInicio(){
       <div class="q-body">
         <span class="q-title">Check-in Emocional</span>
         <span class="q-sub">Registra cómo te sientes hoy</span>
+      </div>
+      <span class="q-chev">›</span>
+    </button>
+    <button class="quick-card" onclick="nav('student_tamizaje')">
+      <div class="q-icon">📋</div>
+      <div class="q-body">
+        <span class="q-title">Tamizaje PIOE</span>
+        <span class="q-sub">${s.tamizaje ? 'Ver mis resultados' : 'Comenzar cuestionario'}</span>
       </div>
       <span class="q-chev">›</span>
     </button>
@@ -1605,4 +1636,91 @@ async function deleteStudentProfilePhoto(){
   if(currentStudentSection === 'student_inicio'){
     nav('student_inicio');
   }
+}
+
+/* ============================================================
+   SECCIÓN: TAMIZAJE PSICOEMOCIONAL ESTUDIANTIL (PIOE)
+   ============================================================ */
+function renderStudentTamizaje(){
+  const user = getCurrentUser();
+  const s = db.students[user.matricula || user.id] || user;
+  const t = s.tamizaje || null;
+
+  return `
+    <div class="page-head">
+      <div>
+        <span class="eyebrow">PROGRAMA INSTITUCIONAL DE ORIENTACIÓN EDUCATIVA (PIOE)</span>
+        <h1>Tamizaje Psicoemocional Estudiantil</h1>
+        <p>Cuestionario confidencial de tamizaje para la detección oportuna de necesidades de apoyo y fortalecimiento de tu bienestar en CONALEP Mérida 1.</p>
+      </div>
+      <span class="demo-chip">CONALEP Mérida I</span>
+    </div>
+
+    ${t ? `
+      <div class="tamizaje-student-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+          <div>
+            <span class="section-label" style="margin:0;">Última evaluación registrada</span>
+            <h3 style="font-size:18px;margin:2px 0 0 0;color:var(--ink);">Resultados de tu Evaluación PIOE</h3>
+          </div>
+          <span class="badge-tamizaje ${(t.resultados && t.resultados.riesgoGlobal) || 'bajo'}">
+            Estado Global: ${((t.resultados && t.resultados.riesgoGlobal) || 'bajo').toUpperCase()}
+          </span>
+        </div>
+
+        <p style="font-size:13px;color:var(--ink-soft);line-height:1.5;margin-bottom:16px;">
+          Evaluación realizada el <strong>${new Date(t.fecha).toLocaleDateString('es-MX', {day:'2-digit',month:'long',year:'numeric'})}</strong>. Tus indicadores han sido enviados confidencialmente a tu orientador(a) institucional.
+        </p>
+
+        <div class="tamizaje-kpi-grid">
+          <div class="tamizaje-kpi-box">
+            <div class="val">${(t.resultados && t.resultados.phq ? t.resultados.phq.nivel : 'Sin indicadores')}</div>
+            <div class="lbl">Estado de Ánimo (PHQ-A)</div>
+          </div>
+          <div class="tamizaje-kpi-box">
+            <div class="val">${(t.resultados && t.resultados.gad ? t.resultados.gad.nivel : 'Sin indicadores')}</div>
+            <div class="lbl">Ansiedad / Estrés (GAD-7)</div>
+          </div>
+          <div class="tamizaje-kpi-box">
+            <div class="val">${(t.resultados && t.resultados.assist ? t.resultados.assist.nivel : 'Sin riesgo')}</div>
+            <div class="lbl">Hábitos y Salud (ASSIST)</div>
+          </div>
+          <div class="tamizaje-kpi-box">
+            <div class="val">${(t.resultados && t.resultados.posit ? t.resultados.posit.nivel : 'Protegido')}</div>
+            <div class="lbl">Entorno Psicosocial</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
+          <a href="evaluacion-estudiantil.html" target="_blank" class="btn-maroon" style="padding:10px 18px;font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+            📋 Ver Detalle Completo o Repetir Cuestionario ↗
+          </a>
+        </div>
+      </div>
+    ` : `
+      <div class="banner" style="border-left-color:var(--maroon);margin-bottom:24px;">
+        <div class="b-icon">📋</div>
+        <div class="b-body">
+          <span class="b-tag">Bienestar y Salud Mental</span>
+          <div class="b-title">Tu bienestar es fundamental para tu éxito en CONALEP</div>
+          <div class="b-desc">Este cuestionario incluye escalas reconocidas internacionalmente (PHQ-A y GAD-7) para ayudarte a identificar cómo te sientes y darte recomendaciones inmediatas.</div>
+        </div>
+        <a href="evaluacion-estudiantil.html" target="_blank" class="btn-maroon" style="text-decoration:none;">Iniciar Cuestionario →</a>
+      </div>
+    `}
+
+    <div class="section-head-row" style="margin:24px 0 14px;">
+      <div>
+        <span class="section-label">Cuestionario en Pantalla</span>
+        <h2 class="section-title" style="margin-bottom:0;">Evaluación Estudiantil Integrada</h2>
+      </div>
+      <a href="evaluacion-estudiantil.html" target="_blank" class="btn-outline-maroon" style="text-decoration:none;padding:6px 14px;font-size:12.5px;">
+        Abrir en Pantalla Completa ↗
+      </a>
+    </div>
+
+    <div class="embed-iframe-container" style="height:760px;">
+      <iframe src="evaluacion-estudiantil.html" title="Evaluación Estudiantil CONALEP"></iframe>
+    </div>
+  `;
 }

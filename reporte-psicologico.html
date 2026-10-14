@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Reporte Psicológico Escolar Oficial — CONALEP Plantel Mérida 1">
+<title>Reporte Psicológico Escolar — CONALEP Mérida 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Montserrat:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  :root {
+    --verde-conalep: #007E67;
+    --verde-dark: #005C4B;
+    --verde-deep: #003D32;
+    --verde-light: #E6F5F2;
+    --verde-pale: #F0FAF8;
+    --dorado: #C8A951;
+    --dorado-light: #FBF6E9;
+    --dorado-border: #E8D9B0;
+    --t1: #1A1E1C;
+    --t2: #3A4340;
+    --t3: #5A6360;
+    --borde: #D0DDD6;
+    --blanco: #FFFFFF;
+    --gris-fondo: #F2F5F4;
+    --rojo: #C0392B;
+    --amarillo: #D4AC0D;
+    --verde-status: #27AE60;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Montserrat', sans-serif;
+    background: var(--gris-fondo);
+    color: var(--t1);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* BARRA SUPERIOR DE CONTROLES (no se imprime) */
+  .report-top-bar {
+    background: var(--verde-deep);
+    color: #FFF;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 3px 12px rgba(0,61,50,0.25);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .rtb-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .rtb-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.12);
+    color: #FFF;
+    border: 1px solid rgba(255,255,255,0.25);
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all .2s;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .rtb-back-btn:hover {
+    background: rgba(255,255,255,0.2);
+    transform: translateX(-2px);
+  }
+  .rtb-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    color: #D6EFE7;
+  }
+  .rtb-btn-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .rtb-btn {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all .2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .rtb-btn-primary {
+    background: var(--dorado);
+    color: #1A1A00;
+  }
+  .rtb-btn-primary:hover {
+    background: #D8BA63;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(200,169,81,0.3);
+  }
+  .rtb-btn-secondary {
+    background: transparent;
+    color: #FFF;
+    border: 1.5px solid rgba(255,255,255,0.3);
+  }
+  .rtb-btn-secondary:hover {
+    background: rgba(255,255,255,0.1);
+  }
+  .rtb-btn-ghost {
+    background: transparent;
+    color: #F1948A;
+    border: 1.5px solid rgba(241,148,138,0.4);
+  }
+  .rtb-btn-ghost:hover {
+    background: rgba(192,57,43,0.15);
+  }
+
+  /* SELECTOR RÁPIDO DE ALUMNO */
+  .student-quick-picker {
+    background: #FFF;
+    border-bottom: 1.5px solid var(--borde);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .sqp-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--t3);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+  .sqp-select {
+    padding: 6px 12px;
+    border: 1.5px solid var(--borde);
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: var(--t1);
+    min-width: 260px;
+    max-width: 100%;
+    background: #FFF;
+  }
+
+  /* PÁGINA Y HOJA DE REPORTE */
+  .report-wrap {
+    max-width: 960px;
+    margin: 28px auto 60px;
+    padding: 0 16px;
+  }
+  .report-sheet {
+    background: var(--blanco);
+    border-radius: 8px;
+    box-shadow: 0 4px 28px rgba(0,0,0,.08);
+    border: 1px solid var(--borde);
+    overflow: hidden;
+  }
+
+  /* ENCABEZADO INSTITUCIONAL */
+  .report-header {
+    background: linear-gradient(135deg, var(--verde-deep) 0%, var(--verde-conalep) 100%);
+    color: #FFF;
+    padding: 28px 36px 22px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .report-header::after {
+    content: '';
+    position: absolute;
+    right: -40px;
+    bottom: -40px;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: rgba(200,169,81,0.08);
+  }
+  .logo-shield {
+    width: 64px;
+    height: 64px;
+    background: rgba(255,255,255,0.12);
+    border: 2px solid rgba(255,255,255,0.25);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-shield .main-txt {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--dorado);
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+  .logo-shield .sub-txt {
+    font-size: 7px;
+    font-weight: 700;
+    color: rgba(255,255,255,.8);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-top: 2px;
+  }
+  .header-main-info {
+    flex: 1;
+  }
+  .header-main-info .sys-label {
+    font-size: 10px;
+    color: var(--dorado);
+    letter-spacing: .12em;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .header-main-info h1 {
+    font-family: 'Crimson Pro', serif;
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: #FFF;
+    line-height: 1.15;
+    margin-bottom: 3px;
+  }
+  .header-main-info .plantel-name {
+    font-size: 12px;
+    color: rgba(255,255,255,0.85);
+  }
+  .folio-box {
+    background: rgba(200,169,81,0.15);
+    border: 1.5px solid var(--dorado);
+    border-radius: 8px;
+    padding: 8px 16px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .folio-box .f-lbl {
+    font-size: 9px;
+    color: var(--dorado);
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    display: block;
+  }
+  .folio-box input {
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: #FFF;
+    width: 140px;
+    text-align: right;
+  }
+
+  /* BARRA DE TIPO DE REPORTE */
+  .type-bar {
+    background: var(--verde-pale);
+    border-bottom: 1.5px solid var(--borde);
+    padding: 12px 36px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .type-bar-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--verde-dark);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+  .type-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .type-chips label {
+    cursor: pointer;
+  }
+  .type-chips input {
+    display: none;
+  }
+  .type-chips .chip {
+    display: block;
+    padding: 5px 13px;
+    border-radius: 20px;
+    border: 1.5px solid var(--borde);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--t2);
+    background: #FFF;
+    transition: all .2s;
+  }
+  .type-chips input:checked + .chip {
+    background: var(--verde-conalep);
+    color: #FFF;
+    border-color: var(--verde-conalep);
+  }
+
+  /* STATUS BAR */
+  .status-strip {
+    background: #FAFBF9;
+    border-bottom: 1px solid var(--borde);
+    padding: 8px 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--t3);
+  }
+  .status-strip .prog-bar {
+    width: 140px;
+    height: 6px;
+    background: var(--borde);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .status-strip .prog-bar-inner {
+    height: 100%;
+    background: var(--verde-conalep);
+    width: 0%;
+    transition: width .4s ease;
+  }
+
+  /* SECCIONES FORMULARIO */
+  .section {
+    padding: 24px 36px;
+    border-bottom: 1px solid #EAEFEA;
+  }
+  .section-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .sec-num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--verde-conalep);
+    color: #FFF;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .section-title-row h2 {
+    font-family: 'Crimson Pro', serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--verde-deep);
+    letter-spacing: .02em;
+    text-transform: uppercase;
+  }
+  .sec-div {
+    flex: 1;
+    height: 1px;
+    background: var(--borde);
+  }
+
+  /* CAMPOS Y GRIDS */
+  .grid {
+    display: grid;
+    gap: 12px;
+  }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .span-2 { grid-column: span 2; }
+  .span-3 { grid-column: span 3; }
+  .span-full { grid-column: 1 / -1; }
+
+  .field-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .field-wrap label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--t3);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+  .field-wrap input,
+  .field-wrap select,
+  .field-wrap textarea {
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--t1);
+    background: #FAFBF9;
+    border: 1.5px solid var(--borde);
+    border-radius: 6px;
+    padding: 8px 11px;
+    outline: none;
+    transition: all .2s;
+  }
+  .field-wrap input:focus,
+  .field-wrap select:focus,
+  .field-wrap textarea:focus {
+    border-color: var(--verde-conalep);
+    background: #FFF;
+    box-shadow: 0 0 0 3px rgba(0,126,103,0.12);
+  }
+  .field-wrap textarea {
+    resize: vertical;
+    min-height: 75px;
+    line-height: 1.5;
+  }
+
+  /* CHECK PILLS */
+  .checks-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .check-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: #FAFBF9;
+    border: 1.5px solid var(--borde);
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--t2);
+    cursor: pointer;
+    user-select: none;
+    transition: all .18s;
+  }
+  .check-pill input { display: none; }
+  .check-pill:has(input:checked) {
+    background: var(--verde-pale);
+    border-color: var(--verde-conalep);
+    color: var(--verde-deep);
+  }
+  .check-pill .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--borde);
+    transition: background .2s;
+  }
+  .check-pill:has(input:checked) .dot {
+    background: var(--verde-conalep);
+  }
+
+  /* ESCALAS DE EVALUACIÓN */
+  .scale-box {
+    background: #FAFBF9;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 6px;
+  }
+  .scale-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--borde);
+    gap: 12px;
+  }
+  .scale-row:last-child { border-bottom: none; }
+  .scale-row .scale-lbl {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--t2);
+    flex: 1;
+  }
+  .scale-select {
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1.5px solid var(--borde);
+    font-size: 11.5px;
+    font-family: inherit;
+    background: #FFF;
+    outline: none;
+  }
+
+  /* SEMÁFORO DE RIESGO */
+  .risk-cards-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .risk-card-opt { position: relative; }
+  .risk-card-opt input { display: none; }
+  .risk-card-label {
+    display: block;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 2px solid var(--borde);
+    cursor: pointer;
+    text-align: center;
+    min-width: 105px;
+    transition: all .2s;
+  }
+  .risk-card-label .ico { font-size: 18px; display: block; margin-bottom: 2px; }
+  .risk-card-label .name { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+
+  .risk-card-opt input:checked + .risk-card-label.bajo { background: #E8F8F1; border-color: var(--verde-status); }
+  .risk-card-opt input:checked + .risk-card-label.medio { background: #FEF9E7; border-color: var(--amarillo); }
+  .risk-card-opt input:checked + .risk-card-label.alto { background: #FDEDEC; border-color: var(--rojo); }
+  .risk-card-opt input:checked + .risk-card-label.critico { background: #F9EBEA; border-color: #7A0F0F; }
+
+  .risk-card-label.bajo .name { color: var(--verde-status); }
+  .risk-card-label.medio .name { color: var(--amarillo); }
+  .risk-card-label.alto .name { color: var(--rojo); }
+  .risk-card-label.critico .name { color: #7A0F0F; }
+
+  /* NOTAS Y BANNER INFORMATIVO */
+  .clinic-hint {
+    background: var(--dorado-light);
+    border-left: 3.5px solid var(--dorado);
+    border-radius: 0 6px 6px 0;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #634C06;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  /* FIRMAS */
+  .signatures-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-top: 24px;
+  }
+  .sig-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .sig-line {
+    width: 80%;
+    height: 1.5px;
+    background: var(--t1);
+    margin-top: 45px;
+    margin-bottom: 6px;
+  }
+  .sig-name {
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .sig-desc {
+    font-size: 10px;
+    color: var(--t3);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+
+  /* FOOTER */
+  .report-footer {
+    background: var(--verde-deep);
+    color: #FFF;
+    padding: 14px 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 10.5px;
+  }
+  .report-footer .confidential {
+    color: var(--dorado);
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  /* MEDIA PRINT */
+  @media print {
+    .report-top-bar, .student-quick-picker, .no-print {
+      display: none !important;
+    }
+    body {
+      background: #FFF;
+    }
+    .report-wrap {
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    .report-sheet {
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+    }
+    .section {
+      page-break-inside: avoid;
+    }
+    .field-wrap input, .field-wrap select, .field-wrap textarea {
+      border: none;
+      border-bottom: 1px solid #888;
+      background: transparent;
+      border-radius: 0;
+      padding: 3px 0;
+    }
+    @page {
+      margin: 15mm 12mm;
+      size: letter;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .section { padding: 18px 20px; }
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    .span-2, .span-3 { grid-column: span 1; }
+    .report-header { flex-direction: column; text-align: center; }
+    .signatures-wrap { grid-template-columns: 1fr; gap: 20px; }
+    .folio-box { text-align: center; }
+    .folio-box input { text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- BARRA DE CONTROLES SUPERIOR (NO IMPRIME) -->
+<header class="report-top-bar no-print">
+  <div class="rtb-left">
+    <a href="admin.html" class="rtb-back-btn" title="Regresar al Portal Administrador">
+      ← Volver al Portal
+    </a>
+    <span class="rtb-title">📋 REPORTE PSICOLÓGICO CLÍNICO ESCOLAR · CONALEP MÉRIDA 1</span>
+  </div>
+  <div class="rtb-btn-group">
+    <button type="button" class="rtb-btn rtb-btn-ghost" onclick="limpiarFormulario()">🗑 Limpiar</button>
+    <button type="button" class="rtb-btn rtb-btn-secondary" onclick="guardarBorrador()">💾 Guardar en Sistema</button>
+    <button type="button" class="rtb-btn rtb-btn-primary" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
+  </div>
+</header>
+
+<!-- SELECTOR RÁPIDO DE ALUMNO (NO IMPRIME) -->
+<div class="student-quick-picker no-print">
+  <span class="sqp-label">Cargar datos de alumno registrado:</span>
+  <select id="alumnoPicker" class="sqp-select" onchange="cargarDatosAlumno(this.value)">
+    <option value="">— Seleccionar estudiante para autorrellenar —</option>
+  </select>
+  <span style="font-size:11px;color:var(--t3);">✦ Completa automáticamente matrícula, grupo, carrera y contacto.</span>
+</div>
+
+<div class="report-wrap">
+  <article class="report-sheet" id="reportSheet">
+
+    <!-- ENCABEZADO INSTITUCIONAL -->
+    <div class="report-header">
+      <div class="logo-shield">
+        <span class="main-txt">CNA</span>
+        <span class="sub-txt">CONALEP</span>
+      </div>
+      <div class="header-main-info">
+        <div class="sys-label">Sistema Nacional de Educación Profesional Técnica · Yucatán</div>
+        <h1>Reporte Psicológico Escolar</h1>
+        <div class="plantel-name">Plantel Mérida 1 "Felipe Carrillo Puerto" · Departamento de Orientación y Tutorías</div>
+      </div>
+      <div class="folio-box">
+        <span class="f-lbl">Folio Institucional</span>
+        <input type="text" id="folio" placeholder="MER1-26-001" maxlength="16">
+      </div>
+    </div>
+
+    <!-- TIPO DE REPORTE -->
+    <div class="type-bar">
+      <span class="type-bar-label">Modalidad:</span>
+      <div class="type-chips">
+        <label><input type="radio" name="tipoReporte" value="inicial" checked><span class="chip">Inicial / Primera vez</span></label>
+        <label><input type="radio" name="tipoReporte" value="seguimiento"><span class="chip">Seguimiento</span></label>
+        <label><input type="radio" name="tipoReporte" value="cierre"><span class="chip">Cierre de caso</span></label>
+        <label><input type="radio" name="tipoReporte" value="derivacion"><span class="chip">Derivación externa</span></label>
+        <label><input type="radio" name="tipoReporte" value="crisis"><span class="chip">⚠ Urgente / Crisis</span></label>
+      </div>
+    </div>
+
+    <!-- STATUS STRIP -->
+    <div class="status-strip no-print">
+      <span id="completionLabel">0% completado</span>
+      <div class="prog-bar"><div class="prog-bar-inner" id="progBarInner"></div></div>
+      <span id="dateStamp">Fecha</span>
+    </div>
+
+    <!-- I. DATOS DEL ALUMNO -->
+    <section class="section">
+      <div class="section-title-row">
+        <div class="sec-num">I</div>
+        <h2>Datos de Identificación del Estudiante</h2>
+        <div class="sec-div"></div>
+      </div>
+      <div class="grid grid-3">
+        <div class="field-wrap span-2">
+          <label for="alNombre">Nombre completo del alumno(a) *</label>
+          <input type="text" id="alNombre" placeholder="Apellidos, Nombres" required>
+        </div>
+        <div class="field-wrap">
+          <label for="alMat">Matrícula escolar *</label>
+          <input type="text" id="alMat" placeholder="Ej. PTB-26101">
+        </div>
+        <div class="field-wrap">
+          <label for="alNac">Fecha de nacimiento</label>
+          <input type="date" id="alNac">
+        </div>
+        <div class="field-wrap">
+          <label for="alEdad">Edad cumplida</label>
+          <input type="number" id="alEdad" min="14" max="25" placeholder="16">
+        </div>
+        <div class="field-wrap">
+          <label for="alSexo">Sexo</label>
+          <select id="alSexo">
+            <option value="">— Seleccionar —</option>
+            <option>Femenino</option>
+            <option>Masculino</option>
+            <option>No binario</option>
+            <option>Prefiero no especificar</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label for="alSem">Semestre</label>
+          <select id="alSem">
+            <option value="">— Semestre —</option>
+            <option>1°</option><option>2°</option><option>3°</option>
+            <option>4°</option><option>5°</option><option>6°</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label for="alCarrera">Carrera técnica</label>
+          <select id="alCarrera">
+            <option value="">— Seleccionar carrera —</option>
+            <option>Técnico en Informática</option>
+            <option>Técnico en Administración</option>
+            <option>Técnico en Contabilidad</option>
+            <option>Técnico en Enfermería General</option>
+            <option>Técnico en Alimentos y Bebidas</option>
+            <option>Técnico en Soporte de Cómputo</option>
+            <option>Técnico en Mecatrónica</option>
+            <option>Otra</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label for="alGrupo">Grupo / Turno</label>
+          <input type="text" id="alGrupo" placeholder="Ej. 402 - Matutino">
+        </div>
+        <div class="field-wrap">
+          <label for="alTel">Teléfono de contacto</label>
+          <input type="tel" id="alTel" placeholder="999 000 0000">
+        </div>
+        <div class="field-wrap">
+          <label for="alEmail">Correo institucional</label>
+          <input type="email" id="alEmail" placeholder="alumno@conalepmex.edu.mx">
+        </div>
+        <div class="field-wrap">
+          <label for="alSituacion">Situación académica</label>
+          <select id="alSituacion">
+            <option>Regular</option>
+            <option>Con materias reprobadas</option>
+            <option>En riesgo de deserción</option>
+            <option>Baja temporal</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- II. DATOS DEL TUTOR -->
+    <section class="section">
+      <div class="section-title-row">
+        <div class="sec-num">II</div>
+        <h2>Datos del Tutor / Responsable Legal</h2>
+        <div class="sec-div"></div>
+      </div>
+      <div class="grid grid-3">
+        <div class="field-wrap span-2">
+          <label for="tuNombre">Nombre completo del padre, madre o tutor(a)</label>
+          <input type="text" id="tuNombre" placeholder="Nombre completo del responsable">
+        </div>
+        <div class="field-wrap">
+          <label for="tuParentesco">Parentesco</label>
+          <select id="tuParentesco">
+            <option>Madre</option>
+            <option>Padre</option>
+            <option>Tutor legal</option>
+            <option>Abuelo(a)</option>
+            <option>Hermano(a) mayor</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label for="tuTel">Teléfono del tutor</label>
+          <input type="tel" id="tuTel" placeholder="999 000 0000">
+        </div>
+        <div class="field-wrap">
+          <label for="tuEmail">Correo del tutor</label>
+          <input type="email" id="tuEmail" placeholder="tutor@correo.com">
+        </div>
+        <div class="field-wrap">
+          <label for="tuNotificado">¿El tutor fue notificado?</label>
+          <select id="tuNotificado">
+            <option>Sí, vía telefónica</option>
+            <option>Sí, en entrevista presencial</option>
+            <option>Pendiente de citar</option>
+            <option>No notificado aún</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- III. MOTIVO DE CONSULTA -->
+    <section class="section">
+      <div class="section-title-row">
+        <div class="sec-num">III</div>
+        <h2>Motivo de Consulta y Problemática Detectada</h2>
+        <div class="sec-div"></div>
+      </div>
+      <div class="field-wrap" style="margin-bottom:14px;">
+        <label>Origen de la derivación o reporte:</label>
+        <div class="checks-row">
+          <label class="check-pill"><input type="checkbox" name="derivador" value="alumno"><span class="dot"></span>Solicitud del propio alumno</label>
+          <label class="check-pill"><input type="checkbox" name="derivador" value="docente"><span class="dot"></span>Docente de asignatura</label>
+          <label class="check-pill"><input type="checkbox" name="derivador" value="tutorAcad"><span class="dot"></span>Tutor académico grupal</label>
+          <label class="check-pill"><input type="checkbox" name="derivador" value="padres"><span class="dot"></span>Padre / Madre de familia</label>
+          <label class="check-pill"><input type="checkbox" name="derivador" value="direccion"><span class="dot"></span>Dirección / Servicios Escolares</label>
+          <label class="check-pill"><input type="checkbox" name="derivador" value="deteccion"><span class="dot"></span>Tamizaje automático NAIMA OS</label>
+        </div>
+      </div>
+      <div class="field-wrap" style="margin-bottom:14px;">
+        <label>Problemáticas detectadas (seleccionar todas las aplicables):</label>
+        <div class="checks-row">
+          <label class="check-pill"><input type="checkbox" name="prob" value="ansiedad"><span class="dot"></span>Ansiedad / Estrés severo</label>
+          <label class="check-pill"><input type="checkbox" name="prob" value="depresion"><span class="dot"></span>Bajo estado de ánimo / Depresión</label>
+          <label class="check-pill"><input type="checkbox" name="prob" value="rendimiento"><span class="dot"></span>Bajo rendimiento escolar</label>
+          <label class="check-pill"><input type="checkbox" name="prob" value="ausentismo"><span class="dot"></span>Ausentismo / Deserción</label>
+          <label class="check-pill"><input type="checkbox" name="prob" value="familiar"><span class="dot"></span>Conflictos familiares</label>
+          <label class="check-pill"><input type="checkbox" name="prob" value="bullying"><span class="dot"></span>Acoso escolar (Bullying)</label>
+          <label class="check-pill"><input type="checkbox" name="prob" value="sustancias"><span class="dot"></span>Consumo de sustancias</label>
+          <label class="check-pill"><input type="checkbox" name="prob" value="autolesion"><span class="dot"></span>Autolesiones (Cutting)</label>
+          <label class="check-pill"><input type="checkbox" name="prob" value="ideacion"><span class="dot"></span>Ideación de riesgo</label>
+          <label class="check-pill"><input type="checkbox" name="prob" value="duelo"><span class="dot"></span>Duelo / Pérdida significativa</label>
+          <label class="check-pill"><input type="checkbox" name="prob" value="conducta"><span class="dot"></span>Problemas conductuales</label>
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <div class="field-wrap">
+          <label for="motivoDesc">Descripción detallada del motivo de consulta</label>
+          <textarea id="motivoDesc" placeholder="Expone las razones expresadas por el estudiante o el docente al momento de acudir a orientación..."></textarea>
+        </div>
+        <div class="field-wrap">
+          <label for="antecedentesDesc">Antecedentes personales y académicos relevantes</label>
+          <textarea id="antecedentesDesc" placeholder="Intervenciones psicológicas anteriores, antecedentes médicos, dinámica familiar o eventos detonantes..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- IV. EVALUACIÓN PSICOLÓGICA -->
+    <section class="section">
+      <div class="section-title-row">
+        <div class="sec-num">IV</div>
+        <h2>Evaluación Psicológica y Pruebas Aplicadas</h2>
+        <div class="sec-div"></div>
+      </div>
+      <div class="clinic-hint">
+        📌 <strong>Registro técnico:</strong> Anota los instrumentos aplicados y el nivel de afectación observado en cada esfera del desarrollo del estudiante.
+      </div>
+      <div class="grid grid-3" style="margin-bottom:14px;">
+        <div class="field-wrap">
+          <label for="evalFecha">Fecha de la entrevista</label>
+          <input type="date" id="evalFecha">
+        </div>
+        <div class="field-wrap">
+          <label for="evalDuracion">Duración de la sesión (minutos)</label>
+          <input type="number" id="evalDuracion" placeholder="50" min="15" max="180">
+        </div>
+        <div class="field-wrap">
+          <label for="evalNumSes">Número de sesión</label>
+          <input type="number" id="evalNumSes" placeholder="1" min="1">
+        </div>
+      </div>
+      <div class="field-wrap" style="margin-bottom:14px;">
+        <label>Instrumentos y escalas aplicadas:</label>
+        <div class="checks-row">
+          <label class="check-pill"><input type="checkbox" name="inst" value="entrevista"><span class="dot"></span>Entrevista semiestructurada</label>
+          <label class="check-pill"><input type="checkbox" name="inst" value="phq9"><span class="dot"></span>PHQ-A / PHQ-9 (Depresión)</label>
+          <label class="check-pill"><input type="checkbox" name="inst" value="gad7"><span class="dot"></span>GAD-7 (Ansiedad)</label>
+          <label class="check-pill"><input type="checkbox" name="inst" value="assist"><span class="dot"></span>ASSIST-Lite (Sustancias OMS)</label>
+          <label class="check-pill"><input type="checkbox" name="inst" value="posit"><span class="dot"></span>POSIT (Tamizaje Psicosocial)</label>
+          <label class="check-pill"><input type="checkbox" name="inst" value="raven"><span class="dot"></span>Test de Matrices Progresivas Raven</label>
+          <label class="check-pill"><input type="checkbox" name="inst" value="htp"><span class="dot"></span>HTP / Figura Humana</label>
+        </div>
+      </div>
+
+      <!-- ESCALA DE ÁREAS -->
+      <div class="scale-box">
+        <div class="scale-row">
+          <span class="scale-lbl">🧠 Área Cognitiva (atención, concentración, procesamiento)</span>
+          <select class="scale-select" id="areaCognitiva">
+            <option>Sin afectación</option><option>Leve</option><option>Moderada</option><option>Severa</option>
+          </select>
+        </div>
+        <div class="scale-row">
+          <span class="scale-lbl">💛 Área Emocional (regulación del afecto, estado de ánimo)</span>
+          <select class="scale-select" id="areaEmocional">
+            <option>Sin afectación</option><option>Leve</option><option>Moderada</option><option>Severa</option>
+          </select>
+        </div>
+        <div class="scale-row">
+          <span class="scale-lbl">👥 Área Social (habilidades interpersonales, relación con pares)</span>
+          <select class="scale-select" id="areaSocial">
+            <option>Sin afectación</option><option>Leve</option><option>Moderada</option><option>Severa</option>
+          </select>
+        </div>
+        <div class="scale-row">
+          <span class="scale-lbl">📚 Área Académica (hábitos de estudio, rendimiento, motivación)</span>
+          <select class="scale-select" id="areaAcademica">
+            <option>Sin afectación</option><option>Leve</option><option>Moderada</option><option>Severa</option>
+          </select>
+        </div>
+        <div class="scale-row">
+          <span class="scale-lbl">🏠 Área Familiar (comunicación, apoyo, ambiente en el hogar)</span>
+          <select class="scale-select" id="areaFamiliar">
+            <option>Sin afectación</option><option>Leve</option><option>Moderada</option><option>Severa</option>
+          </select>
+        </div>
+        <div class="scale-row">
+          <span class="scale-lbl">💊 Área de Salud y Hábitos (patrones de sueño, alimentación)</span>
+          <select class="scale-select" id="areaSalud">
+            <option>Sin afectación</option><option>Leve</option><option>Moderada</option><option>Severa</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="margin-top:12px;">
+        <div class="field-wrap">
+          <label for="obsConducta">Observaciones conductuales en sesión</label>
+          <textarea id="obsConducta" placeholder="Apariencia, contacto visual, disposición a la entrevista, lenguaje verbal y no verbal..."></textarea>
+        </div>
+        <div class="field-wrap">
+          <label for="resultadosPruebas">Interpretación de resultados obtenidos</label>
+          <textarea id="resultadosPruebas" placeholder="Puntuaciones cuantitativas y cualitativas de las escalas aplicadas..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- V. VALORACIÓN DEL RIESGO -->
+    <section class="section">
+      <div class="section-title-row">
+        <div class="sec-num">V</div>
+        <h2>Valoración del Nivel de Riesgo</h2>
+        <div class="sec-div"></div>
+      </div>
+      <div class="risk-cards-grid">
+        <div class="risk-card-opt">
+          <input type="radio" name="riesgoNivel" id="rBajo" value="bajo" checked>
+          <label for="rBajo" class="risk-card-label bajo">
+            <span class="ico">🟢</span>
+            <span class="name">Bajo</span>
+          </label>
+        </div>
+        <div class="risk-card-opt">
+          <input type="radio" name="riesgoNivel" id="rMedio" value="medio">
+          <label for="rMedio" class="risk-card-label medio">
+            <span class="ico">🟡</span>
+            <span class="name">Moderado</span>
+          </label>
+        </div>
+        <div class="risk-card-opt">
+          <input type="radio" name="riesgoNivel" id="rAlto" value="alto">
+          <label for="rAlto" class="risk-card-label alto">
+            <span class="ico">🔴</span>
+            <span class="name">Alto</span>
+          </label>
+        </div>
+        <div class="risk-card-opt">
+          <input type="radio" name="riesgoNivel" id="rCritico" value="critico">
+          <label for="rCritico" class="risk-card-label critico">
+            <span class="ico">🆘</span>
+            <span class="name">Crítico</span>
+          </label>
+        </div>
+      </div>
+      <div class="field-wrap">
+        <label for="riesgoJustificacion">Justificación clínica del nivel de riesgo</label>
+        <textarea id="riesgoJustificacion" placeholder="Fundamentación de los factores protectores y de vulnerabilidad detectados..."></textarea>
+      </div>
+    </section>
+
+    <!-- VI. DIAGNÓSTICO / IMPRESIÓN CLÍNICA -->
+    <section class="section">
+      <div class="section-title-row">
+        <div class="sec-num">VI</div>
+        <h2>Impresión Diagnóstica Presuntiva</h2>
+        <div class="sec-div"></div>
+      </div>
+      <div class="grid grid-2">
+        <div class="field-wrap">
+          <label for="diagPresuntivo">Diagnóstico presuntivo (CIE-10 / CIE-11 / DSM-5)</label>
+          <textarea id="diagPresuntivo" placeholder="Ej. F41.1 Trastorno de ansiedad generalizada / Dificultades de adaptación escolar..."></textarea>
+        </div>
+        <div class="field-wrap">
+          <label for="factoresContribuyentes">Factores contribuyentes y mantenedores</label>
+          <textarea id="factoresContribuyentes" placeholder="Factores familiares, estresores escolares, autoexigencia o falta de red de apoyo..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- VII. PLAN DE INTERVENCIÓN -->
+    <section class="section">
+      <div class="section-title-row">
+        <div class="sec-num">VII</div>
+        <h2>Plan de Intervención y Seguimiento</h2>
+        <div class="sec-div"></div>
+      </div>
+      <div class="field-wrap" style="margin-bottom:14px;">
+        <label>Acciones institucionales acordadas:</label>
+        <div class="checks-row">
+          <label class="check-pill"><input type="checkbox" name="accion" value="sesiones"><span class="dot"></span>Acompañamiento psicológico escolar</label>
+          <label class="check-pill"><input type="checkbox" name="accion" value="semanal"><span class="dot"></span>Seguimiento semanal</label>
+          <label class="check-pill"><input type="checkbox" name="accion" value="tutorReunion"><span class="dot"></span>Reunión con padres/tutor</label>
+          <label class="check-pill"><input type="checkbox" name="accion" value="docentes"><span class="dot"></span>Coordinación con docentes</label>
+          <label class="check-pill"><input type="checkbox" name="accion" value="canalizacion"><span class="dot"></span>Canalización a institución externa (CECA, CAPA, DIF)</label>
+          <label class="check-pill"><input type="checkbox" name="accion" value="taller"><span class="dot"></span>Taller grupal de habilidades socioemocionales</label>
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <div class="field-wrap">
+          <label for="planObjetivos">Objetivos terapéuticos / de orientación</label>
+          <textarea id="planObjetivos" placeholder="Metas a corto y mediano plazo para el bienestar del estudiante..."></textarea>
+        </div>
+        <div class="field-wrap">
+          <label for="planTecnicas">Estrategias y técnicas recomendadas</label>
+          <textarea id="planTecnicas" placeholder="Reestructuración cognitiva, respiración diafragmática, higiene del sueño, acuerdos escolares..."></textarea>
+        </div>
+        <div class="field-wrap">
+          <label for="instDerivacion">Institución de derivación externa (si aplica)</label>
+          <input type="text" id="instDerivacion" placeholder="Ej. Centro de Salud / DIF Yucatán / IMSS">
+        </div>
+        <div class="field-wrap">
+          <label for="proximaCita">Fecha programada para la próxima sesión</label>
+          <input type="date" id="proximaCita">
+        </div>
+      </div>
+    </section>
+
+    <!-- VIII. FIRMAS Y VALIDACIÓN INSTITUCIONAL -->
+    <section class="section">
+      <div class="section-title-row">
+        <div class="sec-num">VIII</div>
+        <h2>Firmas y Validación Oficial</h2>
+        <div class="sec-div"></div>
+      </div>
+      <div class="grid grid-2" style="margin-bottom:14px;">
+        <div class="field-wrap">
+          <label for="psiNombre">Orientador(a) / Psicólogo(a) responsable *</label>
+          <input type="text" id="psiNombre" placeholder="Nombre completo con grado">
+        </div>
+        <div class="field-wrap">
+          <label for="psiCedula">Cédula profesional / Matrícula oficial</label>
+          <input type="text" id="psiCedula" placeholder="00000000">
+        </div>
+      </div>
+      <div class="signatures-wrap">
+        <div class="sig-box">
+          <div class="sig-line"></div>
+          <div class="sig-name" id="sigPsiDisplay">Firma del Especialista Responsable</div>
+          <div class="sig-desc">Área de Orientación Educativa · Plantel Mérida 1</div>
+        </div>
+        <div class="sig-box">
+          <div class="sig-line"></div>
+          <div class="sig-name">Vo.Bo. Dirección / Subdirección del Plantel</div>
+          <div class="sig-desc">Plantel Mérida 1 "Felipe Carrillo Puerto"</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER INSTITUCIONAL -->
+    <footer class="report-footer">
+      <div>CONALEP Yucatán · Plantel Mérida 1 "Felipe Carrillo Puerto" · Clave CCT: 31DPT0001O</div>
+      <div class="confidential">🔒 Documento estrictamente confidencial — uso interno</div>
+    </footer>
+
+  </article>
+</div>
+
+<!-- SCRIPTS DE DATOS Y CONEXIÓN A NAIMA OS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="db.js"></script>
+<script>
+(function initReportPage(){
+  // 1. Fecha automática y Folio dinámico
+  const now = new Date();
+  const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
+  const ds = document.getElementById('dateStamp');
+  if(ds) ds.textContent = now.toLocaleDateString('es-MX', opts);
+
+  const evalFecha = document.getElementById('evalFecha');
+  if(evalFecha && !evalFecha.value) evalFecha.value = now.toISOString().split('T')[0];
+
+  const folio = document.getElementById('folio');
+  if(folio && !folio.value){
+    const yr = String(now.getFullYear()).slice(-2);
+    const mo = String(now.getMonth() + 1).padStart(2,'0');
+    const rnd = String(Math.floor(Math.random() * 899) + 100);
+    folio.value = `MER1-${yr}${mo}-${rnd}`;
+  }
+
+  // 2. Prellenar datos del Orientador activo
+  try {
+    const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+    if(user){
+      const psiNombre = document.getElementById('psiNombre');
+      if(psiNombre && !psiNombre.value) psiNombre.value = user.nombre || user.display || '';
+      const sigDisp = document.getElementById('sigPsiDisplay');
+      if(sigDisp && user.nombre) sigDisp.textContent = user.nombre;
+    }
+  }catch(e){}
+
+  // 3. Llenar el selector rápido de alumnos de db.students
+  try {
+    const sel = document.getElementById('alumnoPicker');
+    if(sel && typeof db !== 'undefined' && db.students){
+      const stList = Object.values(db.students);
+      stList.sort((a,b) => (a.nombre || '').localeCompare(b.nombre || ''));
+      stList.forEach(st => {
+        const opt = document.createElement('option');
+        opt.value = st.matricula || st.id;
+        opt.textContent = `${st.nombre} (${st.matricula || ''} - ${st.grupo || '4B'})`;
+        sel.appendChild(opt);
+      });
+
+      // Si viene por parámetro URL (?matricula=...)
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetMat = urlParams.get('matricula') || urlParams.get('studentId');
+      if(targetMat && db.students[targetMat]){
+        sel.value = targetMat;
+        cargarDatosAlumno(targetMat);
+      }
+    }
+  }catch(e){}
+
+  // 4. Calcular progreso
+  calcularProgreso();
+})();
+
+function cargarDatosAlumno(matricula){
+  if(!matricula || typeof db === 'undefined' || !db.students[matricula]) return;
+  const s = db.students[matricula];
+
+  document.getElementById('alNombre').value = s.nombre || '';
+  document.getElementById('alMat').value = s.matricula || '';
+  if(s.edad) document.getElementById('alEdad').value = s.edad;
+  if(s.carrera) document.getElementById('alCarrera').value = s.carrera;
+  if(s.semestre) document.getElementById('alSem').value = s.semestre;
+  if(s.grupo) document.getElementById('alGrupo').value = s.grupo;
+  if(s.tel) document.getElementById('alTel').value = s.tel;
+  if(s.email) document.getElementById('alEmail').value = s.email;
+
+  if(s.tutor || s.guardian) document.getElementById('tuNombre').value = s.tutor || s.guardian || '';
+  if(s.tutorTel || s.tel_tutor) document.getElementById('tuTel').value = s.tutorTel || s.tel_tutor || '';
+  if(s.tutorEmail || s.guardianEmail) document.getElementById('tuEmail').value = s.tutorEmail || s.guardianEmail || '';
+
+  if(s.motivo) document.getElementById('motivoDesc').value = s.motivo;
+  if(s.diagnostico || s.dx) document.getElementById('diagPresuntivo').value = s.diagnostico || s.dx || '';
+
+  // Sincronizar nivel de riesgo si existe
+  if(s.riesgo || s.prioridad){
+    const r = (s.riesgo || s.prioridad).toLowerCase();
+    if(r.includes('alto')) document.getElementById('rAlto').checked = true;
+    else if(r.includes('medio') || r.includes('moderado')) document.getElementById('rMedio').checked = true;
+    else if(r.includes('critico') || r.includes('crisis')) document.getElementById('rCritico').checked = true;
+    else document.getElementById('rBajo').checked = true;
+  }
+
+  calcularProgreso();
+}
+
+function calcularProgreso(){
+  const inputs = document.querySelectorAll('input:not([type=radio]):not([type=checkbox]), select, textarea');
+  let total = 0, filled = 0;
+  inputs.forEach(el => {
+    total++;
+    if(el.value && el.value.trim() !== '') filled++;
+  });
+  const checks = document.querySelectorAll('input[type=checkbox]:checked');
+  filled += checks.length;
+  const pct = Math.min(100, Math.round((filled / (total + 3)) * 100));
+  const pb = document.getElementById('progBarInner');
+  if(pb) pb.style.width = pct + '%';
+  const lbl = document.getElementById('completionLabel');
+  if(lbl) lbl.textContent = pct + '% completado';
+}
+document.addEventListener('input', calcularProgreso);
+document.addEventListener('change', calcularProgreso);
+
+async function guardarBorrador(){
+  const alNombre = document.getElementById('alNombre').value.trim();
+  const alMat = document.getElementById('alMat').value.trim();
+  const folio = document.getElementById('folio').value.trim();
+
+  if(!alNombre){
+    alert('Por favor introduce al menos el nombre del estudiante para registrar el reporte.');
+    return;
+  }
+
+  const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : {};
+  const docId = 'doc_rep_' + Date.now();
+  const newDoc = {
+    id: docId,
+    studentId: alMat || 'GENERAL',
+    folio: folio,
+    studentName: alNombre,
+    title: `Reporte Psicológico (${folio})`,
+    tipo: 'Reporte Clínico',
+    diagnostico: document.getElementById('diagPresuntivo').value.trim(),
+    riesgo: document.querySelector('input[name=riesgoNivel]:checked')?.value || 'bajo',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    assignedBy: user.nombre || user.display || 'Orientador Educativo'
+  };
+
+  try {
+    if(typeof db !== 'undefined'){
+      if(!db.documents) db.documents = [];
+      db.documents.unshift(newDoc);
+      saveDB();
+    }
+
+    if(typeof isSupabaseLive === 'function' && isSupabaseLive()){
+      const client = getActiveSupabaseClient();
+      if(client){
+        await client.from('documents').insert({
+          id: docId,
+          student_id: alMat || 'GENERAL',
+          title: newDoc.title,
+          file_type: 'Reporte Psicológico',
+          url: window.location.href,
+          created_at: new Date().toISOString()
+        });
+      }
+    }
+
+    alert(`✅ Reporte ${folio} guardado exitosamente en el expediente de ${alNombre}.`);
+  } catch(err){
+    console.warn('Error guardando documento:', err);
+    alert('Reporte guardado localmente en el navegador.');
+  }
+}
+
+function limpiarFormulario(){
+  if(!confirm('¿Estás seguro de que deseas limpiar el formulario? Los datos no guardados se perderán.')) return;
+  document.querySelectorAll('input:not([id=folio]):not([type=radio]):not([type=checkbox]), select, textarea').forEach(el => el.value = '');
+  document.querySelectorAll('input[type=checkbox]').forEach(el => el.checked = false);
+  calcularProgreso();
+}
+</script>
+</body>
+</html>

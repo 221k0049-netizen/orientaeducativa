@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Evaluación y Tamizaje Psicoemocional Estudiantil — CONALEP Plantel Mérida 1">
+<title>Evaluación Estudiantil — CONALEP Plantel Mérida 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --rojo: #007E67;
+  --rojo-dark: #005C4B;
+  --rojo-deep: #003D32;
+  --rojo-light: #E6F5F2;
+  --gris-oscuro: #1E1E2E;
+  --gris-med: #5A5A72;
+  --gris-suave: #F2F5F4;
+  --gris-borde: #D0DDD6;
+  --verde: #0F6E56;
+  --verde-light: #E6F5F0;
+  --verde-mid: #1D9E75;
+  --amarillo: #B47D0A;
+  --amarillo-light: #FEF9E7;
+  --naranja: #C0420F;
+  --naranja-light: #FEF0E6;
+  --azul: #185FA5;
+  --azul-light: #E6F1FB;
+  --blanco: #FFFFFF;
+  --font: 'Montserrat', sans-serif;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:var(--font); background:var(--gris-suave); color:var(--gris-oscuro); min-height:100vh; }
+
+.pantalla { display:none; }
+.pantalla.activa { display:flex; flex-direction:column; min-height:100vh; }
+
+/* HEADER */
+.header {
+  background: var(--rojo-deep);
+  color: white;
+  padding: 0 20px;
+  display: flex; align-items:center; gap:14px;
+  height: 56px;
+  position: sticky; top:0; z-index:200;
+  box-shadow: 0 2px 10px rgba(0,61,50,0.25);
+  flex-wrap: wrap;
+}
+.header-logo { font-size:18px; font-weight:800; letter-spacing:-0.5px; color:#FFF; text-decoration:none; display:flex; align-items:center; gap:6px; }
+.header-sep { width:1.5px; height:24px; background:rgba(255,255,255,0.3); }
+.header-title { font-size:12.5px; font-weight:600; opacity:0.95; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.header-badge {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 20px;
+  padding: 4px 12px; font-size:11px; font-weight:700;
+}
+.btn-back-header {
+  background: rgba(255,255,255,0.12);
+  color: #FFF;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-back-header:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+/* BIENVENIDA */
+.bienvenida-body {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; padding:32px 16px;
+}
+.bienvenida-card {
+  background:white; border-radius:14px;
+  border:1px solid var(--gris-borde);
+  max-width:580px; width:100%; padding:32px;
+  box-shadow:0 4px 24px rgba(0,0,0,0.06);
+}
+.bienvenida-icono {
+  width:60px; height:60px; border-radius:14px;
+  background:var(--rojo-light); display:flex;
+  align-items:center; justify-content:center;
+  font-size:26px; margin:0 auto 16px; color:var(--rojo);
+}
+.bienvenida-card h2 {
+  text-align:center; font-size:20px; font-weight:800;
+  color:var(--rojo-deep); margin-bottom:8px;
+}
+.bienvenida-card p {
+  text-align:center; color:var(--gris-med);
+  font-size:13px; line-height:1.6; margin-bottom:20px;
+}
+.form-grupo { margin-bottom:14px; }
+.form-grupo label {
+  display:block; font-size:11px; font-weight:700;
+  color:var(--gris-med); margin-bottom:5px; letter-spacing:0.5px;
+  text-transform:uppercase;
+}
+.form-grupo input, .form-grupo select {
+  width:100%; padding:9px 12px;
+  border:1.5px solid var(--gris-borde); border-radius:8px;
+  font-family:var(--font); font-size:13px; color:var(--gris-oscuro);
+  background:white; outline:none;
+  transition:border-color 0.2s,box-shadow 0.2s;
+}
+.form-grupo input:focus, .form-grupo select:focus {
+  border-color:var(--rojo);
+  box-shadow:0 0 0 3px rgba(0,126,103,0.12);
+}
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.aviso-conf {
+  background:var(--azul-light); border:1px solid #B5D4F4;
+  border-radius:8px; padding:12px 14px;
+  font-size:12px; color:#0C447C; margin-bottom:18px;
+  line-height:1.5;
+}
+.btn-inicio {
+  width:100%; padding:12px; background:var(--rojo); color:white;
+  border:none; border-radius:8px; font-size:14px; font-weight:700;
+  cursor:pointer; transition:all 0.2s; font-family:var(--font);
+}
+.btn-inicio:hover { background:var(--rojo-dark); transform:translateY(-1px); box-shadow:0 4px 14px rgba(0,126,103,0.3); }
+.error-msg { color:#C0392B; font-size:11.5px; margin-top:4px; display:none; }
+
+/* EVALUACIÓN */
+.eval-layout { display:flex; flex:1; overflow:hidden; }
+.eval-sidebar {
+  width:220px; flex-shrink:0; background:white;
+  border-right:1px solid var(--gris-borde);
+  padding:18px 0; overflow-y:auto;
+}
+.sidebar-titulo {
+  font-size:10px; font-weight:700; color:var(--gris-med);
+  letter-spacing:1px; text-transform:uppercase;
+  padding:0 16px 10px;
+}
+.sidebar-item {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 16px; cursor:default;
+  border-left:3px solid transparent;
+  font-size:12.5px; color:var(--gris-med);
+  transition:all 0.15s;
+}
+.sidebar-item.activo {
+  border-left-color:var(--rojo);
+  background:var(--rojo-light); color:var(--rojo-deep); font-weight:700;
+}
+.sidebar-item.completado {
+  border-left-color:var(--verde-mid);
+  background:var(--verde-light); color:var(--verde); font-weight:600;
+}
+.sidebar-num {
+  width:22px; height:22px; border-radius:50%;
+  background:var(--gris-borde); color:var(--gris-med);
+  font-size:10px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.sidebar-item.activo .sidebar-num { background:var(--rojo); color:white; }
+.sidebar-item.completado .sidebar-num { background:var(--verde-mid); color:white; }
+.sidebar-label { font-size:12px; flex:1; }
+
+.eval-main { flex:1; overflow-y:auto; padding:24px 20px; }
+.eval-contenido { max-width:680px; margin:0 auto; }
+
+/* PROGRESO */
+.progreso-wrap {
+  background:white; border-radius:10px;
+  border:1px solid var(--gris-borde);
+  padding:14px 18px; margin-bottom:20px;
+}
+.progreso-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.progreso-etiqueta { font-size:12px; font-weight:700; color:var(--gris-oscuro); }
+.progreso-pct { font-size:12px; font-weight:800; color:var(--rojo); }
+.barra-fondo { background:var(--gris-borde); border-radius:99px; height:6px; overflow:hidden; }
+.barra-relleno { background:var(--rojo); height:100%; border-radius:99px; transition:width 0.4s ease; }
+
+.seccion-titulo {
+  font-size:11px; font-weight:800; color:var(--gris-med);
+  letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;
+}
+.seccion-inst {
+  font-size:12.5px; color:var(--gris-med);
+  background:white; border-left:3.5px solid var(--rojo);
+  padding:10px 14px; border-radius:0 8px 8px 0;
+  margin-bottom:20px; line-height:1.55; border:1px solid var(--gris-borde); border-left-width:3.5px;
+}
+
+/* PREGUNTA */
+.pregunta-card {
+  background:white; border-radius:10px;
+  border:1px solid var(--gris-borde);
+  padding:18px; margin-bottom:14px;
+  transition:border-color 0.2s;
+}
+.pregunta-card:focus-within { border-color:var(--rojo); }
+.pregunta-texto {
+  font-size:13.5px; line-height:1.6;
+  color:var(--gris-oscuro); margin-bottom:14px; font-weight:600;
+}
+.pregunta-num {
+  font-size:10px; font-weight:700; color:var(--gris-med);
+  margin-bottom:4px; text-transform:uppercase;
+}
+.opciones-grid { display:flex; flex-direction:column; gap:8px; }
+.opcion {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 14px; border-radius:8px;
+  border:1.5px solid var(--gris-borde); cursor:pointer;
+  transition:all 0.15s; font-size:12.5px;
+}
+.opcion:hover { border-color:var(--rojo); background:var(--rojo-light); }
+.opcion.seleccionada { border-color:var(--rojo); background:var(--rojo-light); font-weight:700; }
+.opcion input[type=radio] { accent-color:var(--rojo); width:16px; height:16px; flex-shrink:0; }
+
+/* LIKERT HORIZONTAL */
+.likert-wrap { overflow-x:auto; padding-bottom:4px; }
+.likert-grid { display:grid; gap:6px; min-width:440px; }
+.likert-row {
+  display:grid; align-items:center;
+  background:white; border:1px solid var(--gris-borde); border-radius:8px;
+  padding:10px 12px; gap:8px;
+}
+.likert-row.respondida { background:var(--rojo-light); border-color:rgba(0,126,103,0.3); }
+.likert-pregunta { font-size:12.5px; color:var(--gris-oscuro); line-height:1.45; }
+
+/* BOTONES NAVEGACIÓN */
+.nav-botones {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-top:24px; padding-top:18px;
+  border-top:1px solid var(--gris-borde);
+  flex-wrap:wrap; gap:10px;
+}
+.btn-nav {
+  padding:10px 20px; border-radius:8px; font-size:13px;
+  font-weight:700; cursor:pointer; font-family:var(--font);
+  transition:all 0.18s; border:1.5px solid transparent;
+}
+.btn-anterior { background:white; color:var(--gris-med); border-color:var(--gris-borde); }
+.btn-anterior:hover { border-color:var(--gris-oscuro); color:var(--gris-oscuro); }
+.btn-siguiente { background:var(--rojo); color:white; border-color:var(--rojo); }
+.btn-siguiente:hover { background:var(--rojo-dark); }
+.btn-finalizar { background:var(--verde); color:white; border-color:var(--verde); }
+.btn-finalizar:hover { background:#0B5A47; }
+.preguntas-faltantes {
+  font-size:12px; color:var(--naranja);
+  background:var(--naranja-light); padding:7px 12px;
+  border-radius:6px; display:none;
+}
+
+/* CARGANDO */
+.cargando-body {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:16px;
+  padding:40px; text-align:center;
+}
+.spinner {
+  width:44px; height:44px;
+  border:4px solid var(--gris-borde);
+  border-top-color:var(--rojo);
+  border-radius:50%;
+  animation:girar 0.8s linear infinite;
+}
+@keyframes girar { to { transform:rotate(360deg); } }
+
+/* DASHBOARD */
+.dashboard-body { flex:1; padding:24px 16px; }
+.dashboard-inner { max-width:1050px; margin:0 auto; }
+.dashboard-titulo { font-size:22px; font-weight:800; color:var(--rojo-deep); margin-bottom:4px; }
+.dashboard-sub { font-size:12px; color:var(--gris-med); margin-bottom:18px; }
+
+.alumno-info-band {
+  background:white; border-radius:10px;
+  border:1px solid var(--gris-borde);
+  padding:14px 18px; margin-bottom:18px;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.alumno-avatar {
+  width:44px; height:44px; border-radius:10px;
+  background:var(--rojo-light); color:var(--rojo);
+  font-size:16px; font-weight:800;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.alumno-datos { flex:1; min-width:200px; }
+.alumno-nombre { font-size:15px; font-weight:800; color:var(--gris-oscuro); }
+.alumno-meta { font-size:11.5px; color:var(--gris-med); margin-top:2px; }
+
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:18px; }
+.kpi-card {
+  background:white; border-radius:10px;
+  border:1px solid var(--gris-borde);
+  padding:14px 16px;
+}
+.kpi-etiqueta { font-size:10px; font-weight:700; color:var(--gris-med); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:4px; }
+.kpi-valor { font-size:22px; font-weight:800; line-height:1.1; }
+.kpi-bajo .kpi-valor { color:var(--verde); }
+.kpi-moderado .kpi-valor { color:var(--amarillo); }
+.kpi-alto .kpi-valor { color:var(--naranja); }
+.kpi-severo .kpi-valor { color:var(--rojo); }
+
+.resultados-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px; }
+.resultado-card {
+  background:white; border-radius:10px;
+  border:1px solid var(--gris-borde); padding:18px;
+}
+.resultado-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px; gap:8px; }
+.resultado-nombre { font-size:13px; font-weight:700; color:var(--gris-oscuro); }
+.resultado-instrumento { font-size:10.5px; color:var(--gris-med); margin-top:2px; }
+.resultado-badge {
+  padding:3px 9px; border-radius:99px;
+  font-size:10px; font-weight:800; white-space:nowrap; flex-shrink:0;
+}
+.badge-bajo { background:var(--verde-light); color:var(--verde); }
+.badge-moderado { background:var(--amarillo-light); color:var(--amarillo); }
+.badge-alto { background:var(--naranja-light); color:var(--naranja); }
+.badge-severo { background:#FDEDEC; color:var(--rojo); }
+
+.puntuacion-wrap { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.puntuacion-num { font-size:26px; font-weight:800; color:var(--gris-oscuro); }
+.puntuacion-de { font-size:12px; color:var(--gris-med); align-self:flex-end; padding-bottom:3px; }
+.barra-resultado-fondo { flex:1; background:var(--gris-borde); border-radius:99px; height:7px; overflow:hidden; }
+.barra-resultado-relleno { height:100%; border-radius:99px; }
+.resultado-desc { font-size:11.5px; color:var(--gris-med); line-height:1.55; }
+
+.graficas-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px; }
+.grafica-card {
+  background:white; border-radius:10px;
+  border:1px solid var(--gris-borde); padding:16px;
+}
+.grafica-titulo { font-size:12px; font-weight:700; color:var(--gris-oscuro); margin-bottom:12px; }
+
+.recomendaciones-card {
+  background:white; border-radius:10px;
+  border:1px solid var(--gris-borde); padding:18px; margin-bottom:18px;
+}
+.recomendaciones-titulo { font-size:13px; font-weight:800; color:var(--rojo-deep); margin-bottom:12px; }
+.recomendacion-item {
+  display:flex; align-items:flex-start; gap:12px;
+  padding:10px 0; border-bottom:1px solid var(--gris-borde);
+}
+.recomendacion-item:last-child { border-bottom:none; padding-bottom:0; }
+.rec-icono {
+  width:32px; height:32px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; flex-shrink:0;
+}
+.rec-accion { font-size:12px; font-weight:700; color:var(--gris-oscuro); margin-bottom:2px; }
+.rec-desc { font-size:11.5px; color:var(--gris-med); line-height:1.5; }
+.rec-pioe {
+  font-size:9.5px; font-weight:700; letter-spacing:0.5px;
+  padding:2px 7px; border-radius:99px;
+  background:var(--azul-light); color:var(--azul);
+  margin-top:4px; display:inline-block;
+}
+
+.btn-accion {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:8px 16px; background:var(--rojo); color:white;
+  border:none; border-radius:6px; font-size:12px; font-weight:700;
+  cursor:pointer; font-family:var(--font); text-decoration:none;
+}
+.btn-accion-outline {
+  background:white; color:var(--gris-oscuro);
+  border:1.5px solid var(--gris-borde);
+}
+.acciones-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+
+@media (max-width:768px) {
+  .eval-sidebar { display:none; }
+  .form-row, .resultados-grid, .graficas-grid { grid-template-columns:1fr; }
+  .bienvenida-card { padding:20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- PANTALLA 1: BIENVENIDA Y REGISTRO DE ALUMNO -->
+<div id="p-bienvenida" class="pantalla activa">
+  <header class="header">
+    <a href="estudiante.html" class="header-logo" title="Volver al Portal Estudiantil">
+      <span style="color:#C8A951;">✦</span> CONALEP
+    </a>
+    <span class="header-sep"></span>
+    <span class="header-title">Plantel Mérida 1 — Tamizaje Psicoemocional PIOE</span>
+    <a href="estudiante.html" class="btn-back-header">← Mi Espacio</a>
+  </header>
+  <div class="bienvenida-body">
+    <div class="bienvenida-card">
+      <div class="bienvenida-icono">📋</div>
+      <h2>Tamizaje Estudiantil de Bienestar</h2>
+      <p>Responde con total honestidad. No hay respuestas correctas ni incorrectas. Tus respuestas son <strong>estrictamente confidenciales</strong> y nos permiten brindarte el mejor acompañamiento escolar.</p>
+
+      <div class="aviso-conf">
+        <strong>Aviso de privacidad y confidencialidad</strong>
+        Tus respuestas serán analizadas de forma confidencial por el Departamento de Orientación Educativa del Plantel Mérida 1 conforme a la normativa institucional y a la Ley General de Protección de Datos Personales.
+      </div>
+
+      <div class="form-row">
+        <div class="form-grupo">
+          <label>Nombre(s) *</label>
+          <input type="text" id="inp-nombre" placeholder="Tu nombre" maxlength="50" required>
+          <span class="error-msg" id="err-nombre">Campo obligatorio.</span>
+        </div>
+        <div class="form-grupo">
+          <label>Apellidos *</label>
+          <input type="text" id="inp-apellidos" placeholder="Tus apellidos" maxlength="60" required>
+          <span class="error-msg" id="err-apellidos">Campo obligatorio.</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-grupo">
+          <label>Matrícula escolar *</label>
+          <input type="text" id="inp-matricula" placeholder="Ej. PTB-26101" maxlength="15" required>
+          <span class="error-msg" id="err-matricula">Campo obligatorio.</span>
+        </div>
+        <div class="form-grupo">
+          <label>Edad</label>
+          <input type="number" id="inp-edad" placeholder="Años cumplidos" min="14" max="25" value="16">
+          <span class="error-msg" id="err-edad">Ingresa tu edad.</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-grupo">
+          <label>Semestre *</label>
+          <select id="inp-semestre">
+            <option value="">Seleccionar…</option>
+            <option>1°</option><option>2°</option><option>3°</option>
+            <option selected>4°</option><option>5°</option><option>6°</option>
+          </select>
+          <span class="error-msg" id="err-semestre">Selecciona tu semestre.</span>
+        </div>
+        <div class="form-grupo">
+          <label>Grupo</label>
+          <input type="text" id="inp-grupo" placeholder="Ej. 402" maxlength="6" value="402">
+        </div>
+      </div>
+      <div class="form-grupo">
+        <label>Carrera técnica</label>
+        <select id="inp-carrera">
+          <option selected>Técnico en Informática</option>
+          <option>Técnico en Administración</option>
+          <option>Técnico en Contabilidad</option>
+          <option>Técnico en Enfermería General</option>
+          <option>Técnico en Alimentos y Bebidas</option>
+          <option>Técnico en Soporte y Mantenimiento de Cómputo</option>
+          <option>Técnico en Mecatrónica</option>
+          <option>Otra</option>
+        </select>
+      </div>
+      <button class="btn-inicio" onclick="iniciarEvaluacion()">Comenzar cuestionario →</button>
+    </div>
+  </div>
+</div>
+
+<!-- PANTALLA 2: EVALUACIÓN / CUESTIONARIOS -->
+<div id="p-evaluacion" class="pantalla">
+  <header class="header">
+    <a href="estudiante.html" class="header-logo">
+      <span style="color:#C8A951;">✦</span> CONALEP
+    </a>
+    <span class="header-sep"></span>
+    <span class="header-title" id="eval-header-titulo">Cuestionario de Bienestar</span>
+    <span class="header-badge" id="eval-header-seccion">Sección 1 de 5</span>
+  </header>
+  <div class="eval-layout">
+    <aside class="eval-sidebar">
+      <div class="sidebar-titulo">Dimensiones</div>
+      <div id="sidebar-items"></div>
+    </aside>
+    <main class="eval-main">
+      <div class="eval-contenido">
+        <div class="progreso-wrap">
+          <div class="progreso-header">
+            <span class="progreso-etiqueta" id="prog-etiqueta">Dimensión 1 de 5</span>
+            <span class="progreso-pct" id="prog-pct">0%</span>
+          </div>
+          <div class="barra-fondo">
+            <div class="barra-relleno" id="barra-prog" style="width:0%"></div>
+          </div>
+        </div>
+        <div id="contenido-seccion"></div>
+        <div class="nav-botones">
+          <button class="btn-nav btn-anterior" id="btn-ant" onclick="seccionAnterior()">← Anterior</button>
+          <span class="preguntas-faltantes" id="msg-faltantes">Por favor responde todas las preguntas para continuar.</span>
+          <button class="btn-nav btn-siguiente" id="btn-sig" onclick="seccionSiguiente()">Siguiente →</button>
+          <button class="btn-nav btn-finalizar" id="btn-fin" onclick="finalizar()" style="display:none">Finalizar y Ver Resultados ✓</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- PANTALLA 3: PROCESANDO -->
+<div id="p-cargando" class="pantalla">
+  <header class="header">
+    <span class="header-logo">CONALEP</span>
+    <span class="header-sep"></span>
+    <span class="header-title">Analizando resultados</span>
+  </header>
+  <div class="cargando-body">
+    <div class="spinner"></div>
+    <div style="font-size:16px;font-weight:700;color:var(--rojo-deep);">Procesando tus respuestas con el motor de bienestar…</div>
+    <div style="font-size:12.5px;color:var(--gris-med);">Calculando escalas PHQ-A, GAD-7, ASSIST-Lite y factores protectores.</div>
+  </div>
+</div>
+
+<!-- PANTALLA 4: RESULTADOS -->
+<div id="p-dashboard" class="pantalla">
+  <header class="header">
+    <a href="estudiante.html" class="header-logo">
+      <span style="color:#C8A951;">✦</span> CONALEP
+    </a>
+    <span class="header-sep"></span>
+    <span class="header-title">Resultados del Tamizaje Psicoemocional</span>
+    <span class="header-badge">PIOE Yucatán</span>
+  </header>
+  <div class="dashboard-body">
+    <div class="dashboard-inner">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+        <div>
+          <div class="dashboard-titulo">Panel de Bienestar Estudiantil</div>
+          <div class="dashboard-sub">Resultados individualizados · Protocolo Institucional de Orientación Educativa</div>
+        </div>
+        <div class="acciones-row">
+          <button class="btn-accion btn-accion-outline" onclick="window.print()">🖨 Imprimir</button>
+          <button class="btn-accion btn-accion-outline" onclick="exportarJSON()">📥 Guardar JSON</button>
+          <a href="estudiante.html" class="btn-accion">← Volver a Mi Espacio</a>
+        </div>
+      </div>
+
+      <div class="alumno-info-band">
+        <div class="alumno-avatar" id="dash-avatar">AL</div>
+        <div class="alumno-datos">
+          <div class="alumno-nombre" id="dash-nombre">—</div>
+          <div class="alumno-meta" id="dash-meta">—</div>
+        </div>
+        <div style="font-size:11px;color:var(--gris-med);" id="dash-fecha">—</div>
+      </div>
+
+      <div class="kpi-grid" id="dash-kpis"></div>
+
+      <div class="graficas-grid">
+        <div class="grafica-card">
+          <div class="grafica-titulo">Perfil Psicoemocional — Puntuación por Dimensión</div>
+          <div style="position:relative;height:210px;"><canvas id="chart-barras"></canvas></div>
+        </div>
+        <div class="grafica-card">
+          <div class="grafica-titulo">Radar de Factores de Protección y Vulnerabilidad</div>
+          <div style="position:relative;height:210px;"><canvas id="chart-radar"></canvas></div>
+        </div>
+      </div>
+
+      <div class="resultados-grid" id="dash-resultados"></div>
+
+      <div class="recomendaciones-card">
+        <div class="recomendaciones-titulo">Recomendaciones de Acompañamiento · Ejes PIOE</div>
+        <div id="dash-recomendaciones"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIBRERÍAS DE SUPABASE Y BASE DE DATOS NAIMA OS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="db.js"></script>
+
+<script>
+let alumno = {};
+let respuestas = {};
+let seccionActual = 0;
+
+/* AUTORRELLENO SI YA INICIÓ SESIÓN COMO ESTUDIANTE */
+(function prefillStudent(){
+  try {
+    const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+    if(user && user.rol === 'estudiante'){
+      const s = (typeof db !== 'undefined' && db.students) ? (db.students[user.matricula || user.id] || user) : user;
+      const partes = (s.nombre || '').split(' ');
+      const nom = partes.slice(0, 2).join(' ') || s.nombre;
+      const ape = partes.slice(2).join(' ') || '';
+
+      if(document.getElementById('inp-nombre')) document.getElementById('inp-nombre').value = nom;
+      if(document.getElementById('inp-apellidos')) document.getElementById('inp-apellidos').value = ape;
+      if(document.getElementById('inp-matricula')) document.getElementById('inp-matricula').value = s.matricula || user.id || '';
+      if(s.edad && document.getElementById('inp-edad')) document.getElementById('inp-edad').value = s.edad;
+      if(s.semestre && document.getElementById('inp-semestre')) document.getElementById('inp-semestre').value = s.semestre;
+      if(s.grupo && document.getElementById('inp-grupo')) document.getElementById('inp-grupo').value = s.grupo;
+      if(s.carrera && document.getElementById('inp-carrera')) document.getElementById('inp-carrera').value = s.carrera;
+    }
+  }catch(e){}
+})();
+
+const SECCIONES = [
+  {
+    id: 'cedula',
+    titulo: 'Entorno & Trayectoria',
+    instruccion: 'Responde brevemente las siguientes preguntas sobre tu contexto escolar y personal. No hay respuestas buenas ni malas.',
+    tipo: 'opciones',
+    preguntas: [
+      { id: 'c1', texto: '¿Con quién vives actualmente?', opciones: ['Con ambos padres','Solo con mi madre','Solo con mi padre','Con abuelos, tíos u otros familiares','Con mi pareja o amigos','Vivo de forma independiente'] },
+      { id: 'c2', texto: '¿Cómo describes la situación económica de tu familia?', opciones: ['Muy buena','Buena','Regular / Justa','Difícil','Muy difícil'] },
+      { id: 'c3', texto: '¿Trabajas actualmente además de estudiar en el CONALEP?', opciones: ['No, únicamente estudio','Sí, tiempo parcial (menos de 6 horas)','Sí, tiempo completo (6 horas o más al día)'] },
+      { id: 'c4', texto: '¿Has pensado en abandonar tus estudios en los últimos 3 meses?', opciones: ['No, nunca','A veces lo pienso','Lo pienso frecuentemente','Ya tengo planeado salirme'] },
+      { id: 'c5', texto: '¿Cómo te sientes en general con tu ambiente escolar en el plantel?', opciones: ['Muy a gusto','Bien','Regular','Mal','Muy incómodo(a)'] }
+    ]
+  },
+  {
+    id: 'phqa',
+    titulo: 'Estado de Ánimo (PHQ-A)',
+    instruccion: 'Durante las últimas 2 semanas, ¿con qué frecuencia te han molestado los siguientes problemas?',
+    tipo: 'likert4',
+    columnas: ['Nunca','Varios días','Más de la mitad','Casi todos los días'],
+    valores: [0, 1, 2, 3],
+    preguntas: [
+      { id: 'phq1', texto: 'Poco interés o satisfacción al hacer tus actividades diarias' },
+      { id: 'phq2', texto: 'Sentirte decaído(a), triste, desanimado(a) o sin esperanza' },
+      { id: 'phq3', texto: 'Dificultad para conciliar el sueño, despertarte seguido o dormir en exceso' },
+      { id: 'phq4', texto: 'Sentirte sin energía o fatigado(a) casi todo el día' },
+      { id: 'phq5', texto: 'Falta de apetito o comer mucho más de lo normal' },
+      { id: 'phq6', texto: 'Sentirte mal contigo mismo(a), sentirte un fracaso o haber defraudado a otros' },
+      { id: 'phq7', texto: 'Dificultad para concentrarte al estudiar, leer o hacer tareas' },
+      { id: 'phq8', texto: 'Moverte o hablar muy lento, o estar tan inquieto(a) que no puedes estar quieto(a)' },
+      { id: 'phq9', texto: 'Pensamientos de que estarías mejor muerto(a) o ideas de hacerte daño' }
+    ]
+  },
+  {
+    id: 'gad7',
+    titulo: 'Regulación del Estrés (GAD-7)',
+    instruccion: 'En las últimas 2 semanas, ¿con qué frecuencia has experimentado las siguientes sensaciones?',
+    tipo: 'likert4',
+    columnas: ['Para nada','Varios días','Más de la mitad','Casi todos los días'],
+    valores: [0, 1, 2, 3],
+    preguntas: [
+      { id: 'gad1', texto: 'Sentirte nervioso(a), tenso(a) o con los nervios de punta' },
+      { id: 'gad2', texto: 'No poder parar o controlar tus preocupaciones constantes' },
+      { id: 'gad3', texto: 'Preocuparte en exceso por múltiples cosas a la vez' },
+      { id: 'gad4', texto: 'Dificultad evidente para relajarte o calmar la mente' },
+      { id: 'gad5', texto: 'Estar tan inquieto(a) que te cuesta trabajo permanecer sentado(a)' },
+      { id: 'gad6', texto: 'Irritarte, enojarte o molestarte con mucha facilidad' },
+      { id: 'gad7', texto: 'Sentir miedo o sobresalto como si algo terrible fuera a suceder' }
+    ]
+  },
+  {
+    id: 'assist',
+    titulo: 'Hábitos y Salud (ASSIST-Lite)',
+    instruccion: 'Responde con sinceridad. La información es estrictamente confidencial para prevención en salud.',
+    tipo: 'opciones',
+    preguntas: [
+      { id: 'ass1', texto: '¿Has consumido tabaco o vapeadores (cigarros electrónicos)?', opciones: ['Nunca','Consumí en el pasado pero ya no','Ocasionalmente','Frecuentemente (casi todos los días)'] },
+      { id: 'ass2', texto: '¿Con qué frecuencia consumes bebidas con alcohol?', opciones: ['Nunca','Ya no consumo','1 o 2 veces al mes o menos','Todas las semanas','Varios días a la semana'] },
+      { id: 'ass3', texto: '¿En los últimos 3 meses has consumido alcohol hasta perder el control?', opciones: ['Nunca','Una o dos veces','Mensualmente','Semanalmente','Con frecuencia'] },
+      { id: 'ass4', texto: '¿Alguna vez has consumido cannabis (mariguana)?', opciones: ['Nunca','Una o dos veces para probar','Algunas veces al año','Frecuentemente'] },
+      { id: 'ass5', texto: '¿Alguna persona cercana ha expresado preocupación por tu consumo de alguna sustancia?', opciones: ['No, nunca','Sí, alguna vez','Sí, en repetidas ocasiones'] }
+    ]
+  },
+  {
+    id: 'posit',
+    titulo: 'Vínculos & Factores de Protección',
+    instruccion: 'Selecciona la opción que mejor describe tu situación en el último semestre escolar.',
+    tipo: 'sino',
+    preguntas: [
+      { id: 'pos1', texto: '¿Te has sentido solo(a) o incomprendido(a) la mayor parte del tiempo?' },
+      { id: 'pos2', texto: '¿Tus calificaciones o rendimiento bajaron notoriamente este semestre?' },
+      { id: 'pos3', texto: '¿Has tenido enfrentamientos o peleas físicas con compañeros en el plantel?' },
+      { id: 'pos4', texto: '¿Has faltado a clases sin permiso de tus padres o tutores?' },
+      { id: 'pos5', texto: '¿Has sido víctima de acoso, burlas pesadas o bullying escolar?' },
+      { id: 'pos6', texto: '¿Hay situaciones en tu casa que te generen angustia o tristeza profunda?' },
+      { id: 'pos7', texto: '¿Tienes problemas frecuentes para dormir o descansar bien?' },
+      { id: 'pos8', texto: '¿Has tenido pensamientos de hacerte daño en algún momento de este año?' },
+      { id: 'pos9', texto: '¿Cuentas con al menos un adulto de confianza (orientador, docente o familiar) al que puedas acudir?' }
+    ]
+  }
+];
+
+function iniciarEvaluacion(){
+  const nom = document.getElementById('inp-nombre').value.trim();
+  const ape = document.getElementById('inp-apellidos').value.trim();
+  const mat = document.getElementById('inp-matricula').value.trim();
+  const sem = document.getElementById('inp-semestre').value;
+
+  if(!nom || !ape || !mat || !sem){
+    alert('Por favor completa los campos marcados con asterisco (*).');
+    return;
+  }
+
+  alumno = {
+    nombre: `${nom} ${ape}`,
+    matricula: mat,
+    edad: document.getElementById('inp-edad').value || '16',
+    semestre: sem,
+    grupo: document.getElementById('inp-grupo').value || '402',
+    carrera: document.getElementById('inp-carrera').value || 'Técnico en Informática',
+    fecha: new Date().toLocaleDateString('es-MX', {year:'numeric',month:'long',day:'numeric'})
+  };
+
+  mostrarPantalla('p-evaluacion');
+  renderizarSidebar();
+  renderizarSeccion(0);
+}
+
+function mostrarPantalla(id){
+  document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
+  document.getElementById(id).classList.add('activa');
+  window.scrollTo(0,0);
+}
+
+function renderizarSidebar(){
+  const cont = document.getElementById('sidebar-items');
+  cont.innerHTML = SECCIONES.map((s, i) => `
+    <div class="sidebar-item ${i === seccionActual ? 'activo' : ''}" id="side-${i}">
+      <div class="sidebar-num">${i+1}</div>
+      <span class="sidebar-label">${s.titulo}</span>
+    </div>
+  `).join('');
+}
+
+function actualizarSidebar(){
+  SECCIONES.forEach((s, i) => {
+    const el = document.getElementById(`side-${i}`);
+    if(!el) return;
+    el.className = 'sidebar-item';
+    if(i === seccionActual) el.classList.add('activo');
+    else if(seccionCompleta(i)) el.classList.add('completado');
+  });
+}
+
+function seccionCompleta(idx){
+  const sec = SECCIONES[idx];
+  for(const p of sec.preguntas){
+    if(respuestas[p.id] === undefined || respuestas[p.id] === null || respuestas[p.id] === '') return false;
+  }
+  return true;
+}
+
+function actualizarProgreso(){
+  const total = SECCIONES.reduce((a,s) => a + s.preguntas.length, 0);
+  const resp = Object.keys(respuestas).length;
+  const pct = Math.min(100, Math.round((resp / total) * 100));
+  document.getElementById('prog-pct').textContent = pct + '%';
+  document.getElementById('barra-prog').style.width = pct + '%';
+  document.getElementById('prog-etiqueta').textContent = `Dimensión ${seccionActual+1} de ${SECCIONES.length}`;
+  document.getElementById('eval-header-seccion').textContent = `Sección ${seccionActual+1} de ${SECCIONES.length}`;
+}
+
+function renderizarSeccion(idx){
+  seccionActual = idx;
+  const sec = SECCIONES[idx];
+  const cont = document.getElementById('contenido-seccion');
+
+  document.getElementById('eval-header-titulo').textContent = sec.titulo;
+
+  let html = `
+    <div class="seccion-titulo">${sec.titulo}</div>
+    <div class="seccion-inst">${sec.instruccion}</div>
+  `;
+
+  if(sec.tipo === 'likert4'){
+    html += `<div class="likert-wrap"><div class="likert-grid">`;
+    html += `<div style="display:grid;grid-template-columns:2fr repeat(${sec.columnas.length},1fr);font-size:10px;font-weight:700;color:var(--gris-med);text-align:center;padding-bottom:4px;">
+      <span></span>
+      ${sec.columnas.map(c => `<span>${c}</span>`).join('')}
+    </div>`;
+    sec.preguntas.forEach((p, pi) => {
+      const resp = respuestas[p.id] !== undefined;
+      html += `
+        <div class="likert-row ${resp ? 'respondida' : ''}" id="row-${p.id}"
+             style="grid-template-columns:2fr repeat(${sec.columnas.length},1fr);">
+          <span class="likert-pregunta"><strong>${pi+1}.</strong> ${p.texto}</span>
+          ${sec.columnas.map((c, ci) => `
+            <label style="display:flex;flex-direction:column;align-items:center;cursor:pointer;">
+              <input type="radio" name="${p.id}" value="${sec.valores[ci]}"
+                ${respuestas[p.id] === sec.valores[ci] ? 'checked' : ''}
+                onchange="registrar('${p.id}', ${sec.valores[ci]})">
+            </label>
+          `).join('')}
+        </div>`;
+    });
+    html += `</div></div>`;
+  } else if(sec.tipo === 'opciones'){
+    sec.preguntas.forEach((p, pi) => {
+      html += `
+        <div class="pregunta-card" id="card-${p.id}">
+          <div class="pregunta-num">${pi+1} de ${sec.preguntas.length}</div>
+          <div class="pregunta-texto">${p.texto}</div>
+          <div class="opciones-grid">
+            ${p.opciones.map((op, oi) => `
+              <label class="opcion ${respuestas[p.id] === oi ? 'seleccionada' : ''}">
+                <input type="radio" name="${p.id}" value="${oi}"
+                  ${respuestas[p.id] === oi ? 'checked' : ''}
+                  onchange="registrar('${p.id}', ${oi}, '${p.id}')">
+                ${op}
+              </label>
+            `).join('')}
+          </div>
+        </div>`;
+    });
+  } else if(sec.tipo === 'sino'){
+    sec.preguntas.forEach((p, pi) => {
+      html += `
+        <div class="pregunta-card" id="card-${p.id}">
+          <div class="pregunta-num">${pi+1} de ${sec.preguntas.length}</div>
+          <div class="pregunta-texto">${p.texto}</div>
+          <div class="opciones-grid">
+            ${['Sí','No'].map((op, oi) => `
+              <label class="opcion ${respuestas[p.id] === oi ? 'seleccionada' : ''}">
+                <input type="radio" name="${p.id}" value="${oi}"
+                  ${respuestas[p.id] === oi ? 'checked' : ''}
+                  onchange="registrar('${p.id}', ${oi}, '${p.id}')">
+                ${op}
+              </label>
+            `).join('')}
+          </div>
+        </div>`;
+    });
+  }
+
+  cont.innerHTML = html;
+
+  const esUltima = idx === SECCIONES.length - 1;
+  document.getElementById('btn-sig').style.display = esUltima ? 'none' : 'inline-flex';
+  document.getElementById('btn-fin').style.display = esUltima ? 'inline-flex' : 'none';
+  document.getElementById('btn-ant').style.display = idx === 0 ? 'none' : 'inline-flex';
+  document.getElementById('msg-faltantes').style.display = 'none';
+
+  actualizarSidebar();
+  actualizarProgreso();
+}
+
+function registrar(pregId, val, cardId){
+  respuestas[pregId] = val;
+  const row = document.getElementById('row-' + pregId);
+  if(row) row.classList.add('respondida');
+  if(cardId){
+    const card = document.getElementById('card-' + cardId);
+    if(card){
+      card.querySelectorAll('.opcion').forEach(o => o.classList.remove('seleccionada'));
+      const chk = card.querySelector('input[type=radio]:checked');
+      if(chk) chk.closest('.opcion').classList.add('seleccionada');
+    }
+  }
+  actualizarProgreso();
+  actualizarSidebar();
+}
+
+function seccionSiguiente(){
+  if(!seccionCompleta(seccionActual)){
+    document.getElementById('msg-faltantes').style.display = 'block';
+    return;
+  }
+  document.getElementById('msg-faltantes').style.display = 'none';
+  if(seccionActual < SECCIONES.length - 1){
+    renderizarSeccion(seccionActual + 1);
+  }
+}
+
+function seccionAnterior(){
+  if(seccionActual > 0){
+    renderizarSeccion(seccionActual - 1);
+  }
+}
+
+function finalizar(){
+  if(!seccionCompleta(seccionActual)){
+    document.getElementById('msg-faltantes').style.display = 'block';
+    return;
+  }
+  mostrarPantalla('p-cargando');
+  setTimeout(calcularResultados, 1500);
+}
+
+/* MOTOR DE CALIFICACIÓN */
+function calcularResultados(){
+  // 1. PHQ-A
+  const phqKeys = ['phq1','phq2','phq3','phq4','phq5','phq6','phq7','phq8','phq9'];
+  const phqScore = phqKeys.reduce((acc, k) => acc + (respuestas[k] || 0), 0);
+  const phqIdeacion = (respuestas['phq9'] || 0) >= 1;
+  let phqNivel = 'Sin indicadores', phqColor = 'bajo';
+  if(phqScore >= 20){ phqNivel = 'Grave'; phqColor = 'severo'; }
+  else if(phqScore >= 15){ phqNivel = 'Moderada-Grave'; phqColor = 'severo'; }
+  else if(phqScore >= 10){ phqNivel = 'Moderada'; phqColor = 'alto'; }
+  else if(phqScore >= 5){ phqNivel = 'Leve'; phqColor = 'moderado'; }
+
+  // 2. GAD-7
+  const gadKeys = ['gad1','gad2','gad3','gad4','gad5','gad6','gad7'];
+  const gadScore = gadKeys.reduce((acc, k) => acc + (respuestas[k] || 0), 0);
+  let gadNivel = 'Sin indicadores', gadColor = 'bajo';
+  if(gadScore >= 15){ gadNivel = 'Grave'; gadColor = 'severo'; }
+  else if(gadScore >= 10){ gadNivel = 'Moderada'; gadColor = 'alto'; }
+  else if(gadScore >= 5){ gadNivel = 'Leve'; gadColor = 'moderado'; }
+
+  // 3. ASSIST-Lite
+  const assScore = (respuestas['ass1']||0) + (respuestas['ass2']||0) + (respuestas['ass3']||0) + (respuestas['ass4']||0) + (respuestas['ass5']||0);
+  let assNivel = 'Sin riesgo', assColor = 'bajo';
+  if(assScore >= 8){ assNivel = 'Riesgo alto'; assColor = 'severo'; }
+  else if(assScore >= 4){ assNivel = 'Riesgo moderado'; assColor = 'alto'; }
+  else if(assScore >= 2){ assNivel = 'Riesgo leve'; assColor = 'moderado'; }
+
+  // 4. POSIT
+  let positScore = 0;
+  for(let i=1; i<=8; i++){
+    if(respuestas['pos' + i] === 0) positScore++; // Sí = riesgo
+  }
+  if(respuestas['pos9'] === 1) positScore++; // No tener adulto de confianza = riesgo
+  const positIdeacion = respuestas['pos8'] === 0;
+
+  let positNivel = 'Sin riesgo', positColor = 'bajo';
+  if(positScore >= 6){ positNivel = 'Riesgo alto'; positColor = 'severo'; }
+  else if(positScore >= 4){ positNivel = 'Riesgo moderado'; positColor = 'alto'; }
+  else if(positScore >= 2){ positNivel = 'Riesgo bajo'; positColor = 'moderado'; }
+
+  const riesgoGlobal = (phqIdeacion || positIdeacion) ? 'crisis' :
+    (phqColor === 'severo' || gadColor === 'severo') ? 'alto' :
+    (phqColor === 'alto' || gadColor === 'alto' || assColor === 'alto') ? 'medio' : 'bajo';
+
+  const res = {
+    phq: { score: phqScore, max: 27, nivel: phqNivel, color: phqColor, alerta: phqIdeacion },
+    gad: { score: gadScore, max: 21, nivel: gadNivel, color: gadColor },
+    assist: { score: assScore, max: 15, nivel: assNivel, color: assColor },
+    posit: { score: positScore, max: 9, nivel: positNivel, color: positColor, alerta: positIdeacion },
+    riesgoGlobal: riesgoGlobal,
+    ideacion: phqIdeacion || positIdeacion,
+    abandono: respuestas['c4'] >= 2
+  };
+
+  // Guardar en la base de datos de NAIMA OS
+  sincronizarResultadoNaima(res);
+  mostrarDashboard(res);
+}
+
+function sincronizarResultadoNaima(res){
+  try {
+    if(typeof db !== 'undefined' && db.students && alumno.matricula){
+      const mat = alumno.matricula;
+      if(!db.students[mat]){
+        db.students[mat] = {
+          nombre: alumno.nombre,
+          matricula: mat,
+          carrera: alumno.carrera,
+          semestre: alumno.semestre,
+          grupo: alumno.grupo,
+          edad: alumno.edad,
+          prioridad: res.riesgoGlobal === 'crisis' || res.riesgoGlobal === 'alto' ? 'alto' : 'bajo'
+        };
+      }
+      db.students[mat].tamizaje = {
+        fecha: new Date().toISOString(),
+        resultados: res
+      };
+      db.students[mat].riesgo = res.riesgoGlobal;
+      db.students[mat].prioridad = (res.riesgoGlobal === 'crisis' || res.riesgoGlobal === 'alto') ? 'alto' : 'bajo';
+
+      // Si hay ideación o riesgo alto, generar una alerta para el orientador
+      if(res.ideacion || res.riesgoGlobal === 'crisis' || res.riesgoGlobal === 'alto'){
+        if(!db.alerts) db.alerts = [];
+        const existing = db.alerts.find(a => a.studentId === mat && a.status === 'pendiente');
+        if(!existing){
+          db.alerts.unshift({
+            id: 'alt_' + Date.now(),
+            studentId: mat,
+            studentName: alumno.nombre,
+            carrera: alumno.carrera,
+            grupo: alumno.grupo,
+            type: res.ideacion ? 'Ideación detectada en Tamizaje' : 'Riesgo alto en Tamizaje',
+            details: `PHQ-A: ${res.phq.score}/27 (${res.phq.nivel}) · GAD-7: ${res.gad.score}/21. Requiere atención de orientación educativa.`,
+            date: new Date().toISOString().split('T')[0],
+            status: 'pendiente',
+            guardian: db.students[mat].guardian || 'Por asignar'
+          });
+        }
+      }
+
+      saveDB();
+    }
+  }catch(e){
+    console.warn('Aviso guardando tamizaje en NAIMA OS:', e);
+  }
+}
+
+function mostrarDashboard(res){
+  mostrarPantalla('p-dashboard');
+
+  const partes = alumno.nombre.split(' ');
+  const ini = ((partes[0] ? partes[0][0] : 'A') + (partes[1] ? partes[1][0] : 'L')).toUpperCase();
+  document.getElementById('dash-avatar').textContent = ini;
+  document.getElementById('dash-nombre').textContent = alumno.nombre;
+  document.getElementById('dash-meta').textContent = `Matrícula: ${alumno.matricula} · ${alumno.semestre} Grupo ${alumno.grupo} · ${alumno.carrera}`;
+  document.getElementById('dash-fecha').textContent = `Completado: ${alumno.fecha}`;
+
+  // KPIs
+  const areas = [
+    { nombre:'Estado de Ánimo', val:res.phq.nivel, col:res.phq.color },
+    { nombre:'Ansiedad / Estrés', val:res.gad.nivel, col:res.gad.color },
+    { nombre:'Salud & Hábitos', val:res.assist.nivel, col:res.assist.color },
+    { nombre:'Vínculos Psicosociales', val:res.posit.nivel, col:res.posit.color }
+  ];
+  document.getElementById('dash-kpis').innerHTML = areas.map(a => `
+    <div class="kpi-card kpi-${a.col}">
+      <div class="kpi-etiqueta">${a.nombre}</div>
+      <div class="kpi-valor">${a.val}</div>
+    </div>
+  `).join('');
+
+  // Detalle
+  const listDetalle = [
+    { nombre:'Estado de Ánimo (PHQ-A)', inst:'Escala estandarizada de depresión adolescente', ...res.phq, desc:'Evalúa interés en actividades, energía, calidad de sueño y afecto.' },
+    { nombre:'Regulación Emocional (GAD-7)', inst:'Escala estandarizada de ansiedad generalizada', ...res.gad, desc:'Mide niveles de tensión nerviosa, preocupación incontrolable e irritabilidad.' },
+    { nombre:'Salud y Hábitos (ASSIST-Lite)', inst:'Tamizaje de sustancias conforme al modelo OMS', ...res.assist, desc:'Identifica indicadores de consumo ocasional o problemático.' },
+    { nombre:'Factores Psicosociales (POSIT)', inst:'Tamizaje psicosocial y red de apoyo', ...res.posit, desc:'Analiza relaciones con compañeros, dinámica familiar y soporte escolar.' }
+  ];
+
+  document.getElementById('dash-resultados').innerHTML = listDetalle.map(a => {
+    const pct = Math.round((a.score / a.max) * 100);
+    const colMap = {bajo:'#1D9E75', moderado:'#D4A017', alto:'#C0420F', severo:'#C8102E'};
+    return `
+      <div class="resultado-card">
+        <div class="resultado-header">
+          <div>
+            <div class="resultado-nombre">${a.nombre}</div>
+            <div class="resultado-instrumento">${a.inst}</div>
+          </div>
+          <span class="resultado-badge badge-${a.color}">${a.nivel}</span>
+        </div>
+        <div class="puntuacion-wrap">
+          <span class="puntuacion-num">${a.score}</span>
+          <span class="puntuacion-de">/ ${a.max} pts</span>
+          <div class="barra-resultado-fondo">
+            <div class="barra-resultado-relleno" style="width:${pct}%;background:${colMap[a.color]};"></div>
+          </div>
+        </div>
+        <div class="resultado-desc">${a.desc}</div>
+      </div>`;
+  }).join('');
+
+  // Gráficas
+  setTimeout(() => renderGraficas(res), 100);
+
+  // Recomendaciones
+  renderRecomendaciones(res);
+}
+
+function renderGraficas(res){
+  const ctxB = document.getElementById('chart-barras').getContext('2d');
+  new Chart(ctxB, {
+    type:'bar',
+    data:{
+      labels:['Ánimo (PHQ)','Ansiedad (GAD)','Hábitos (ASSIST)','Psicosocial'],
+      datasets:[{
+        data:[
+          Math.round((res.phq.score/res.phq.max)*100),
+          Math.round((res.gad.score/res.gad.max)*100),
+          Math.round((res.assist.score/res.assist.max)*100),
+          Math.round((res.posit.score/res.posit.max)*100)
+        ],
+        backgroundColor:['#007E67','#009E83','#C8A951','#2563A8'],
+        borderRadius:6
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ y:{ beginAtZero:true, max:100, ticks:{ callback:v=>v+'%' } } }
+    }
+  });
+
+  const ctxR = document.getElementById('chart-radar').getContext('2d');
+  new Chart(ctxR, {
+    type:'radar',
+    data:{
+      labels:['Ánimo','Ansiedad','Hábitos','Protección Social'],
+      datasets:[{
+        label:'Perfil',
+        data:[
+          Math.round((res.phq.score/res.phq.max)*100),
+          Math.round((res.gad.score/res.gad.max)*100),
+          Math.round((res.assist.score/res.assist.max)*100),
+          Math.round((res.posit.score/res.posit.max)*100)
+        ],
+        backgroundColor:'rgba(0,126,103,0.15)',
+        borderColor:'#007E67',
+        pointBackgroundColor:'#007E67'
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ r:{ beginAtZero:true, max:100 } }
+    }
+  });
+}
+
+function renderRecomendaciones(res){
+  const recs = [];
+  if(res.phq.color === 'alto' || res.phq.color === 'severo'){
+    recs.push({ icono:'💬', pioe:'Desarrollo Personal · Orientación', accion:'Acompañamiento individual con tu Orientador(a)', desc:'Se recomienda una charla de orientación escolar para explorar herramientas de regulación del estado de ánimo.' });
+  }
+  if(res.gad.color === 'alto' || res.gad.color === 'severo'){
+    recs.push({ icono:'🧘', pioe:'Prácticas de Vida Saludable', accion:'Técnicas de manejo de ansiedad ante exámenes', desc:'Prueba ejercicios de respiración diafragmática y pausas activas durante tus horas de estudio.' });
+  }
+  if(res.abandono){
+    recs.push({ icono:'🎯', pioe:'Orientación Vocacional', accion:'Plan de apoyo académico y permanencia', desc:'Tu proyecto de vida importa. Acude a orientación para revisar opciones de asesorías académicas.' });
+  }
+  if(recs.length === 0){
+    recs.push({ icono:'✨', pioe:'Bienestar Continuo', accion:'Continuar hábitos saludables y check-in emocional', desc:'Tus indicadores muestran un equilibrio favorable. Sigue apoyándote en tus compañeros y en tus metas escolares.' });
+  }
+
+  document.getElementById('dash-recomendaciones').innerHTML = recs.map(r => `
+    <div class="recomendacion-item">
+      <div class="rec-icono" style="background:var(--rojo-light);color:var(--rojo);">${r.icono}</div>
+      <div>
+        <div class="rec-accion">${r.accion}</div>
+        <div class="rec-desc">${r.desc}</div>
+        <span class="rec-pioe">${r.pioe}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function exportarJSON(){
+  const payload = { alumno, respuestas, fecha: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `tamizaje_${alumno.matricula || 'alumno'}.json`;
+  a.click();
+}
+</script>
+</body>
+</html>

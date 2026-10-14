@@ -13,6 +13,9 @@ if (!currentAdminUser || currentAdminUser.rol !== 'coordinador') {
 const SECTIONS_ADMIN = [
   { id:'inicio',        label:'Inicio',           icon:'◆' },
   { id:'alumnos',       label:'Estudiantes',      icon:'🎓' },
+  { id:'psicologia',    label:'Psicología Escolar',icon:'🩺', sep:'CLÍNICA' },
+  { id:'agenda',        label:'Agenda & Citas',   icon:'📅' },
+  { id:'reportes_ofic', label:'Reportes Oficiales',icon:'📋' },
   { id:'pioe',          label:'PIOE Digital',     icon:'◎', sep:'MÓDULOS' },
   { id:'eirene',        label:'EIRÉNÉ',           icon:'◌' },
   { id:'orion',         label:'ORION Asistente',  icon:'✧' },
@@ -94,16 +97,19 @@ function nav(sec){
   const el = document.getElementById('content');
   window.scrollTo(0,0);
 
-  if(sec === 'inicio')        el.innerHTML = renderAdminInicio();
-  else if(sec === 'alumnos')  el.innerHTML = renderProtoestrellas();
-  else if(sec === 'pioe')     el.innerHTML = renderPioe();
-  else if(sec === 'eirene')   el.innerHTML = renderEirene();
-  else if(sec === 'orion')    el.innerHTML = renderOrionPanel();
-  else if(sec === 'catalogo') el.innerHTML = renderDocumentos();
-  else if(sec === 'nova')     el.innerHTML = renderNova();
-  else if(sec === 'campus3d') el.innerHTML = renderCampus3DCoordinador();
-  else if(sec === 'equipo')   el.innerHTML = renderEquipoCoordinadores();
-  else if(sec === 'config')   el.innerHTML = renderConfiguracion();
+  if(sec === 'inicio')             el.innerHTML = renderAdminInicio();
+  else if(sec === 'alumnos')       el.innerHTML = renderProtoestrellas();
+  else if(sec === 'psicologia')    el.innerHTML = renderAdminPsicologia();
+  else if(sec === 'agenda')        el.innerHTML = renderAdminAgenda();
+  else if(sec === 'reportes_ofic') el.innerHTML = renderAdminReportesOficiales();
+  else if(sec === 'pioe')          el.innerHTML = renderPioe();
+  else if(sec === 'eirene')        el.innerHTML = renderEirene();
+  else if(sec === 'orion')         el.innerHTML = renderOrionPanel();
+  else if(sec === 'catalogo')      el.innerHTML = renderDocumentos();
+  else if(sec === 'nova')          el.innerHTML = renderNova();
+  else if(sec === 'campus3d')      el.innerHTML = renderCampus3DCoordinador();
+  else if(sec === 'equipo')        el.innerHTML = renderEquipoCoordinadores();
+  else if(sec === 'config')        el.innerHTML = renderConfiguracion();
   else el.innerHTML = renderAdminStub(sec);
 }
 
@@ -432,6 +438,7 @@ function renderProtoestrellas(){
       <td class="pt-name">
         ${s.nombre}
         ${isAssignedToCurrent ? '<span style="color:var(--green);font-size:11px;font-weight:700;margin-left:6px;">(Tu estudiante)</span>' : ''}
+        ${s.tamizaje ? `<span class="badge-tamizaje ${(s.tamizaje.resultados && s.tamizaje.resultados.riesgoGlobal) || 'bajo'}" style="margin-left:6px;" title="Tamizaje PIOE realizado">🩺 ${(s.tamizaje.resultados && s.tamizaje.resultados.riesgoGlobal ? s.tamizaje.resultados.riesgoGlobal.toUpperCase() : 'PIOE')}</span>` : ''}
       </td>
       <td class="pt-mat mono">${s.matricula}</td>
       <td>${s.grupo} · ${s.carrera || 'Sin carrera'}</td>
@@ -440,8 +447,9 @@ function renderProtoestrellas(){
           ${s.guardian || 'Por asignar'}
         </span>
       </td>
-      <td class="pt-action">
+      <td class="pt-action" style="white-space:nowrap;">
         <button class="btn-outline-maroon" onclick="openStudentModal('${s.matricula}')">Abrir expediente</button>
+        <a href="reporte-psicologico.html?matricula=${encodeURIComponent(s.matricula)}" target="_blank" class="btn-outline-maroon" style="padding:6px 10px;font-size:12px;margin-left:4px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;" title="Generar Reporte Psicológico Oficial">📋 Reporte</a>
       </td>
     </tr>`;
   }).join('');
@@ -465,6 +473,7 @@ function renderProtoestrellas(){
                 Ver los ${allStudents.length} estudiantes del plantel →
               </button>
             ` : ''}
+            <a href="psicologia-escolar.html#tab-importar" class="btn-outline-maroon" style="padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;background:#FFF;display:inline-flex;align-items:center;gap:6px;">📥 Importar Excel / CSV</a>
             <button class="btn-maroon" onclick="quickNuevaProtoestrella()">+ Nuevo Estudiante</button>
           </div>
         </div>
@@ -484,7 +493,11 @@ function renderProtoestrellas(){
       <span class="pb-tag">Expediente Único Digital</span>
       <p class="pb-desc">Los datos se capturan una sola vez y alimentan todos los flujos autorizados.</p>
     </div>
-    <button class="btn-maroon" onclick="quickNuevaProtoestrella()">+ Nuevo Estudiante</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="psicologia-escolar.html#tab-importar" class="btn-outline-maroon" style="padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;background:#FFF;display:inline-flex;align-items:center;gap:6px;">📥 Importar Excel / CSV</a>
+      <a href="psicologia-escolar.html#tab-agenda" class="btn-outline-maroon" style="padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;background:#FFF;display:inline-flex;align-items:center;gap:6px;">📅 Agenda de Citas</a>
+      <button class="btn-maroon" onclick="quickNuevaProtoestrella()">+ Nuevo Estudiante</button>
+    </div>
   </div>
 
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:20px 0 14px;">
@@ -778,10 +791,65 @@ function openStudentModal(matricula, activeTab = 'checkins'){
     </div>
   `;
 
+  const tamizajeData = s.tamizaje || null;
+  const tamizajeTabContent = tamizajeData ? `
+    <div style="background:#FAFBF9;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <span class="section-label" style="margin:0;">Resultados del Tamizaje Psicoemocional (PIOE)</span>
+        <span class="badge-tamizaje ${(tamizajeData.resultados && tamizajeData.resultados.riesgoGlobal) || 'bajo'}">
+          Nivel de Riesgo: ${((tamizajeData.resultados && tamizajeData.resultados.riesgoGlobal) || 'bajo').toUpperCase()}
+        </span>
+      </div>
+      <div class="tamizaje-kpi-grid">
+        <div class="tamizaje-kpi-box">
+          <div class="val">${(tamizajeData.resultados && tamizajeData.resultados.phq ? tamizajeData.resultados.phq.score : 0)}/27</div>
+          <div class="lbl">Depresión (PHQ-A)</div>
+        </div>
+        <div class="tamizaje-kpi-box">
+          <div class="val">${(tamizajeData.resultados && tamizajeData.resultados.gad ? tamizajeData.resultados.gad.score : 0)}/21</div>
+          <div class="lbl">Ansiedad (GAD-7)</div>
+        </div>
+        <div class="tamizaje-kpi-box">
+          <div class="val">${(tamizajeData.resultados && tamizajeData.resultados.assist ? tamizajeData.resultados.assist.nivel : 'Sin riesgo')}</div>
+          <div class="lbl">Sustancias (ASSIST)</div>
+        </div>
+        <div class="tamizaje-kpi-box">
+          <div class="val">${(tamizajeData.resultados && tamizajeData.resultados.posit ? tamizajeData.resultados.posit.nivel : 'Bajo')}</div>
+          <div class="lbl">Psicosocial (POSIT)</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--ink-soft);margin-top:10px;">
+        Fecha de aplicación: <strong>${new Date(tamizajeData.fecha).toLocaleDateString('es-MX')}</strong>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="reporte-psicologico.html?matricula=${encodeURIComponent(matricula)}" target="_blank" class="btn-maroon" style="padding:8px 14px;font-size:12.5px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+        📋 Abrir en Reporte Psicológico Oficial
+      </a>
+      <a href="psicologia-escolar.html" target="_blank" class="btn-outline-maroon" style="padding:8px 14px;font-size:12.5px;text-decoration:none;">
+        🩺 Abrir Sistema de Psicología Escolar
+      </a>
+    </div>
+  ` : `
+    <div class="history-empty" style="padding:28px 16px;">
+      <div style="font-size:26px;margin-bottom:6px;">📋</div>
+      <strong>El alumno aún no ha respondido el tamizaje de este ciclo</strong>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:4px;">
+        El alumno puede responder el cuestionario desde su portal estudiantil o puedes abrir el formato oficial de reporte psicológico.
+      </p>
+      <div style="margin-top:12px;">
+        <a href="reporte-psicologico.html?matricula=${encodeURIComponent(matricula)}" target="_blank" class="btn-outline-maroon" style="padding:7px 14px;font-size:12.5px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+          📋 Elaborar Reporte Psicológico Oficial
+        </a>
+      </div>
+    </div>
+  `;
+
   // Selector del contenido según pestaña activa
   let activeTabHTML = checkinsTabContent;
   if(activeTab === 'tareas') activeTabHTML = tasksTabContent;
   if(activeTab === 'documentos') activeTabHTML = docsTabContent;
+  if(activeTab === 'tamizaje') activeTabHTML = tamizajeTabContent;
 
   const studentPhoto = (typeof getStudentPhoto === 'function') ? getStudentPhoto(s) : (s.photo || s.avatar?.photo || null);
 
@@ -820,6 +888,9 @@ function openStudentModal(matricula, activeTab = 'checkins'){
           <button class="btn-outline-maroon" style="padding:5px 12px;font-size:11.5px;border-radius:100px;" onclick="openOfficialReportModal('${matricula}', 'Expediente Integral del Estudiante')">
             🖨️ Generar Reporte Oficial CONALEP (PDF)
           </button>
+          <a href="reporte-psicologico.html?matricula=${encodeURIComponent(matricula)}" target="_blank" class="btn-outline-maroon" style="padding:5px 12px;font-size:11.5px;border-radius:100px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+            📋 Reporte Psicológico Oficial (Folio)
+          </a>
         </div>
       </div>
     </div>
@@ -834,6 +905,9 @@ function openStudentModal(matricula, activeTab = 'checkins'){
       </button>
       <button class="sm-tab-btn ${activeTab === 'documentos' ? 'active' : ''}" onclick="openStudentModal('${matricula}', 'documentos')">
         📁 Documentos (${docs.length})
+      </button>
+      <button class="sm-tab-btn ${activeTab === 'tamizaje' ? 'active' : ''}" onclick="openStudentModal('${matricula}', 'tamizaje')">
+        🩺 Tamizaje PIOE ${s.tamizaje ? '✓' : ''}
       </button>
     </div>
 
@@ -2708,4 +2782,187 @@ async function deleteAdminProfilePhoto(){
   if(currentSection === 'equipo'){
     renderEquipoCoordinadores();
   }
+}
+
+/* ============================================================
+   SECCIONES: PSICOLOGÍA ESCOLAR, AGENDA Y REPORTES OFICIALES
+   ============================================================ */
+function renderAdminPsicologia(){
+  const allStudents = studentsList();
+  const withTamizaje = allStudents.filter(s => s.tamizaje).length;
+  const highRisk = allStudents.filter(s => s.prioridad === 'alto' || (s.tamizaje && (s.tamizaje.resultados?.riesgoGlobal === 'alto' || s.tamizaje.resultados?.riesgoGlobal === 'crisis'))).length;
+
+  return `
+    <div class="page-head">
+      <div>
+        <span class="eyebrow">DIRECCIÓN GENERAL · ÁREA DE PSICOLOGÍA ESCOLAR</span>
+        <h1>Psicología Escolar & Orientación Clínica</h1>
+        <p>Acompañamiento psicopedagógico, expedientes clínicos, agenda semanal de sesiones y reportes oficiales con membrete CONALEP.</p>
+      </div>
+      <span class="demo-chip">CONALEP Mérida I</span>
+    </div>
+
+    <div class="clinical-card-grid">
+      <div class="clinical-card">
+        <div class="clinical-card-icon">👤</div>
+        <div class="clinical-card-title">Expedientes & Notas Clínicas</div>
+        <div class="clinical-card-desc">
+          Consulta fichas completas, notas evolutivas cronológicas, registro de citas y acuerdos individuales de tutoría.
+        </div>
+        <div class="clinical-card-actions">
+          <a href="psicologia-escolar.html#tab-expedientes" target="_blank" class="btn-maroon" style="text-decoration:none;font-size:12.5px;padding:8px 14px;">
+            Abrir Expedientes Clínicos ↗
+          </a>
+        </div>
+      </div>
+
+      <div class="clinical-card">
+        <div class="clinical-card-icon">📅</div>
+        <div class="clinical-card-title">Agenda & Disponibilidad Semanal</div>
+        <div class="clinical-card-desc">
+          Control de citas por fecha y hora, disponibilidad de cubículo de orientación y confirmación de asistencia.
+        </div>
+        <div class="clinical-card-actions">
+          <a href="psicologia-escolar.html#tab-agenda" target="_blank" class="btn-maroon" style="text-decoration:none;font-size:12.5px;padding:8px 14px;">
+            Ver Agenda de Citas ↗
+          </a>
+        </div>
+      </div>
+
+      <div class="clinical-card">
+        <div class="clinical-card-icon">📥</div>
+        <div class="clinical-card-title">Importador Masivo (Excel / CSV)</div>
+        <div class="clinical-card-desc">
+          Carga listas grupales en formato .xlsx o .csv con detección inteligente de columnas y creación automática de expedientes.
+        </div>
+        <div class="clinical-card-actions">
+          <a href="psicologia-escolar.html#tab-importar" target="_blank" class="btn-maroon" style="text-decoration:none;font-size:12.5px;padding:8px 14px;">
+            Importar Alumnos desde Excel ↗
+          </a>
+        </div>
+      </div>
+
+      <div class="clinical-card">
+        <div class="clinical-card-icon">📋</div>
+        <div class="clinical-card-title">Reporte Psicológico Oficial (Folio)</div>
+        <div class="clinical-card-desc">
+          Generador de reportes formales con folio MER1-YYMM-XXX, escalas clínicas, diagnóstico CIE-11 y firmas para impresión o PDF.
+        </div>
+        <div class="clinical-card-actions">
+          <a href="reporte-psicologico.html" target="_blank" class="btn-maroon" style="text-decoration:none;font-size:12.5px;padding:8px 14px;">
+            Elaborar Reporte Oficial ↗
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-head-row" style="margin:28px 0 14px;">
+      <div>
+        <span class="section-label">Sistema Integral Embebido</span>
+        <h2 class="section-title" style="margin-bottom:0;">Entorno de Trabajo Clínico Integrado</h2>
+      </div>
+      <a href="psicologia-escolar.html" target="_blank" class="btn-outline-maroon" style="text-decoration:none;padding:7px 14px;font-size:12.5px;">
+        Abrir en Pantalla Completa ↗
+      </a>
+    </div>
+
+    <div class="embed-iframe-container">
+      <iframe src="psicologia-escolar.html" title="Sistema Integral de Psicología Escolar CONALEP"></iframe>
+    </div>
+  `;
+}
+
+function renderAdminAgenda(){
+  return `
+    <div class="page-head">
+      <div>
+        <span class="eyebrow">PROGRAMACIÓN DE CITAS Y CUBÍCULO</span>
+        <h1>Agenda de Orientación & Tutorías</h1>
+        <p>Gestión de citas programadas, sesiones de seguimiento con estudiantes y reuniones con padres de familia.</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <a href="psicologia-escolar.html#tab-agenda" target="_blank" class="btn-maroon" style="text-decoration:none;padding:8px 16px;font-size:12.5px;">
+          Abrir en Pantalla Completa ↗
+        </a>
+      </div>
+    </div>
+
+    <div class="embed-iframe-container">
+      <iframe src="psicologia-escolar.html#tab-agenda" title="Agenda de Citas CONALEP"></iframe>
+    </div>
+  `;
+}
+
+function renderAdminReportesOficiales(){
+  const allDocs = (typeof getAllDocuments === 'function') ? getAllDocuments() : (db.documents || []);
+
+  return `
+    <div class="page-head">
+      <div>
+        <span class="eyebrow">EXPEDIENTES CLÍNICOS & FORMATOS OFICIALES</span>
+        <h1>Reportes Psicológicos Escolares</h1>
+        <p>Generación y resguardo de reportes oficiales de evaluación psicológica, intervenciones y actas con folio institucional.</p>
+      </div>
+      <a href="reporte-psicologico.html" target="_blank" class="btn-maroon" style="text-decoration:none;padding:8px 16px;font-size:13px;display:inline-flex;align-items:center;gap:6px;">
+        ＋ Elaborar Nuevo Reporte Oficial (Folio) ↗
+      </a>
+    </div>
+
+    <div class="pioe-banner" style="margin-bottom:24px;">
+      <div class="pioe-banner-body">
+        <span class="pioe-banner-tag">Documento Oficial CONALEP</span>
+        <p class="pioe-banner-desc">
+          El formato oficial incluye membrete oficial del Plantel Mérida 1, folio automatizado, evaluación de 6 áreas del desarrollo, valoración del riesgo y firmas oficiales.
+        </p>
+      </div>
+      <a href="reporte-psicologico.html" target="_blank" class="btn-maroon" style="text-decoration:none;font-size:12.5px;">
+        Abrir Formato en Blanco →
+      </a>
+    </div>
+
+    <div class="section-head-row">
+      <div>
+        <span class="section-label">Historial de Reportes</span>
+        <h2 class="section-title" style="margin-bottom:0;">Expedientes Registrados en el Sistema (${allDocs.length})</h2>
+      </div>
+    </div>
+
+    <div class="proto-table-wrap">
+      <table class="proto-table">
+        <thead>
+          <tr>
+            <th>Alumno / Matrícula</th>
+            <th>Título del Reporte</th>
+            <th>Folio / Categoría</th>
+            <th>Fecha</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${allDocs.length ? allDocs.map(d => `
+            <tr>
+              <td>
+                <strong style="color:var(--ink);">${escapeHTML(d.studentName || d.studentId)}</strong>
+                <div class="mono" style="font-size:11.5px;color:var(--ink-soft);">${d.studentId}</div>
+              </td>
+              <td><strong>${escapeHTML(d.title)}</strong></td>
+              <td><span class="doc-type-badge">${d.folio || d.file_type || 'Reporte'}</span></td>
+              <td><span style="font-size:12px;color:var(--ink-soft);">${d.created_at ? new Date(d.created_at).toLocaleDateString('es-MX') : (d.date || 'Reciente')}</span></td>
+              <td style="text-align:right;">
+                <a href="reporte-psicologico.html?studentId=${encodeURIComponent(d.studentId)}" target="_blank" class="btn-outline-maroon" style="padding:5px 12px;font-size:12px;text-decoration:none;">
+                  🖨️ Ver / Imprimir
+                </a>
+              </td>
+            </tr>
+          `).join('') : `
+            <tr>
+              <td colspan="5" style="text-align:center;padding:32px;color:var(--ink-soft);">
+                No hay reportes elaborados todavía. Haz clic en "Elaborar Nuevo Reporte Oficial" para generar el primero.
+              </td>
+            </tr>
+          `}
+        </tbody>
+      </table>
+    </div>
+  `;
 }

@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="description" content="CONALEP Mérida 1 — Sistema Integral de Psicología Escolar y Orientación Educativa">
+<title>CONALEP Mérida 1 — Sistema de Psicología Escolar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* VARIABLES CONALEP OFICIAL */
+:root {
+  --g: #007E67; --gd: #005C4B; --gp: #003D32; --gm: #009E83;
+  --gl: #E6F5F2; --gpl: #F0FAF8; --gs: #C8E6E0;
+  --w: #FFFFFF; --bg: #F2F5F4; --paper: #FAFBFA;
+  --b1: #E2E8E6; --b2: #C5CEC9; --b3: #8FA099;
+  --t1: #1A1E1C; --t2: #3A4340; --t3: #5A6360; --t4: #8FA099;
+  --r: #C0392B; --rl: #FDECEA; --rm: #F5B7B1;
+  --am: #E67E22; --aml: #FEF5E7;
+  --az: #2563A8; --azl: #EBF0F9;
+  --pu: #7B3FA0; --pul: #F3ECFA;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.07);
+  --shadow: 0 2px 8px rgba(0,0,0,.09);
+  --shadow-lg: 0 6px 24px rgba(0,0,0,.13);
+  --radius: 10px; --radius-sm: 7px; --radius-lg: 14px;
+  --transition: .18s ease;
+}
+
+/* RESET */
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; height:100%; }
+body {
+  font-family:'Montserrat',sans-serif;
+  background:var(--bg);
+  color:var(--t1);
+  font-size:13px;
+  line-height:1.6;
+  min-height:100vh;
+}
+
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--b2); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--g); }
+
+#shell { display:grid; grid-template-rows:auto auto 1fr; min-height:100vh; }
+#main-content { overflow-y:auto; }
+.wrap { max-width:1180px; margin:0 auto; padding:20px 16px 70px; }
+
+#topbar { height:5px; background:linear-gradient(90deg,var(--gp) 0%,var(--g) 50%,var(--gm) 100%); }
+
+/* HEADER */
+#hdr { background:var(--w); border-bottom:1.5px solid var(--b1); box-shadow:var(--shadow-sm); }
+.hdr-in {
+  max-width:1180px; margin:0 auto; display:flex; align-items:center;
+  gap:14px; padding:12px 18px; flex-wrap:wrap;
+}
+.hdr-logo { display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit; }
+.logo-sep { width:1.5px; height:44px; background:var(--b2); }
+.hdr-text h1 { font-size:16px; font-weight:800; color:var(--gp); line-height:1.1; }
+.hdr-text p { font-size:10.5px; font-weight:700; color:var(--g); text-transform:uppercase; letter-spacing:.08em; margin-top:2px; }
+.hdr-text small { font-size:10px; color:var(--t3); display:block; margin-top:1px; }
+.hdr-right { margin-left:auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+#hdr-badges { display:flex; gap:6px; flex-wrap:wrap; }
+
+/* NAV */
+#nav { background:var(--gp); position:sticky; top:0; z-index:100; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+.nav-in { max-width:1180px; margin:0 auto; display:flex; overflow-x:auto; }
+.nav-btn {
+  background:none; border:none; border-bottom:3px solid transparent;
+  padding:12px 16px; font-size:12px; font-weight:700; color:rgba(255,255,255,.7);
+  cursor:pointer; white-space:nowrap; font-family:'Montserrat',sans-serif;
+  transition:var(--transition); letter-spacing:.02em;
+}
+.nav-btn:hover { color:#FFF; }
+.nav-btn.on { color:#FFF; border-bottom-color:var(--gm); background:rgba(255,255,255,0.06); }
+
+/* BOTONES */
+.btn {
+  cursor:pointer; font-family:'Montserrat',sans-serif; font-weight:700;
+  font-size:12px; border:none; border-radius:var(--radius-sm);
+  padding:9px 18px; transition:var(--transition); line-height:1;
+  display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+}
+.btn-g { background:var(--g); color:#fff; }
+.btn-g:hover { background:var(--gd); transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,126,103,.3); }
+.btn-gd { background:var(--gp); color:#fff; }
+.btn-gd:hover { background:#002820; }
+.btn-o { background:transparent; color:var(--g); border:2px solid var(--g); }
+.btn-o:hover { background:var(--gl); }
+.btn-gr { background:var(--b1); color:var(--t2); border:1.5px solid var(--b2); }
+.btn-gr:hover { background:var(--b2); }
+.btn-r { background:var(--rl); color:var(--r); border:1.5px solid var(--rm); }
+.btn-r:hover { background:var(--rm); }
+.btn-az { background:var(--azl); color:var(--az); border:1.5px solid #93BAE8; }
+.btn-sm { font-size:11px; padding:6px 13px; }
+.btn-xs { font-size:10px; padding:4px 9px; }
+.btn-row { display:flex; gap:8px; flex-wrap:wrap; }
+
+/* INPUTS */
+input, select, textarea {
+  font-family:'Montserrat',sans-serif; font-size:12px; color:var(--t1);
+  background:var(--w); border:1.5px solid var(--b2); border-radius:var(--radius-sm);
+  padding:8px 11px; width:100%; outline:none; transition:border-color .18s,box-shadow .18s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color:var(--g); box-shadow:0 0 0 3px rgba(0,126,103,.1);
+}
+textarea { resize:vertical; min-height:70px; line-height:1.65; }
+.lbl { font-size:10px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; }
+.lbl-r::after { content:' *'; color:var(--r); }
+.field { margin-bottom:11px; }
+.g2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:11px; }
+.g3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:10px; }
+.full { grid-column:1/-1; }
+
+/* CARDS */
+.card {
+  background:var(--w); border:1.5px solid var(--b1); border-radius:var(--radius);
+  padding:18px; box-shadow:var(--shadow-sm);
+}
+.card + .card { margin-top:14px; }
+.card-hdr {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:14px; flex-wrap:wrap; gap:8px;
+}
+.card-ttl { font-size:14px; font-weight:800; color:var(--gp); display:flex; align-items:center; gap:8px; }
+.sec-div { height:1px; background:var(--b1); margin:14px 0; }
+
+/* TAGS */
+.tag {
+  display:inline-flex; align-items:center; font-size:10px; font-weight:700;
+  border-radius:20px; padding:2px 9px; line-height:1.5;
+}
+.tg-g { background:var(--gl); color:var(--gd); }
+.tg-r { background:var(--rl); color:var(--r); }
+.tg-a { background:var(--aml); color:#8B4C00; }
+.tg-az { background:var(--azl); color:var(--az); }
+.tg-gr { background:var(--b1); color:var(--t3); }
+
+.risk-tag { font-size:11px; font-weight:800; padding:3px 10px; border-radius:20px; }
+.risk-none { background:var(--gl); color:var(--gd); }
+.risk-low { background:#D5F5E3; color:#1A6B34; }
+.risk-mid { background:var(--aml); color:#8B4C00; }
+.risk-high { background:var(--rl); color:var(--r); }
+.risk-crisis { background:#7A0F0F; color:#fff; }
+
+/* STUDENT CARDS */
+.stu-card {
+  background:var(--w); border:1.5px solid var(--b1); border-radius:var(--radius);
+  overflow:hidden; box-shadow:var(--shadow-sm); margin-bottom:10px;
+  transition:border-color var(--transition),box-shadow var(--transition);
+}
+.stu-card:hover { border-color:var(--g); box-shadow:var(--shadow); }
+.stu-card-bar { height:4px; }
+.stu-card-body { padding:13px 15px; }
+.stu-card-top { display:flex; align-items:flex-start; gap:12px; }
+.stu-avatar {
+  width:40px; height:40px; border-radius:50%; background:var(--gpl);
+  border:2px solid var(--gs); display:flex; align-items:center; justify-content:center;
+  font-size:15px; flex-shrink:0; font-weight:800; color:var(--gd);
+}
+.stu-info { flex:1; min-width:0; }
+.stu-name { font-size:14px; font-weight:800; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.stu-meta { font-size:11px; color:var(--t3); margin-top:2px; }
+.stu-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.stu-actions { display:flex; gap:5px; margin-left:auto; flex-shrink:0; }
+
+/* APPOINTMENTS */
+.apt-card {
+  background:var(--w); border:1.5px solid var(--b1); border-radius:var(--radius);
+  overflow:hidden; margin-bottom:9px; box-shadow:var(--shadow-sm);
+  transition:border-color var(--transition);
+}
+.apt-card:hover { border-color:var(--g); }
+.apt-bar { height:4px; }
+.apt-body { padding:12px 15px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.apt-date {
+  background:var(--gpl); border:1.5px solid var(--gs); border-radius:9px;
+  padding:6px 10px; text-align:center; min-width:52px; flex-shrink:0;
+}
+.apt-day { font-size:20px; font-weight:800; color:var(--g); line-height:1; }
+.apt-mon { font-size:9px; font-weight:700; color:var(--t3); text-transform:uppercase; margin-top:2px; }
+.apt-info { flex:1; min-width:120px; }
+.apt-name { font-weight:800; font-size:13px; }
+.apt-sub { font-size:11px; color:var(--t3); margin-top:2px; }
+.apt-right { margin-left:auto; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+
+/* STATS */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:11px; margin-bottom:18px; }
+.stat {
+  background:var(--w); border:1.5px solid var(--b1); border-radius:var(--radius);
+  padding:15px; text-align:center; box-shadow:var(--shadow-sm);
+}
+.stat-n { font-size:26px; font-weight:800; line-height:1.1; }
+.stat-l { font-size:10px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.07em; margin-top:4px; }
+
+/* PROGRESS */
+.prog { height:6px; background:var(--b1); border-radius:99px; overflow:hidden; margin-top:4px; }
+.prog-f { height:100%; background:linear-gradient(90deg,var(--gp),var(--g)); border-radius:99px; }
+
+/* NOTAS TIMELINE */
+.note-item { display:flex; gap:10px; margin-bottom:12px; }
+.note-dot {
+  width:10px; height:10px; border-radius:50%; background:var(--g);
+  flex-shrink:0; margin-top:5px; border:2px solid var(--gs);
+}
+.note-content {
+  flex:1; background:var(--gpl); border:1px solid var(--gs);
+  border-radius:var(--radius-sm); padding:10px 13px;
+}
+.note-meta { font-size:10px; color:var(--t3); margin-bottom:4px; font-weight:600; }
+.note-text { font-size:12px; line-height:1.65; }
+
+/* UPLOAD ZONE */
+.upload-zone {
+  border:2.5px dashed var(--b2); border-radius:var(--radius); padding:32px;
+  text-align:center; cursor:pointer; transition:var(--transition); background:var(--paper);
+}
+.upload-zone:hover, .upload-zone.over { border-color:var(--g); background:var(--gpl); }
+.upload-zone .ico { font-size:36px; margin-bottom:10px; }
+.upload-zone h3 { font-size:14px; font-weight:800; color:var(--gp); margin-bottom:5px; }
+.upload-zone p { font-size:11px; color:var(--t3); }
+
+/* AVAILABILITY */
+.avail-slot {
+  border-radius:5px; padding:5px; text-align:center; cursor:pointer;
+  transition:var(--transition); border:1.5px solid transparent; font-size:10px; font-weight:600;
+}
+.avail-slot.free { background:var(--gpl); color:var(--gd); border-color:var(--gs); }
+.avail-slot.free:hover { background:var(--gl); border-color:var(--g); }
+.avail-slot.busy { background:var(--rl); color:var(--r); border-color:var(--rm); cursor:not-allowed; }
+
+/* MODAL */
+.modal-bg {
+  position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000;
+  display:flex; align-items:center; justify-content:center; padding:14px; overflow-y:auto;
+}
+.modal {
+  background:var(--w); border-radius:var(--radius-lg); width:100%; max-width:560px;
+  max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg);
+}
+.modal-hdr {
+  padding:16px 20px; border-bottom:1.5px solid var(--b1);
+  display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:var(--w); z-index:1;
+}
+.modal-hdr h2 { font-size:15px; font-weight:800; color:var(--gp); }
+.modal-body { padding:18px 20px; }
+.modal-footer {
+  padding:13px 20px; border-top:1.5px solid var(--b1);
+  display:flex; gap:8px; justify-content:flex-end; position:sticky; bottom:0; background:var(--w);
+}
+
+/* PDF PREVIEW & FIRMA */
+.sig-pad {
+  border:2px solid var(--b2); border-radius:var(--radius-sm);
+  background:var(--paper); display:block; cursor:crosshair; width:100%;
+}
+.sig-pad-wrap { position:relative; }
+
+/* TOAST */
+#toast {
+  position:fixed; bottom:20px; right:20px; z-index:9999; padding:11px 18px;
+  border-radius:9px; font-weight:700; font-size:12px; color:#fff;
+  box-shadow:var(--shadow-lg); display:none; max-width:320px;
+}
+
+.search-wrap { display:flex; gap:9px; margin-bottom:14px; flex-wrap:wrap; }
+.search-wrap input { flex:1; min-width:180px; }
+.search-wrap select { width:auto; min-width:140px; }
+
+.import-table { width:100%; border-collapse:collapse; font-size:11px; }
+.import-table th { background:var(--gp); color:#fff; padding:7px 10px; text-align:left; font-weight:700; }
+.import-table td { padding:6px 10px; border-bottom:1px solid var(--b1); }
+.import-table tr:hover td { background:var(--gpl); }
+
+.empty { text-align:center; padding:50px 20px; color:var(--t3); }
+.empty .eico { font-size:40px; margin-bottom:10px; }
+.empty h3 { font-size:15px; font-weight:800; color:var(--t2); margin-bottom:4px; }
+
+@media (max-width:768px) {
+  .hdr-in { flex-direction:column; align-items:flex-start; gap:10px; }
+  .hdr-right { width:100%; justify-content:space-between; margin-left:0; }
+  .stats-grid { grid-template-columns:1fr 1fr; }
+  .g2, .g3 { grid-template-columns:1fr; }
+  .stu-card-top { flex-direction:column; }
+  .stu-actions { margin-left:0; width:100%; justify-content:flex-start; }
+}
+
+@media print {
+  #topbar, #hdr, #nav, .no-print, button, .btn-row, #toast, .modal-bg, .upload-zone, .search-wrap, .stu-actions { display:none!important; }
+  body { background:#fff; font-size:11px; }
+  .wrap { padding:0!important; max-width:100%!important; }
+  .card { box-shadow:none!important; border-radius:4px!important; }
+}
+</style>
+</head>
+<body>
+<div id="shell">
+<div id="topbar"></div>
+
+<!-- HEADER -->
+<div id="hdr">
+  <div class="hdr-in">
+    <a href="admin.html" class="hdr-logo" title="Ir al Portal Administrador NAIMA OS">
+      <!-- LOGO SVG CONALEP -->
+      <svg width="44" height="44" viewBox="0 0 52 52" fill="none">
+        <path d="M26 4C13 4 4 13 4 26c0-6 4-15 15-17.5C22.5 7.5 26 8.5 26 8.5z" fill="#007E67"/>
+        <path d="M26 4c0 0 3.5 3.5 7 4.5C44 11 48 20 48 26 48 13 39 4 26 4z" fill="#005C4B"/>
+        <path d="M26 48c13 0 22-9 22-22-0 6-4 15-15 17.5C29.5 44.5 26 43.5 26 43.5z" fill="#007E67"/>
+        <path d="M26 48c0 0-3.5-3.5-7-4.5C8 41 4 32 4 26c0 13 9 22 22 22z" fill="#005C4B"/>
+        <circle cx="26" cy="26" r="5.5" fill="#007E67"/>
+        <circle cx="26" cy="26" r="3" fill="white"/>
+      </svg>
+      <div class="logo-sep"></div>
+      <div class="hdr-text">
+        <h1>CONALEP Mérida 1</h1>
+        <p>Departamento de Orientación & Tutorías</p>
+        <small>Sistema Integral de Psicología Escolar · NAIMA OS</small>
+      </div>
+    </a>
+    <div class="hdr-right no-print">
+      <div id="hdr-badges"></div>
+      <a href="admin.html" class="btn btn-gr btn-sm">← Volver al Portal Admin</a>
+      <button class="btn btn-g btn-sm" onclick="openAddStudent()">+ Nuevo Expediente</button>
+    </div>
+  </div>
+</div>
+
+<!-- NAVEGACIÓN -->
+<div id="nav" class="no-print">
+  <div class="nav-in">
+    <button class="nav-btn on" data-tab="dashboard" onclick="goTab('dashboard',this)">🏠 Inicio</button>
+    <button class="nav-btn" data-tab="expedientes" onclick="goTab('expedientes',this)">👤 Expedientes</button>
+    <button class="nav-btn" data-tab="agenda" onclick="goTab('agenda',this)">📅 Agenda & Citas</button>
+    <button class="nav-btn" data-tab="reportes" onclick="goTab('reportes',this)">📋 Reportes Clínicos</button>
+    <button class="nav-btn" data-tab="importar" onclick="goTab('importar',this)">📥 Importar Excel/CSV</button>
+    <button class="nav-btn" data-tab="exportar" onclick="goTab('exportar',this)">📤 Exportar PDF</button>
+  </div>
+</div>
+
+<div id="main-content">
+  <div class="wrap">
+    <div id="tab-dashboard"></div>
+    <div id="tab-expedientes" style="display:none"></div>
+    <div id="tab-agenda" style="display:none"></div>
+    <div id="tab-reportes" style="display:none"></div>
+    <div id="tab-importar" style="display:none"></div>
+    <div id="tab-exportar" style="display:none"></div>
+  </div>
+</div>
+</div><!-- /shell -->
+
+<!-- MODAL: ADD/EDIT STUDENT -->
+<div id="modal-add-student" class="modal-bg" style="display:none">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h2 id="modal-student-title">📋 Nuevo Expediente Estudiantil</h2>
+      <button class="btn btn-gr btn-sm" onclick="closeModal('add-student')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="g2">
+        <div class="field full"><div class="lbl lbl-r">Nombre completo</div><input id="ms-nombre" placeholder="Apellido Paterno Materno Nombres" required/></div>
+        <div class="field"><div class="lbl">CURP</div><input id="ms-curp" placeholder="CURP (18 caracteres)" maxlength="18" style="text-transform:uppercase"/></div>
+        <div class="field"><div class="lbl lbl-r">Matrícula</div><input id="ms-mat" placeholder="Ej. PTB-26105"/></div>
+        <div class="field"><div class="lbl lbl-r">Carrera</div>
+          <select id="ms-carrera">
+            <option value="">Seleccionar carrera…</option>
+            <option>Técnico en Informática</option>
+            <option>Técnico en Administración</option>
+            <option>Técnico en Contabilidad</option>
+            <option>Técnico en Enfermería General</option>
+            <option>Técnico en Alimentos y Bebidas</option>
+            <option>Técnico en Soporte y Mantenimiento de Cómputo</option>
+            <option>Técnico en Mecatrónica</option>
+            <option>Otra</option>
+          </select>
+        </div>
+        <div class="field"><div class="lbl">Semestre</div>
+          <select id="ms-sem">
+            <option value="">Semestre</option>
+            <option>1°</option><option>2°</option><option>3°</option>
+            <option>4°</option><option>5°</option><option>6°</option>
+          </select>
+        </div>
+        <div class="field"><div class="lbl">Grupo</div><input id="ms-grp" placeholder="Ej. 402"/></div>
+        <div class="field"><div class="lbl">Turno</div>
+          <select id="ms-turno">
+            <option value="">Turno</option>
+            <option>Matutino</option><option>Vespertino</option><option>Mixto</option>
+          </select>
+        </div>
+        <div class="field"><div class="lbl">Sexo</div>
+          <select id="ms-sexo">
+            <option value="">Sexo</option>
+            <option>Masculino</option><option>Femenino</option><option>No binario</option><option>N/E</option>
+          </select>
+        </div>
+        <div class="field"><div class="lbl">Edad</div><input type="number" id="ms-edad" min="14" max="25" placeholder="16"/></div>
+        <div class="field"><div class="lbl">Teléfono</div><input id="ms-tel" placeholder="999 000 0000"/></div>
+        <div class="field"><div class="lbl">Correo</div><input type="email" id="ms-email" placeholder="alumno@conalepmex.edu.mx"/></div>
+        <div class="field"><div class="lbl lbl-r">Nombre del tutor</div><input id="ms-tutor" placeholder="Padre, madre o tutor legal"/></div>
+        <div class="field"><div class="lbl">Tel. del tutor</div><input id="ms-tutor-tel" placeholder="999 000 0000"/></div>
+        <div class="field"><div class="lbl">Diagnóstico principal</div><input id="ms-dx" placeholder="Ej: F41.1 Ansiedad generalizada"/></div>
+        <div class="field"><div class="lbl">Nivel de riesgo</div>
+          <select id="ms-riesgo">
+            <option value="none">Sin riesgo</option>
+            <option value="low">Bajo</option>
+            <option value="mid">Moderado</option>
+            <option value="high">Alto</option>
+            <option value="crisis">Crisis / Urgente</option>
+          </select>
+        </div>
+        <div class="field"><div class="lbl">Estado del caso</div>
+          <select id="ms-estado">
+            <option value="activo">Activo</option>
+            <option value="seguimiento">En seguimiento</option>
+            <option value="cerrado">Cerrado</option>
+          </select>
+        </div>
+        <div class="field full"><div class="lbl">Motivo de ingreso / Observaciones</div>
+          <textarea id="ms-motivo" placeholder="Descripción breve del caso socioeducativo o psicológico…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gr btn-sm" onclick="closeModal('add-student')">Cancelar</button>
+      <button class="btn btn-g btn-sm" onclick="saveStudent()">💾 Guardar expediente</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD NOTE -->
+<div id="modal-add-note" class="modal-bg" style="display:none">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h2>📝 Registrar Nota Clínica de Sesión</h2>
+      <button class="btn btn-gr btn-sm" onclick="closeModal('add-note')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><div class="lbl">Estudiante</div><div id="note-alumno-name" style="font-weight:800;font-size:14px;color:var(--gp);"></div></div>
+      <div class="g2">
+        <div class="field"><div class="lbl">Fecha de la sesión</div><input type="date" id="note-fecha"/></div>
+        <div class="field"><div class="lbl">Tipo de nota</div>
+          <select id="note-tipo">
+            <option>Nota de evolución</option><option>Nota de sesión</option>
+            <option>Nota de seguimiento</option><option>Actualización diagnóstica</option>
+            <option>Nota de crisis</option><option>Nota de cierre</option>
+          </select>
+        </div>
+        <div class="field"><div class="lbl">Psicólogo(a) / Orientador</div><input id="note-psi" placeholder="Nombre del especialista"/></div>
+        <div class="field"><div class="lbl">Sesión No.</div><input type="number" id="note-ses" min="1" placeholder="1"/></div>
+      </div>
+      <div class="field"><div class="lbl lbl-r">Observaciones clínicas y acuerdos</div>
+        <textarea id="note-texto" placeholder="Detalles de la sesión, acuerdos tomados, avances y conducta observada…" style="min-height:110px;"></textarea>
+      </div>
+      <div class="field"><div class="lbl">Actualizar diagnóstico (opcional)</div><input id="note-dx" placeholder="Código CIE-10 / Diagnóstico"/></div>
+      <div class="field"><div class="lbl">Actualizar semáforo de riesgo</div>
+        <select id="note-riesgo">
+          <option value="">Sin cambio</option>
+          <option value="none">Sin riesgo</option><option value="low">Bajo</option>
+          <option value="mid">Moderado</option><option value="high">Alto</option><option value="crisis">Crisis</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gr btn-sm" onclick="closeModal('add-note')">Cancelar</button>
+      <button class="btn btn-g btn-sm" onclick="saveNote()">💾 Guardar nota</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD APPOINTMENT -->
+<div id="modal-add-apt" class="modal-bg" style="display:none">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h2>📅 Programar Nueva Cita</h2>
+      <button class="btn btn-gr btn-sm" onclick="closeModal('add-apt')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><div class="lbl">Alumno/a</div>
+        <select id="apt-alumno"><option value="">Seleccionar alumno…</option></select>
+      </div>
+      <div class="g2">
+        <div class="field"><div class="lbl lbl-r">Fecha</div><input type="date" id="apt-fecha"/></div>
+        <div class="field"><div class="lbl lbl-r">Hora</div><input type="time" id="apt-hora"/></div>
+        <div class="field"><div class="lbl">Duración</div>
+          <select id="apt-dur">
+            <option value="30">30 min</option>
+            <option value="45">45 min</option>
+            <option value="60" selected>1 hora</option>
+            <option value="90">1.5 horas</option>
+          </select>
+        </div>
+        <div class="field"><div class="lbl">Tipo de sesión</div>
+          <select id="apt-tipo">
+            <option>Primera vez</option><option>Seguimiento</option>
+            <option>Urgencia / Crisis</option><option>Reunión con tutor legal</option>
+            <option>Entrega de reporte</option><option>Cierre de caso</option>
+          </select>
+        </div>
+        <div class="field"><div class="lbl">Orientador(a) responsable</div><input id="apt-psi" placeholder="Nombre del especialista"/></div>
+        <div class="field"><div class="lbl">Modalidad</div>
+          <select id="apt-modal"><option>Presencial (Cubículo)</option><option>Virtual</option></select>
+        </div>
+      </div>
+      <div class="field"><div class="lbl">Motivo u observaciones</div>
+        <input id="apt-motivo" placeholder="Objetivo de la cita…"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gr btn-sm" onclick="closeModal('add-apt')">Cancelar</button>
+      <button class="btn btn-g btn-sm" onclick="saveAppointment()">💾 Programar cita</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- LIBRERÍAS DE SUPABASE Y BASE DE DATOS NAIMA OS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="db.js"></script>
+
+<script>
+/* CONSTANTES Y CATÁLOGOS */
+var MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+var DIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+var RISK_LABEL = {none:'Sin riesgo', low:'Riesgo bajo', mid:'Riesgo moderado', high:'Riesgo alto', crisis:'Crisis'};
+var RISK_CSS = {none:'risk-none', low:'risk-low', mid:'risk-mid', high:'risk-high', crisis:'risk-crisis'};
+var APT_STATUS_CSS = {Pendiente:'tg-a', Confirmada:'tg-g', Completada:'tg-az', Cancelada:'tg-r', 'No asistió':'tg-r'};
+
+/* ESTADO SINCRONIZADO CON NAIMA OS */
+var students = [];
+var appointments = JSON.parse(localStorage.getItem('cnlp_apts') || '[]');
+var reports = JSON.parse(localStorage.getItem('cnlp_reps') || '[]');
+var editStudentId = null;
+var noteTargetId = null;
+var currentStudentId = null;
+var sigCanvas = null, sigCtx = null, sigDrawing = false;
+var pdfSections = {header:true, datos:true, diagnostico:true, notas:true, reportes:true, citas:true, firmas:true};
+
+function uid(){ return 's' + Date.now() + Math.random().toString(36).slice(2,7); }
+function today(){ return new Date().toISOString().split('T')[0]; }
+function gf(id){ var e=document.getElementById(id); return e?e.value.trim():''; }
+function sf(id,v){ var e=document.getElementById(id); if(e&&v!==undefined)e.value=v||''; }
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fD(d){ if(!d)return'—'; var p=d.split('-'); return (p[2]||'')+'/'+(p[1]||'')+'/'+(p[0]||''); }
+function fH(t){ if(!t)return'—'; var p=t.split(':'); var h=parseInt(p[0]); return (h>12?h-12:h||12)+':'+p[1]+' '+(h>=12?'pm':'am'); }
+function avatarLetter(name){ return (name||'?').trim().charAt(0).toUpperCase(); }
+
+function toast(msg, type){
+  type = type||'ok';
+  var t = document.getElementById('toast');
+  t.style.background = type==='ok'?'#007E67':type==='w'?'#E67E22':'#C0392B';
+  t.textContent = (type==='ok'?'✓ ':type==='w'?'⚠ ':'✕ ')+msg;
+  t.style.display='block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function(){ t.style.display='none'; }, 3400);
+}
+
+/* CARGAR ESTUDIANTES DIRECTAMENTE DE db.students / db.users */
+function syncWithNaimaDB(){
+  if(typeof db !== 'undefined' && db.students){
+    students = Object.values(db.students).map(function(s){
+      return {
+        id: s.matricula || s.id || uid(),
+        nombre: s.nombre || 'Estudiante',
+        mat: s.matricula || '',
+        curp: s.curp || '',
+        carrera: s.carrera || 'Técnico en Informática',
+        sem: s.semestre || s.sem || '4°',
+        grp: s.grupo || s.grp || '402',
+        turno: s.turno || 'Matutino',
+        sexo: s.sexo || '',
+        edad: s.edad || '',
+        tel: s.tel || '',
+        email: s.email || '',
+        tutor: s.tutor || s.guardian || '',
+        tutor_tel: s.tutorTel || s.guardianTel || '',
+        dx: s.diagnostico || s.dx || '',
+        riesgo: s.riesgo || (s.prioridad === 'alto' ? 'high' : s.prioridad === 'medio' ? 'mid' : 'none'),
+        estado: s.estado || 'activo',
+        motivo: s.motivo || '',
+        notas: s.notas || [],
+        createdAt: s.createdAt || new Date().toISOString()
+      };
+    });
+  }
+  updateBadges();
+}
+
+function saveAll(){
+  localStorage.setItem('cnlp_apts', JSON.stringify(appointments));
+  localStorage.setItem('cnlp_reps', JSON.stringify(reports));
+
+  // Persistir en db.students de NAIMA OS
+  if(typeof db !== 'undefined' && db.students){
+    students.forEach(function(s){
+      const mat = s.mat || s.id;
+      db.students[mat] = Object.assign({}, db.students[mat] || {}, {
+        nombre: s.nombre,
+        matricula: mat,
+        carrera: s.carrera,
+        semestre: s.sem,
+        grupo: s.grp,
+        tel: s.tel,
+        email: s.email,
+        tutor: s.tutor,
+        guardian: s.tutor,
+        tutorTel: s.tutor_tel,
+        diagnostico: s.dx,
+        dx: s.dx,
+        riesgo: s.riesgo,
+        estado: s.estado,
+        motivo: s.motivo,
+        notas: s.notas
+      });
+      if(db.users && db.users[mat]){
+        db.users[mat] = Object.assign({}, db.users[mat], db.students[mat]);
+      }
+    });
+    if(typeof saveDB === 'function') saveDB();
+  }
+  updateBadges();
+}
+
+function updateBadges(){
+  var b = document.getElementById('hdr-badges');
+  if(!b) return;
+  var total = students.length;
+  var activos = students.filter(s => s.estado==='activo').length;
+  var hoy_apts = appointments.filter(a => a.fecha===today()).length;
+  b.innerHTML =
+    '<span class="tag tg-g">'+total+' expedientes</span> ' +
+    '<span class="tag tg-az">'+activos+' activos</span> ' +
+    (hoy_apts > 0 ? '<span class="tag tg-a">'+hoy_apts+' citas hoy</span>' : '');
+}
+
+function openModal(name){ var el = document.getElementById('modal-'+name); if(el) el.style.display='flex'; }
+function closeModal(name){ var el = document.getElementById('modal-'+name); if(el) el.style.display='none'; }
+
+function goTab(name, btn){
+  document.querySelectorAll('[id^=tab-]').forEach(function(d){ d.style.display='none'; });
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('on'); });
+  var el = document.getElementById('tab-'+name);
+  if(el){ el.style.display='block'; }
+  if(btn) btn.classList.add('on');
+  var renders = {
+    dashboard: renderDashboard,
+    expedientes: renderExpedientes,
+    agenda: renderAgenda,
+    reportes: renderReportes,
+    importar: renderImportar,
+    exportar: renderExportar
+  };
+  if(renders[name]) renders[name]();
+}
+
+/* CRUD EXPEDIENTES */
+function openAddStudent(){
+  editStudentId = null;
+  document.getElementById('modal-student-title').textContent = '📋 Nuevo Expediente Estudiantil';
+  ['ms-nombre','ms-curp','ms-mat','ms-carrera','ms-sem','ms-grp','ms-turno','ms-sexo','ms-edad','ms-tel','ms-email','ms-tutor','ms-tutor-tel','ms-dx','ms-motivo'].forEach(id => {
+    var e = document.getElementById(id); if(e) e.value = '';
+  });
+  sf('ms-riesgo','none'); sf('ms-estado','activo');
+  openModal('add-student');
+}
+
+function openEditStudent(id){
+  var s = students.find(x => x.id === id);
+  if(!s) return;
+  editStudentId = id;
+  document.getElementById('modal-student-title').textContent = '✏️ Editar Expediente';
+  sf('ms-nombre', s.nombre); sf('ms-curp', s.curp); sf('ms-mat', s.mat);
+  sf('ms-carrera', s.carrera); sf('ms-sem', s.sem); sf('ms-grp', s.grp);
+  sf('ms-turno', s.turno); sf('ms-sexo', s.sexo); sf('ms-edad', s.edad);
+  sf('ms-tel', s.tel); sf('ms-email', s.email); sf('ms-tutor', s.tutor);
+  sf('ms-tutor-tel', s.tutor_tel); sf('ms-dx', s.dx); sf('ms-riesgo', s.riesgo||'none');
+  sf('ms-estado', s.estado||'activo'); sf('ms-motivo', s.motivo);
+  openModal('add-student');
+}
+
+function saveStudent(){
+  var nombre = gf('ms-nombre');
+  if(!nombre){ toast('El nombre es obligatorio','err'); return; }
+  var mat = gf('ms-mat') || ('PTB-' + Math.floor(Math.random()*89999 + 10000));
+  var data = {
+    nombre: nombre, curp: gf('ms-curp'), mat: mat,
+    carrera: gf('ms-carrera') || 'Técnico en Informática',
+    sem: gf('ms-sem') || '4°', grp: gf('ms-grp') || '402',
+    turno: gf('ms-turno') || 'Matutino', sexo: gf('ms-sexo'), edad: gf('ms-edad'),
+    tel: gf('ms-tel'), email: gf('ms-email'), tutor: gf('ms-tutor'),
+    tutor_tel: gf('ms-tutor-tel'), dx: gf('ms-dx'), motivo: gf('ms-motivo'),
+    riesgo: gf('ms-riesgo') || 'none', estado: gf('ms-estado') || 'activo'
+  };
+
+  if(editStudentId){
+    students = students.map(s => s.id === editStudentId ? Object.assign({}, s, data, {updatedAt: new Date().toISOString()}) : s);
+    toast('Expediente actualizado');
+  } else {
+    data.id = mat; data.createdAt = new Date().toISOString();
+    data.notas = [];
+    students.push(data);
+    toast('Expediente creado con éxito');
+  }
+  saveAll(); closeModal('add-student'); renderExpedientes();
+}
+
+function deleteStudent(id){
+  if(!confirm('¿Eliminar este expediente y todas sus citas y notas asociadas?')) return;
+  students = students.filter(s => s.id !== id);
+  appointments = appointments.filter(a => a.student_id !== id);
+  if(typeof db !== 'undefined' && db.students && db.students[id]){
+    delete db.students[id];
+    if(db.users && db.users[id]) delete db.users[id];
+    saveDB();
+  }
+  saveAll(); toast('Expediente eliminado'); renderExpedientes();
+}
+
+/* CRUD NOTAS */
+function openAddNote(studentId){
+  noteTargetId = studentId;
+  var s = students.find(x => x.id === studentId);
+  var el = document.getElementById('note-alumno-name');
+  if(el) el.textContent = s ? (s.nombre + ' (' + (s.mat || '') + ')') : '';
+  sf('note-fecha', today());
+  sf('note-tipo', 'Nota de evolución');
+  try{
+    const u = getCurrentUser();
+    sf('note-psi', u ? (u.nombre || u.display || 'Orientador Educativo') : 'Orientador Educativo');
+  }catch(e){ sf('note-psi','Orientador Educativo'); }
+  sf('note-ses', (s && s.notas ? s.notas.length + 1 : 1));
+  sf('note-texto', ''); sf('note-dx', ''); sf('note-riesgo', '');
+  openModal('add-note');
+}
+
+function saveNote(){
+  if(!noteTargetId){ toast('Error: sin alumno seleccionado','err'); return; }
+  var texto = gf('note-texto');
+  if(!texto){ toast('Escribe las observaciones de la nota','err'); return; }
+  var note = {
+    id: uid(), fecha: gf('note-fecha'), tipo: gf('note-tipo'),
+    psi: gf('note-psi'), ses: gf('note-ses'), texto: texto,
+    dx_update: gf('note-dx'), riesgo_update: gf('note-riesgo'),
+    createdAt: new Date().toISOString()
+  };
+  students = students.map(s => {
+    if(s.id !== noteTargetId) return s;
+    var notas = s.notas ? s.notas.slice() : [];
+    notas.push(note);
+    var updated = Object.assign({}, s, {notas: notas, updatedAt: note.createdAt});
+    if(note.dx_update) updated.dx = note.dx_update;
+    if(note.riesgo_update) updated.riesgo = note.riesgo_update;
+    return updated;
+  });
+  saveAll(); closeModal('add-note'); toast('Nota clínica registrada');
+  if(currentStudentId === noteTargetId) showStudentDetail(noteTargetId);
+}
+
+/* CRUD CITAS */
+function openAddApt(studentId){
+  var sel = document.getElementById('apt-alumno');
+  if(sel){
+    sel.innerHTML = '<option value="">Seleccionar alumno…</option>' +
+      students.map(s => '<option value="'+s.id+'"'+(s.id===studentId?' selected':'')+'>'+esc(s.nombre)+' ('+esc(s.mat||'')+')</option>').join('');
+  }
+  sf('apt-fecha', today()); sf('apt-hora', '10:00'); sf('apt-dur', '60');
+  sf('apt-tipo', 'Seguimiento');
+  try{
+    const u = getCurrentUser();
+    sf('apt-psi', u ? (u.nombre || u.display || 'Orientador Educativo') : 'Orientador');
+  }catch(e){ sf('apt-psi','Orientador'); }
+  sf('apt-modal', 'Presencial (Cubículo)'); sf('apt-motivo', '');
+  openModal('add-apt');
+}
+
+function saveAppointment(){
+  var sid = gf('apt-alumno');
+  var fecha = gf('apt-fecha');
+  var hora = gf('apt-hora');
+  if(!sid){ toast('Selecciona un alumno','err'); return; }
+  if(!fecha || !hora){ toast('Fecha y hora son obligatorias','err'); return; }
+  var s = students.find(x => x.id === sid);
+  var apt = {
+    id: uid(), student_id: sid,
+    nombre: s ? s.nombre : '—',
+    carrera: s ? s.carrera : '',
+    sem: s ? s.sem : '', grp: s ? s.grp : '',
+    fecha: fecha, hora: hora, duracion: gf('apt-dur'),
+    tipo: gf('apt-tipo'), psi: gf('apt-psi'),
+    modalidad: gf('apt-modal'), motivo: gf('apt-motivo'),
+    estado: 'Pendiente', asistio: null,
+    createdAt: new Date().toISOString()
+  };
+  appointments.push(apt);
+  saveAll(); closeModal('add-apt'); toast('Cita agendada para el '+fD(fecha));
+  renderAgenda();
+}
+
+function updateAptStatus(id, estado){
+  appointments = appointments.map(a => a.id===id ? Object.assign({},a,{estado:estado}) : a);
+  saveAll(); renderAgenda();
+}
+
+function markAsistencia(id, asistio){
+  appointments = appointments.map(a => a.id===id ? Object.assign({},a,{asistio:asistio, estado:asistio?'Completada':'No asistió'}) : a);
+  saveAll(); renderAgenda();
+  toast(asistio ? 'Asistencia registrada ✓' : 'Marcado como no asistió');
+}
+
+function deleteApt(id){
+  if(!confirm('¿Eliminar esta cita?')) return;
+  appointments = appointments.filter(a => a.id !== id);
+  saveAll(); renderAgenda(); toast('Cita eliminada');
+}
+
+/* TAB: DASHBOARD */
+function renderDashboard(){
+  var el = document.getElementById('tab-dashboard');
+  if(!el) return;
+  var total = students.length;
+  var activos = students.filter(s => s.estado==='activo').length;
+  var alto_riesgo = students.filter(s => s.riesgo==='high'||s.riesgo==='crisis').length;
+  var hoy = today();
+  var hoy_apts = appointments.filter(a => a.fecha===hoy);
+  var proximos = appointments.filter(a => a.fecha>=hoy && a.estado!=='Cancelada')
+    .sort((a,b) => (a.fecha+a.hora).localeCompare(b.fecha+b.hora)).slice(0,5);
+
+  var risk_counts = {none:0, low:0, mid:0, high:0, crisis:0};
+  students.forEach(s => { if(risk_counts[s.riesgo]!==undefined) risk_counts[s.riesgo]++; });
+
+  el.innerHTML =
+    '<div class="stats-grid">' +
+      statBox(total,'var(--g)','Total Expedientes') +
+      statBox(activos,'var(--az)','Alumnos Activos') +
+      statBox(alto_riesgo,'var(--r)','Riesgo Alto / Crisis') +
+      statBox(hoy_apts.length,'var(--am)','Citas Hoy') +
+    '</div>' +
+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;">' +
+      '<div class="card">' +
+        '<div class="card-hdr"><div class="card-ttl">📅 Próximas Citas de Orientación</div>' +
+          '<button class="btn btn-g btn-sm no-print" onclick="goTab(\'agenda\',document.querySelector(\'[data-tab=agenda]\'))">Ver agenda</button>' +
+        '</div>' +
+        (proximos.length ? proximos.map(a => {
+          var sc = {Pendiente:'var(--am)',Confirmada:'var(--g)',Completada:'var(--az)',Cancelada:'var(--r)'}[a.estado]||'var(--b2)';
+          return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--b1);">' +
+            '<div style="width:8px;height:8px;border-radius:50%;background:'+sc+';flex-shrink:0;"></div>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(a.nombre)+'</div>' +
+              '<div style="font-size:10px;color:var(--t3);">'+fD(a.fecha)+' · '+fH(a.hora)+' · '+esc(a.tipo)+'</div>' +
+            '</div>' +
+            '<span class="tag '+(APT_STATUS_CSS[a.estado]||'tg-gr')+'">'+a.estado+'</span>' +
+          '</div>';
+        }).join('') : '<div class="empty" style="padding:20px;"><div class="eico">📅</div><p>No hay citas programadas hoy</p></div>') +
+      '</div>' +
+
+      '<div class="card">' +
+        '<div class="card-hdr"><div class="card-ttl">🎯 Distribución por Semáforo de Riesgo</div></div>' +
+        (total ? Object.keys(risk_counts).map(k => {
+          var v = risk_counts[k];
+          return '<div style="margin-bottom:9px;">' +
+            '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">' +
+              '<span class="risk-tag '+RISK_CSS[k]+'">'+RISK_LABEL[k]+'</span>' +
+              '<strong>'+v+' ('+Math.round(v/(total||1)*100)+'%)</strong>' +
+            '</div>' +
+            '<div class="prog"><div class="prog-f" style="width:'+Math.round(v/(total||1)*100)+'%"></div></div>' +
+          '</div>';
+        }).join('') : '<div class="empty" style="padding:20px;"><p>Sin expedientes registrados</p></div>') +
+      '</div>' +
+
+      (alto_riesgo > 0 ?
+      '<div class="card" style="border-left:4px solid var(--r);grid-column:1/-1;">' +
+        '<div class="card-hdr"><div class="card-ttl" style="color:var(--r);">⚠️ Casos Prioritarios en Riesgo Alto o Crisis</div></div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;">' +
+        students.filter(s => s.riesgo==='high'||s.riesgo==='crisis').map(s => {
+          return '<div style="display:flex;align-items:center;gap:9px;padding:9px 11px;background:var(--rl);border-radius:7px;border:1px solid var(--rm);">' +
+            '<div class="stu-avatar" style="width:32px;height:32px;font-size:12px;background:var(--rm);">'+avatarLetter(s.nombre)+'</div>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-weight:800;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(s.nombre)+'</div>' +
+              '<div style="font-size:10px;color:var(--r);">'+esc(s.carrera||'')+' · '+esc(s.mat||'')+'</div>' +
+            '</div>' +
+            '<button class="btn btn-r btn-xs" onclick="showStudentDetail(\''+s.id+'\')">Expediente</button>' +
+          '</div>';
+        }).join('') +
+        '</div></div>' : '') +
+    '</div>' +
+
+    '<div class="card" style="margin-top:14px;">' +
+      '<div class="card-hdr">' +
+        '<div class="card-ttl">👤 Expedientes Recientes</div>' +
+        '<button class="btn btn-g btn-sm no-print" onclick="goTab(\'expedientes\',document.querySelector(\'[data-tab=expedientes]\'))">Ver todos</button>' +
+      '</div>' +
+      (students.length ?
+        students.slice(-5).reverse().map(s => miniStudentCard(s)).join('') :
+        '<div class="empty"><div class="eico">👤</div><h3>Sin expedientes</h3><p>Importa tu lista desde Excel o da de alta alumnos.</p>' +
+        '<button class="btn btn-g" style="margin-top:12px;" onclick="openAddStudent()">+ Nuevo Expediente</button></div>'
+      ) +
+    '</div>';
+}
+
+function statBox(n, color, label){
+  return '<div class="stat"><div class="stat-n" style="color:'+color+';">'+n+'</div><div class="stat-l">'+label+'</div></div>';
+}
+
+function miniStudentCard(s){
+  return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b1);">' +
+    '<div class="stu-avatar">'+avatarLetter(s.nombre)+'</div>' +
+    '<div style="flex:1;min-width:0;">' +
+      '<div style="font-weight:800;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(s.nombre)+'</div>' +
+      '<div style="font-size:10px;color:var(--t3);">'+esc(s.carrera||'')+(s.sem?' · '+s.sem+' '+s.grp:'')+(s.mat?' · Mat: '+s.mat:'')+'</div>' +
+    '</div>' +
+    '<span class="risk-tag '+RISK_CSS[s.riesgo||'none']+'">'+RISK_LABEL[s.riesgo||'none']+'</span>' +
+    '<button class="btn btn-o btn-xs no-print" onclick="showStudentDetail(\''+s.id+'\')">Ver</button>' +
+  '</div>';
+}
+
+/* TAB: EXPEDIENTES */
+function renderExpedientes(){
+  var el = document.getElementById('tab-expedientes');
+  if(!el) return;
+  el.innerHTML =
+    '<div class="card">' +
+      '<div class="card-hdr">' +
+        '<div class="card-ttl">👤 Expedientes Estudiantiles ('+students.length+')</div>' +
+        '<div class="btn-row no-print">' +
+          '<button class="btn btn-g btn-sm" onclick="openAddStudent()">+ Nuevo</button>' +
+          '<button class="btn btn-gr btn-sm" onclick="goTab(\'importar\',document.querySelector(\'[data-tab=importar]\'))">📥 Importar Excel</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="search-wrap">' +
+        '<input id="stu-q" placeholder="🔍 Buscar por nombre, matrícula, carrera, diagnóstico…" oninput="filterStudents()"/>' +
+        '<select id="stu-f-estado" onchange="filterStudents()">' +
+          '<option value="">Todos los estados</option>' +
+          '<option value="activo">Activo</option>' +
+          '<option value="seguimiento">Seguimiento</option>' +
+          '<option value="cerrado">Cerrado</option>' +
+        '</select>' +
+        '<select id="stu-f-riesgo" onchange="filterStudents()">' +
+          '<option value="">Todos los niveles de riesgo</option>' +
+          '<option value="none">Sin riesgo</option>' +
+          '<option value="low">Bajo</option>' +
+          '<option value="mid">Moderado</option>' +
+          '<option value="high">Alto</option>' +
+          '<option value="crisis">Crisis</option>' +
+        '</select>' +
+      '</div>' +
+      '<div id="stu-list"></div>' +
+    '</div>';
+  filterStudents();
+}
+
+function filterStudents(){
+  var q = (document.getElementById('stu-q')||{value:''}).value.toLowerCase();
+  var fest = (document.getElementById('stu-f-estado')||{value:''}).value;
+  var frisk = (document.getElementById('stu-f-riesgo')||{value:''}).value;
+  var list = students.filter(s => {
+    var match = !q || [s.nombre,s.mat,s.carrera,s.dx,s.curp].some(v => v && v.toLowerCase().includes(q));
+    var mEst = !fest || s.estado===fest;
+    var mRisk = !frisk || (s.riesgo||'none')===frisk;
+    return match && mEst && mRisk;
+  });
+  var el = document.getElementById('stu-list');
+  if(!el) return;
+  if(!list.length){
+    el.innerHTML = '<div class="empty"><div class="eico">🔍</div><h3>Sin resultados</h3><p>No se encontraron expedientes con los criterios seleccionados.</p></div>';
+    return;
+  }
+  el.innerHTML = list.map(s => studentCard(s)).join('');
+}
+
+function studentCard(s){
+  var color = {none:'var(--g)',low:'var(--g)',mid:'var(--am)',high:'var(--r)',crisis:'#7A0F0F'}[s.riesgo||'none'];
+  var apts_count = appointments.filter(a => a.student_id===s.id).length;
+  var notas_count = (s.notas||[]).length;
+  return '<div class="stu-card">' +
+    '<div class="stu-card-bar" style="background:'+color+';"></div>' +
+    '<div class="stu-card-body">' +
+      '<div class="stu-card-top">' +
+        '<div class="stu-avatar">'+avatarLetter(s.nombre)+'</div>' +
+        '<div class="stu-info">' +
+          '<div class="stu-name">'+esc(s.nombre)+'</div>' +
+          '<div class="stu-meta">'+esc(s.carrera||'')+(s.sem?' · '+s.sem+' '+s.grp:'')+(s.mat?' · Mat: '+s.mat:'')+'</div>' +
+          '<div class="stu-tags">' +
+            '<span class="risk-tag '+RISK_CSS[s.riesgo||'none']+'">'+RISK_LABEL[s.riesgo||'none']+'</span>' +
+            '<span class="tag tg-az">'+esc(s.estado||'activo')+'</span>' +
+            (s.dx ? '<span class="tag tg-gr" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(s.dx)+'</span>':'') +
+            '<span class="tag tg-gr">'+apts_count+' cita'+(apts_count!==1?'s':'')+'</span>' +
+            '<span class="tag tg-gr">'+notas_count+' nota'+(notas_count!==1?'s':'')+'</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="stu-actions no-print">' +
+          '<button class="btn btn-g btn-xs" onclick="showStudentDetail(\''+s.id+'\')">Expediente</button>' +
+          '<a href="reporte-psicologico.html?matricula='+encodeURIComponent(s.mat || s.id)+'" target="_blank" class="btn btn-az btn-xs" title="Generar reporte psicológico oficial">📋 Reporte</a>' +
+          '<button class="btn btn-gr btn-xs" onclick="openEditStudent(\''+s.id+'\')">✏️</button>' +
+          '<button class="btn btn-r btn-xs" onclick="deleteStudent(\''+s.id+'\')">🗑</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+/* VISTA DETALLE DEL EXPEDIENTE */
+function showStudentDetail(id){
+  currentStudentId = id;
+  var s = students.find(x => x.id===id);
+  if(!s) return;
+  var el = document.getElementById('tab-expedientes');
+  if(!el) return;
+  el.style.display='block';
+
+  document.querySelectorAll('[id^=tab-]').forEach(d => d.style.display='none');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('on'));
+  el.style.display='block';
+  var nb = document.querySelector('[data-tab=expedientes]');
+  if(nb) nb.classList.add('on');
+
+  var apts = appointments.filter(a => a.student_id===id).sort((a,b) => (b.fecha+b.hora).localeCompare(a.fecha+a.hora));
+  var notas = (s.notas||[]).slice().reverse();
+
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:12px;color:var(--t3);" class="no-print">' +
+      '<button class="btn btn-gr btn-sm" onclick="renderExpedientes()">← Volver a lista</button>' +
+      '<span>›</span><span style="font-weight:700;color:var(--t1);">'+esc(s.nombre)+'</span>' +
+    '</div>' +
+
+    '<div class="card" style="border-left:4px solid '+({none:'var(--g)',low:'var(--g)',mid:'var(--am)',high:'var(--r)',crisis:'#7A0F0F'}[s.riesgo||'none'])+';margin-bottom:14px;">' +
+      '<div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;">' +
+        '<div class="stu-avatar" style="width:54px;height:54px;font-size:20px;">'+avatarLetter(s.nombre)+'</div>' +
+        '<div style="flex:1;">' +
+          '<div style="font-size:20px;font-weight:800;color:var(--gp);">'+esc(s.nombre)+'</div>' +
+          '<div style="font-size:12px;color:var(--t3);margin-top:3px;">'+esc(s.carrera||'')+(s.sem?' · '+s.sem+' '+s.grp:'')+(s.mat?' · Matrícula: '+s.mat:'')+'</div>' +
+          '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;">' +
+            '<span class="risk-tag '+RISK_CSS[s.riesgo||'none']+'">'+RISK_LABEL[s.riesgo||'none']+'</span>' +
+            '<span class="tag tg-az">'+esc(s.estado||'activo')+'</span>' +
+            (s.dx?'<span class="tag tg-gr">'+esc(s.dx)+'</span>':'') +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:7px;flex-wrap:wrap;" class="no-print">' +
+          '<button class="btn btn-g btn-sm" onclick="openAddNote(\''+id+'\')">📝 Nueva nota</button>' +
+          '<button class="btn btn-az btn-sm" onclick="openAddApt(\''+id+'\')">📅 Programar cita</button>' +
+          '<a href="reporte-psicologico.html?matricula='+encodeURIComponent(s.mat || s.id)+'" target="_blank" class="btn btn-gd btn-sm">📋 Reporte Oficial Folio</a>' +
+          '<button class="btn btn-gr btn-sm" onclick="openEditStudent(\''+id+'\')">✏️ Editar</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;">' +
+      '<div class="card">' +
+        '<div class="card-ttl" style="margin-bottom:12px;">👤 Ficha de Identificación</div>' +
+        infoRow('Nombre completo', s.nombre) +
+        infoRow('CURP', s.curp) +
+        infoRow('Matrícula', s.mat) +
+        infoRow('Carrera técnica', s.carrera) +
+        infoRow('Semestre / Grupo', s.sem&&s.grp ? s.sem+' — '+s.grp : s.sem||s.grp) +
+        infoRow('Turno', s.turno) +
+        infoRow('Sexo', s.sexo) +
+        infoRow('Edad', s.edad ? s.edad+' años' : '') +
+        infoRow('Teléfono', s.tel) +
+        infoRow('Correo', s.email) +
+        '<div class="sec-div"></div>' +
+        infoRow('Tutor legal', s.tutor) +
+        infoRow('Teléfono tutor', s.tutor_tel) +
+        infoRow('Motivo ingreso', s.motivo) +
+      '</div>' +
+
+      '<div class="card">' +
+        '<div class="card-hdr">' +
+          '<div class="card-ttl">📝 Notas de Seguimiento ('+notas.length+')</div>' +
+          '<button class="btn btn-g btn-xs no-print" onclick="openAddNote(\''+id+'\')">+ Nueva nota</button>' +
+        '</div>' +
+        (notas.length ? notas.map(n => {
+          return '<div class="note-item">' +
+            '<div class="note-dot"></div>' +
+            '<div class="note-content">' +
+              '<div class="note-meta">'+fD(n.fecha)+' · '+esc(n.tipo)+(n.psi?' · '+esc(n.psi):'')+(n.ses?' · Sesión '+n.ses:'')+'</div>' +
+              '<div class="note-text">'+esc(n.texto)+'</div>' +
+              (n.dx_update ? '<div style="margin-top:4px;font-size:10px;font-weight:700;color:var(--az);">→ Diagnóstico: '+esc(n.dx_update)+'</div>' : '') +
+            '</div>' +
+          '</div>';
+        }).join('') : '<div class="empty" style="padding:20px;"><div class="eico">📝</div><p>No hay notas clínicas registradas todavía.</p></div>') +
+      '</div>' +
+
+      '<div class="card" style="grid-column:1/-1;">' +
+        '<div class="card-hdr">' +
+          '<div class="card-ttl">📅 Historial de Citas ('+apts.length+')</div>' +
+          '<button class="btn btn-az btn-xs no-print" onclick="openAddApt(\''+id+'\')">+ Programar cita</button>' +
+        '</div>' +
+        (apts.length ? apts.map(a => aptCard(a, true)).join('') :
+          '<div class="empty" style="padding:20px;"><p>Sin citas registradas.</p></div>') +
+      '</div>' +
+    '</div>';
+}
+
+function infoRow(label, value){
+  if(!value) return '';
+  return '<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--b1);">' +
+    '<span style="font-size:10px;font-weight:700;color:var(--t3);min-width:110px;">'+label+'</span>' +
+    '<span style="font-size:12px;font-weight:600;flex:1;">'+esc(value)+'</span>' +
+  '</div>';
+}
+
+/* TAB: AGENDA */
+function renderAgenda(){
+  var el = document.getElementById('tab-agenda');
+  if(!el) return;
+  var hoy = today();
+  var hoy_apts = appointments.filter(a => a.fecha===hoy).sort((a,b) => a.hora.localeCompare(b.hora));
+
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;">' +
+      '<div class="card">' +
+        '<div class="card-hdr">' +
+          '<div class="card-ttl">📌 Citas de Hoy — '+fD(hoy)+'</div>' +
+          '<button class="btn btn-g btn-sm no-print" onclick="openAddApt(null)">+ Nueva cita</button>' +
+        '</div>' +
+        (hoy_apts.length ? hoy_apts.map(a => aptCard(a,false)).join('') :
+          '<div class="empty" style="padding:24px;"><p>No hay citas programadas para hoy</p></div>') +
+      '</div>' +
+
+      '<div class="card">' +
+        '<div class="card-hdr"><div class="card-ttl">🕐 Disponibilidad Semanal de Orientación</div></div>' +
+        renderAvailability() +
+      '</div>' +
+    '</div>' +
+
+    '<div class="card" style="margin-top:14px;">' +
+      '<div class="card-hdr">' +
+        '<div class="card-ttl">📋 Todas las Citas Registradas ('+appointments.length+')</div>' +
+        '<button class="btn btn-g btn-sm no-print" onclick="openAddApt(null)">+ Programar cita</button>' +
+      '</div>' +
+      '<div class="search-wrap">' +
+        '<input id="apt-q" placeholder="🔍 Buscar por alumno, tipo, orientador…" oninput="filterApts()"/>' +
+        '<select id="apt-f-est" onchange="filterApts()">' +
+          '<option value="">Todos los estados</option>' +
+          '<option>Pendiente</option><option>Confirmada</option>' +
+          '<option>Completada</option><option>Cancelada</option><option>No asistió</option>' +
+        '</select>' +
+      '</div>' +
+      '<div id="apt-list"></div>' +
+    '</div>';
+
+  filterApts();
+}
+
+function filterApts(){
+  var q = (document.getElementById('apt-q')||{value:''}).value.toLowerCase();
+  var est = (document.getElementById('apt-f-est')||{value:''}).value;
+  var list = appointments.filter(a => {
+    var m = !q || [a.nombre,a.tipo,a.psi,a.motivo].some(v => v && v.toLowerCase().includes(q));
+    var me = !est || a.estado===est;
+    return m && me;
+  });
+  list.sort((a,b) => (a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+  var el = document.getElementById('apt-list');
+  if(!el) return;
+  if(!list.length){
+    el.innerHTML='<div class="empty"><div class="eico">📅</div><h3>Sin citas</h3><p>Programa citas usando el botón superior.</p></div>';
+    return;
+  }
+  el.innerHTML = list.map(a => aptCard(a,false)).join('');
+}
+
+function aptCard(a, simple){
+  var sc = {Pendiente:'var(--am)',Confirmada:'var(--g)',Completada:'var(--az)',Cancelada:'var(--r)','No asistió':'var(--r)'}[a.estado]||'var(--b2)';
+  var d = a.fecha ? new Date(a.fecha+'T12:00:00') : null;
+  var day = d ? d.getDate() : '?';
+  var mon = d ? MESES[d.getMonth()] : '';
+  var asistBtn = '';
+  if(!simple && (a.estado==='Pendiente'||a.estado==='Confirmada')){
+    asistBtn = '<button class="btn btn-g btn-xs" onclick="markAsistencia(\''+a.id+'\',true)">✓ Asistió</button>' +
+               '<button class="btn btn-r btn-xs" onclick="markAsistencia(\''+a.id+'\',false)">✗ No asistió</button>';
+  }
+  return '<div class="apt-card">' +
+    '<div class="apt-bar" style="background:'+sc+';"></div>' +
+    '<div class="apt-body">' +
+      '<div class="apt-date"><div class="apt-day">'+day+'</div><div class="apt-mon">'+mon+'</div></div>' +
+      '<div class="apt-info">' +
+        '<div class="apt-name">'+esc(a.nombre)+'</div>' +
+        '<div class="apt-sub">'+fH(a.hora)+' ('+esc(a.duracion||60)+' min) · '+esc(a.tipo||'')+(a.psi?' · '+esc(a.psi):'')+'</div>' +
+        (a.motivo?'<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+esc(a.motivo)+'</div>':'') +
+      '</div>' +
+      '<div class="apt-right">' +
+        '<span class="tag '+(APT_STATUS_CSS[a.estado]||'tg-gr')+'">'+esc(a.estado)+'</span>' +
+        (!simple ? asistBtn : '') +
+        (!simple ? '<button class="btn btn-r btn-xs" onclick="deleteApt(\''+a.id+'\')">🗑</button>' : '') +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function renderAvailability(){
+  var hoy = new Date();
+  var slots = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00'];
+  var days = [];
+  for(var i=0;i<5;i++){
+    var d = new Date(hoy);
+    d.setDate(hoy.getDate() + i);
+    days.push(d);
+  }
+  var html = '<div style="overflow-x:auto;">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
+    '<tr><th style="padding:5px;background:var(--gp);color:#fff;"></th>' +
+    days.map(d => '<th style="padding:5px 3px;background:var(--gp);color:#fff;text-align:center;min-width:60px;">' +
+      DIAS[d.getDay()]+'<br/><span style="font-size:10px;font-weight:400;">'+d.getDate()+' '+MESES[d.getMonth()]+'</span></th>'
+    ).join('') + '</tr>';
+
+  slots.forEach(slot => {
+    html += '<tr>';
+    html += '<td style="padding:4px 7px;font-size:10px;font-weight:700;color:var(--t3);white-space:nowrap;">'+slot+'</td>';
+    days.forEach(d => {
+      var fecha = d.toISOString().split('T')[0];
+      var busy = appointments.filter(a => a.fecha===fecha && a.hora===slot && a.estado!=='Cancelada');
+      var isBusy = busy.length > 0;
+      var isWeekend = d.getDay()===0||d.getDay()===6;
+      var cls = isWeekend ? 'off' : isBusy ? 'busy' : 'free';
+      html += '<td style="padding:3px;text-align:center;">' +
+        '<div class="avail-slot '+cls+'" '+
+          (cls==='free'?'onclick="openAddAptWithSlot(\''+fecha+'\',\''+slot+'\')" title="Disponible — clic para agendar"':'')+
+          (cls==='busy'?'title="'+esc(busy[0].nombre)+'"':'')+
+          '>'+
+          (isBusy ? '●' : isWeekend ? '—' : '✓') +
+        '</div></td>';
+    });
+    html += '</tr>';
+  });
+  html += '</table></div>';
+  return html;
+}
+
+function openAddAptWithSlot(fecha, hora){
+  openAddApt(null);
+  sf('apt-fecha', fecha);
+  sf('apt-hora', hora);
+}
+
+/* TAB: REPORTES */
+function renderReportes(){
+  var el = document.getElementById('tab-reportes');
+  if(!el) return;
+  el.innerHTML =
+    '<div class="card">' +
+      '<div class="card-hdr">' +
+        '<div class="card-ttl">📋 Reportes Psicológicos Clínicos ('+reports.length+')</div>' +
+        '<a href="reporte-psicologico.html" target="_blank" class="btn btn-g btn-sm no-print">+ Elaborar Nuevo Reporte Oficial</a>' +
+      '</div>' +
+      '<div class="search-wrap">' +
+        '<input id="rep-q" placeholder="🔍 Buscar por alumno, diagnóstico o folio…" oninput="filterReports()"/>' +
+      '</div>' +
+      '<div id="rep-list"></div>' +
+    '</div>';
+  filterReports();
+}
+
+function filterReports(){
+  var q = (document.getElementById('rep-q')||{value:''}).value.toLowerCase();
+  var list = reports.filter(r => !q || [r.alumno_nombre, r.diagnostico, r.folio].some(v => v && v.toLowerCase().includes(q))).reverse();
+  var el = document.getElementById('rep-list');
+  if(!el) return;
+  if(!list.length){
+    el.innerHTML = '<div class="empty"><div class="eico">📋</div><h3>Sin reportes</h3><p>Genera reportes oficiales con folio desde el expediente de cualquier alumno.</p></div>';
+    return;
+  }
+  el.innerHTML = list.map(r => {
+    return '<div class="stu-card">' +
+      '<div class="stu-card-bar" style="background:var(--g);"></div>' +
+      '<div class="stu-card-body">' +
+        '<div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;">' +
+          '<div style="flex:1;">' +
+            '<div style="font-family:monospace;font-size:12px;font-weight:800;color:var(--g);">'+esc(r.folio)+'</div>' +
+            '<div style="font-size:14px;font-weight:800;margin-top:2px;">'+esc(r.alumno_nombre||'—')+'</div>' +
+            '<div style="font-size:11px;color:var(--t3);">'+fD(r.fecha_atencion)+(r.diagnostico?' · '+esc(r.diagnostico):'')+'</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;" class="no-print">' +
+            '<a href="reporte-psicologico.html?studentId='+encodeURIComponent(r.student_id||'')+'" target="_blank" class="btn btn-g btn-xs">Ver Reporte</a>' +
+            '<button class="btn btn-r btn-xs" onclick="deleteReport(\''+r.id+'\')">🗑</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function deleteReport(id){
+  if(!confirm('¿Eliminar este registro de reporte?')) return;
+  reports = reports.filter(r => r.id !== id);
+  localStorage.setItem('cnlp_reps', JSON.stringify(reports));
+  filterReports();
+  toast('Reporte eliminado');
+}
+
+/* TAB: IMPORTAR EXCEL CON SHEETJS */
+function renderImportar(){
+  var el = document.getElementById('tab-importar');
+  if(!el) return;
+  el.innerHTML =
+    '<div class="card">' +
+      '<div class="card-ttl" style="margin-bottom:14px;">📥 Importar Base de Datos de Alumnos (Excel / CSV)</div>' +
+      '<p style="font-size:12px;color:var(--t2);margin-bottom:14px;">' +
+        'Sube tu lista escolar en formato Excel (.xlsx, .xls) o CSV (.csv). El sistema detectará automáticamente los nombres de columnas y creará los expedientes en NAIMA OS.' +
+      '</p>' +
+      '<div class="upload-zone" id="upload-zone" onclick="document.getElementById(\'file-input\').click()" ' +
+           'ondragover="event.preventDefault();this.classList.add(\'over\')" ' +
+           'ondragleave="this.classList.remove(\'over\')" ' +
+           'ondrop="handleDrop(event)">' +
+        '<div class="ico">📂</div>' +
+        '<h3>Arrastra tu archivo Excel aquí o haz clic para seleccionarlo</h3>' +
+        '<p>Formatos aceptados: .xlsx, .xls, .csv</p>' +
+        '<p style="margin-top:8px;font-size:11px;color:var(--g);font-weight:700;">✓ Crea expedientes de inmediato en la base de datos institucional</p>' +
+      '</div>' +
+      '<input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileInput(this)"/>' +
+      '<div style="margin-top:16px;">' +
+        '<button class="btn btn-gr btn-sm" onclick="downloadTemplate()">📥 Descargar plantilla Excel de ejemplo</button>' +
+      '</div>' +
+      '<div id="import-preview" style="margin-top:16px;"></div>' +
+    '</div>';
+}
+
+function normCol(s){
+  return (s||'').toString().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]/g,'');
+}
+
+var COL_ALIASES = {
+  nombre:     ['nombre','name','alumno','nombrealumno','nombrecompleto','apellidosnombre','alumnos'],
+  matricula:  ['matricula','mat','nocontrol','numerodecontrol','noalumno','id','folio'],
+  curp:       ['curp'],
+  carrera:    ['carrera','programa','especialidad','tecnico'],
+  semestre:   ['semestre','sem','grado','nivel'],
+  grupo:      ['grupo','grp','seccion','salon'],
+  turno:      ['turno','jornada','horario'],
+  sexo:       ['sexo','genero','gender'],
+  edad:       ['edad','age','anos','años'],
+  telefono:   ['telefono','tel','celular','movil','contacto'],
+  correo:     ['correo','email','mail','correoelectronico'],
+  tutor:      ['tutor','padre','madre','responsable','nombretutor'],
+  tel_tutor:  ['teltutor','telefonotutor','celulartutor'],
+  diagnostico:['diagnostico','dx','cie10'],
+  riesgo:     ['riesgo','nivelriesgo'],
+  estado:     ['estado','estatus','situacion']
+};
+
+function getColVal(row, field, headerMap){
+  var aliases = COL_ALIASES[field] || [normCol(field)];
+  for(var i=0;i<aliases.length;i++){
+    var norm = normCol(aliases[i]);
+    if(headerMap[norm] !== undefined){
+      var v = row[headerMap[norm]];
+      if(v !== undefined && v !== null && v !== '') return v.toString().trim();
+    }
+  }
+  return '';
+}
+
+function buildHeaderMap(headers){
+  var map = {};
+  headers.forEach((h,i) => { map[normCol(h)] = i; });
+  return map;
+}
+
+function handleDrop(e){
+  e.preventDefault();
+  var uz = document.getElementById('upload-zone');
+  if(uz) uz.classList.remove('over');
+  if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+}
+
+function handleFileInput(input){
+  if(input.files[0]) processFile(input.files[0]);
+}
+
+function processFile(file){
+  var name = file.name.toLowerCase();
+  var preview = document.getElementById('import-preview');
+  if(!preview) return;
+  preview.innerHTML = '<div style="padding:20px;text-align:center;">⏳ Procesando archivo '+esc(file.name)+'...</div>';
+
+  if(name.endsWith('.xlsx') || name.endsWith('.xls')){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        var wb = XLSX.read(e.target.result, {type:'binary'});
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        var data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        parseSheetData(data);
+      }catch(err){
+        preview.innerHTML = '<div style="color:var(--r);padding:14px;">Error al leer Excel: '+esc(err.message)+'</div>';
+      }
+    };
+    reader.readAsBinaryString(file);
+  } else if(name.endsWith('.csv')){
+    var r = new FileReader();
+    r.onload = function(e){ parseCSVData(e.target.result); };
+    r.readAsText(file, 'UTF-8');
+  } else {
+    preview.innerHTML = '<div style="color:var(--r);padding:14px;">Formato no soportado. Sube un archivo .xlsx o .csv.</div>';
+  }
+}
+
+function parseSheetData(data){
+  if(!data || data.length < 2){
+    document.getElementById('import-preview').innerHTML = '<div style="color:var(--r);padding:14px;">El archivo Excel no contiene datos.</div>';
+    return;
+  }
+  var headers = data[0].map(h => (h||'').toString());
+  var rows = data.slice(1).filter(r => r.some(v => v !== '' && v !== null && v !== undefined));
+  showImportPreview(headers, rows);
+}
+
+function parseCSVData(text){
+  var lines = text.split(/\r?\n/).filter(l => l.trim());
+  if(lines.length < 2) return;
+  var delim = lines[0].indexOf(';') > lines[0].indexOf(',') ? ';' : ',';
+  var headers = lines[0].split(delim).map(s => s.trim().replace(/^"|"$/g,''));
+  var rows = lines.slice(1).map(l => l.split(delim).map(s => s.trim().replace(/^"|"$/g,'')));
+  showImportPreview(headers, rows);
+}
+
+var pendingImport = [];
+var pendingHeaders = [];
+
+function showImportPreview(headers, rows){
+  pendingImport = rows;
+  pendingHeaders = headers;
+  var preview = document.getElementById('import-preview');
+  var hmap = buildHeaderMap(headers);
+  var hasNombre = COL_ALIASES.nombre.some(a => hmap[normCol(a)] !== undefined);
+
+  preview.innerHTML =
+    '<div class="card" style="border-left:4px solid var(--g);">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap;">' +
+        '<div>' +
+          '<div style="font-size:15px;font-weight:800;color:var(--gp);">📊 '+rows.length+' alumnos detectados</div>' +
+          '<div style="font-size:11px;color:var(--t3);">Se crearán o actualizarán expedientes en NAIMA OS</div>' +
+        '</div>' +
+        (hasNombre ? '<button class="btn btn-g" onclick="confirmImport()">📥 Confirmar e Importar '+rows.length+' Alumnos</button>' : '') +
+      '</div>' +
+      '<div style="overflow-x:auto;">' +
+        '<table class="import-table">' +
+          '<tr><th>#</th><th>Nombre</th><th>Matrícula</th><th>Carrera</th><th>Semestre</th><th>Grupo</th><th>Teléfono</th></tr>' +
+          rows.slice(0, 8).map((r, i) => {
+            return '<tr><td>'+(i+1)+'</td>' +
+              '<td>'+esc(getColVal(r,'nombre',hmap))+'</td>' +
+              '<td>'+esc(getColVal(r,'matricula',hmap))+'</td>' +
+              '<td>'+esc(getColVal(r,'carrera',hmap))+'</td>' +
+              '<td>'+esc(getColVal(r,'semestre',hmap))+'</td>' +
+              '<td>'+esc(getColVal(r,'grupo',hmap))+'</td>' +
+              '<td>'+esc(getColVal(r,'telefono',hmap))+'</td>' +
+            '</tr>';
+          }).join('') +
+        '</table>' +
+      '</div>' +
+    '</div>';
+}
+
+function confirmImport(){
+  var hmap = buildHeaderMap(pendingHeaders);
+  var added = 0, updated = 0;
+
+  pendingImport.forEach(row => {
+    var nombre = getColVal(row, 'nombre', hmap);
+    if(!nombre || nombre.length < 2) return;
+    var mat = getColVal(row, 'matricula', hmap) || ('PTB-' + Math.floor(Math.random()*89999 + 10000));
+    var carrera = getColVal(row, 'carrera', hmap) || 'Técnico en Informática';
+    var sem = getColVal(row, 'semestre', hmap) || '4°';
+    var grp = getColVal(row, 'grupo', hmap) || '402';
+    var tel = getColVal(row, 'telefono', hmap);
+    var email = getColVal(row, 'correo', hmap) || (mat.toLowerCase() + '@conalepmex.edu.mx');
+    var tutor = getColVal(row, 'tutor', hmap);
+    var tel_tutor = getColVal(row, 'tel_tutor', hmap);
+    var dx = getColVal(row, 'diagnostico', hmap);
+    var riesgo = (getColVal(row, 'riesgo', hmap) || 'none').toLowerCase();
+    if(riesgo.includes('alt') || riesgo.includes('high')) riesgo = 'high';
+    else if(riesgo.includes('med') || riesgo.includes('mod')) riesgo = 'mid';
+    else if(riesgo.includes('baj') || riesgo.includes('low')) riesgo = 'low';
+    else riesgo = 'none';
+
+    var existing = students.find(s => s.mat === mat || s.nombre.toLowerCase() === nombre.toLowerCase());
+    if(existing){
+      existing.nombre = nombre;
+      existing.carrera = carrera;
+      existing.sem = sem;
+      existing.grp = grp;
+      if(tel) existing.tel = tel;
+      if(tutor) existing.tutor = tutor;
+      updated++;
+    } else {
+      students.push({
+        id: mat, nombre: nombre, mat: mat, carrera: carrera, sem: sem, grp: grp,
+        tel: tel, email: email, tutor: tutor, tutor_tel: tel_tutor, dx: dx,
+        riesgo: riesgo, estado: 'activo', notas: [], createdAt: new Date().toISOString()
+      });
+      added++;
+    }
+  });
+
+  saveAll();
+  toast('✓ '+added+' alumnos importados, '+updated+' actualizados');
+  renderImportar();
+  setTimeout(() => goTab('expedientes', document.querySelector('[data-tab=expedientes]')), 1200);
+}
+
+function downloadTemplate(){
+  var headers = [['nombre','matricula','carrera','semestre','grupo','telefono','correo','tutor','tel_tutor','diagnostico','riesgo']];
+  var example = [['García López Juan','PTB-26101','Técnico en Informática','4°','402','9991234567','juan@gmail.com','García Pedro','9997654321','Ansiedad','bajo']];
+  var ws = XLSX.utils.aoa_to_sheet(headers.concat(example));
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Alumnos');
+  XLSX.writeFile(wb, 'Plantilla_CONALEP_Alumnos.xlsx');
+  toast('Plantilla descargada');
+}
+
+/* TAB: EXPORTAR PDF */
+function renderExportar(){
+  var el = document.getElementById('tab-exportar');
+  if(!el) return;
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;">' +
+      '<div>' +
+        '<div class="card">' +
+          '<div class="card-ttl" style="margin-bottom:14px;">👤 Seleccionar Alumno para Expediente PDF</div>' +
+          '<div class="field"><div class="lbl">Estudiante</div>' +
+            '<select id="exp-student-sel" onchange="renderExportPreview()">' +
+              '<option value="">Seleccionar alumno…</option>' +
+              students.map(s => '<option value="'+s.id+'"'+(s.id===currentStudentId?' selected':'')+'>'+esc(s.nombre)+' ('+esc(s.mat||'')+')</option>').join('') +
+            '</select>' +
+          '</div>' +
+          '<div class="field"><div class="lbl">Orientador(a) / Psicólogo responsable</div><input id="exp-psi" placeholder="Nombre completo"/></div>' +
+          '<div class="field"><div class="lbl">Cédula profesional</div><input id="exp-ced" placeholder="00000000"/></div>' +
+        '</div>' +
+
+        '<div class="card" style="margin-top:14px;">' +
+          '<div class="card-ttl" style="margin-bottom:12px;">✍️ Firma Digital del Tutor de Enterado</div>' +
+          '<div class="sig-pad-wrap"><canvas id="sig-canvas" class="sig-pad" width="400" height="100"></canvas></div>' +
+          '<button class="btn btn-gr btn-xs" style="margin-top:8px;" onclick="clearSig()">🗑 Limpiar firma</button>' +
+        '</div>' +
+
+        '<div class="btn-row" style="margin-top:14px;">' +
+          '<button class="btn btn-gd btn-sm" onclick="window.print()" style="flex:1;">🖨 Imprimir / Guardar PDF</button>' +
+        '</div>' +
+      '</div>' +
+
+      '<div>' +
+        '<div class="card">' +
+          '<div class="card-ttl" style="margin-bottom:12px;">👁 Vista Previa de Impresión</div>' +
+          '<div id="exp-preview"><div class="empty"><div class="eico">👤</div><h3>Selecciona un alumno</h3></div></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  setTimeout(initSigCanvas, 100);
+  if(currentStudentId){
+    var sel = document.getElementById('exp-student-sel');
+    if(sel) sel.value = currentStudentId;
+    renderExportPreview();
+  }
+}
+
+function renderExportPreview(){
+  var sid = gf('exp-student-sel');
+  var el = document.getElementById('exp-preview');
+  if(!el) return;
+  if(!sid){ el.innerHTML='<div class="empty"><div class="eico">👤</div><h3>Selecciona un alumno</h3></div>'; return; }
+  var s = students.find(x => x.id === sid);
+  if(!s){ el.innerHTML='<div style="color:var(--r);">Alumno no encontrado</div>'; return; }
+
+  el.innerHTML =
+    '<div style="background:#fff;padding:16px;border-radius:6px;border:1px solid var(--b1);">' +
+      '<div style="display:flex;align-items:center;gap:10px;border-bottom:2px solid var(--g);padding-bottom:10px;margin-bottom:12px;">' +
+        '<div style="font-size:16px;font-weight:800;color:var(--gp);">CONALEP Mérida 1</div>' +
+        '<div style="margin-left:auto;font-size:11px;font-weight:700;color:var(--g);">Expediente de Orientación Educativa</div>' +
+      '</div>' +
+      '<div style="font-size:15px;font-weight:800;color:var(--t1);">'+esc(s.nombre)+'</div>' +
+      '<div style="font-size:11px;color:var(--t3);margin-bottom:12px;">Matrícula: '+esc(s.mat)+' · Carrera: '+esc(s.carrera)+' · '+esc(s.sem)+' '+esc(s.grp)+'</div>' +
+      '<div style="font-size:12px;margin-bottom:8px;"><strong>Tutor legal:</strong> '+esc(s.tutor||'Por asignar')+' ('+esc(s.tutor_tel||'Sin teléfono')+')</div>' +
+      '<div style="font-size:12px;margin-bottom:8px;"><strong>Nivel de riesgo:</strong> '+RISK_LABEL[s.riesgo||'none']+' · <strong>Diagnóstico:</strong> '+esc(s.dx||'En evaluación')+'</div>' +
+      '<div style="font-size:11px;color:var(--t3);margin-top:16px;border-top:1px dashed var(--b2);padding-top:8px;">Documento generado el '+new Date().toLocaleDateString('es-MX')+' · Departamento de Orientación y Tutorías</div>' +
+    '</div>';
+}
+
+function initSigCanvas(){
+  var canvas = document.getElementById('sig-canvas');
+  if(!canvas) return;
+  sigCanvas = canvas; sigCtx = canvas.getContext('2d');
+  sigCtx.strokeStyle = '#1A1E1C'; sigCtx.lineWidth = 2; sigCtx.lineCap = 'round';
+  canvas.addEventListener('mousedown', e => { sigDrawing=true; sigCtx.beginPath(); sigCtx.moveTo(e.offsetX,e.offsetY); });
+  canvas.addEventListener('mousemove', e => { if(!sigDrawing)return; sigCtx.lineTo(e.offsetX,e.offsetY); sigCtx.stroke(); });
+  canvas.addEventListener('mouseup', () => sigDrawing=false);
+  canvas.addEventListener('mouseleave', () => sigDrawing=false);
+}
+function clearSig(){ if(sigCtx&&sigCanvas) sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height); }
+
+/* INICIALIZACIÓN */
+syncWithNaimaDB();
+renderDashboard();
+</script>
+</body>
+</html>
