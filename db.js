@@ -79,6 +79,20 @@ function loadDB(){
         delete parsed.users['usr_coord_2'];
         delete parsed.users['usr_coord_3'];
 
+        // Deduplicar coordinadores para evitar entradas dobles (por id y por correo)
+        const seenCoordEmails = new Set();
+        Object.keys(parsed.users).forEach(uid => {
+          const u = parsed.users[uid];
+          if(u && u.rol === 'coordinador'){
+            const em = (u.email || '').toLowerCase();
+            if(em && seenCoordEmails.has(em)){
+              delete parsed.users[uid];
+            } else if(em){
+              seenCoordEmails.add(em);
+            }
+          }
+        });
+
         if(parsed.alerts) {
           parsed.alerts = parsed.alerts.filter(a => !['PTB-26001', 'PTB-26002', 'PTB-26003'].includes(a.studentId));
         }
@@ -260,9 +274,16 @@ async function getActivePsychologists(){
     }
   }
 
-  // 2. Fallback local solo si Supabase no responde: únicamente los coordinadores reales sin simulaciones
+  // 2. Fallback local solo si Supabase no responde: únicamente los coordinadores reales sin simulaciones ni duplicados
+  const seenPsy = new Set();
   return Object.values(db.users || {})
-    .filter(u => u.rol === 'coordinador' && !['usr_coord_1', 'usr_coord_2', 'usr_coord_3'].includes(u.id))
+    .filter(u => u && u.rol === 'coordinador' && !['usr_coord_1', 'usr_coord_2', 'usr_coord_3'].includes(u.id))
+    .filter(u => {
+      const em = (u.email || u.id || '').toLowerCase();
+      if(!em || seenPsy.has(em)) return false;
+      seenPsy.add(em);
+      return true;
+    })
     .map(c => ({
       id: c.id,
       nombre: c.nombre,
@@ -385,7 +406,9 @@ async function loginUser(identifier, password){
             password: password,
             passwordHash: inputHash
           };
-          if(coordData.email) db.users[coordData.email.toLowerCase()] = db.users[coordData.id];
+          if(coordData.email && coordData.email.toLowerCase() !== coordData.id && db.users[coordData.email.toLowerCase()]){
+            delete db.users[coordData.email.toLowerCase()];
+          }
           saveDB();
           setCurrentUser(coordData.id);
           return { success: true, user: db.users[coordData.id], redirectUrl: 'admin.html', source: 'supabase' };
@@ -730,6 +753,11 @@ async function deleteCoordinator(id){
   }
   
   delete db.users[id];
+  Object.keys(db.users).forEach(k => {
+    if(db.users[k] && (db.users[k].id === id || (db.users[k].email && db.users[k].email.toLowerCase() === idLower))){
+      delete db.users[k];
+    }
+  });
   saveDB();
 
   if(isSupabaseLive()){
@@ -1396,6 +1424,19 @@ async function pullSupabaseToLocal(){
         client.from('coordinadores').upsert(aObj, { onConflict: 'email' }).catch(() => {});
       }
 
+      // Asegurar unicidad por email en coordData
+      const seenCoordEmails = new Set();
+      const uniqueCoords = [];
+      coordData.forEach(c => {
+        const em = (c.email || '').toLowerCase();
+        if(em && !seenCoordEmails.has(em)){
+          seenCoordEmails.add(em);
+          uniqueCoords.push(c);
+        } else if(!em){
+          uniqueCoords.push(c);
+        }
+      });
+
       // Limpiar coordinadores locales para que solo existan los que están en la base de datos
       const existingCoords = { ...db.users };
       Object.keys(db.users).forEach(uid => {
@@ -1403,7 +1444,7 @@ async function pullSupabaseToLocal(){
           delete db.users[uid];
         }
       });
-      coordData.forEach(c => {
+      uniqueCoords.forEach(c => {
         const emailLower = (c.email || '').toLowerCase();
         const existing = existingCoords[c.id] || existingCoords[c.email] || existingCoords[emailLower] || {};
         const isFounder = (emailLower === '221k0049@itscarrillopuerto.edu.mx' || emailLower === 'adanm.noh150903@gmail.com');
@@ -1425,8 +1466,9 @@ async function pullSupabaseToLocal(){
         const effectiveHash = profHash || existing.passwordHash || null;
         const effectivePassword = existing.password || (isFounder ? '1234' : 'conalep123');
 
+        const coordKey = c.id || c.email;
         const coordObj = {
-          id: c.id || c.email,
+          id: coordKey,
           nombre: c.nombre,
           display: c.display || c.nombre,
           email: c.email,
@@ -1439,8 +1481,7 @@ async function pullSupabaseToLocal(){
           avatar_url: effectivePhoto
         };
 
-        db.users[c.id || c.email] = coordObj;
-        if(c.email) db.users[emailLower] = coordObj;
+        db.users[coordKey] = coordObj;
       });
     }
 

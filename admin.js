@@ -1977,7 +1977,15 @@ function open3dDemo(nombre){
 /* ---------- VISTA: EQUIPO DE ORIENTADORES Y COORDINACIÓN ---------- */
 function renderEquipoCoordinadores(){
   const currentUser = getCurrentUser() || {};
-  const coords = Object.values(db.users || {}).filter(u => u && u.rol === 'coordinador');
+  const seenCoords = new Set();
+  const coords = Object.values(db.users || {})
+    .filter(u => u && u.rol === 'coordinador')
+    .filter(u => {
+      const emailLower = (u.email || u.id || '').toLowerCase();
+      if(!emailLower || seenCoords.has(emailLower)) return false;
+      seenCoords.add(emailLower);
+      return true;
+    });
 
   const rows = coords.map(c => {
     const isMe = (c.id === currentUser.id || c.email === currentUser.email);
