@@ -30,20 +30,28 @@ let pioeOpen = null;
 function renderAdminUserProfile(){
   const el = document.getElementById('userProfileBlock');
   if(!el) return;
-  const user = getCurrentUser();
+  const user = getCurrentUser() || {};
+  const photo = user.photo || user.avatar_url || (db.users[user.id] && (db.users[user.id].photo || db.users[user.id].avatar_url)) || (db.users[user.email] && (db.users[user.email].photo || db.users[user.email].avatar_url)) || null;
 
   el.innerHTML = `
-    <div class="up-avatar">
-      ${initialOf(user.display || user.nombre)}
+    <div class="up-avatar-wrap" onclick="openAdminPhotoModal()" title="Haz clic para subir o cambiar tu foto de perfil">
+      <div class="up-avatar">
+        ${photo ? `
+          <img src="${escapeHTML(photo)}" class="up-avatar-img" alt="Foto de ${escapeHTML(user.nombre || user.display || 'Orientador')}">
+        ` : `
+          ${initialOf(user.display || user.nombre || 'V')}
+        `}
+      </div>
+      <span class="up-camera-badge" title="Cambiar foto">📷</span>
     </div>
     <div class="up-details">
-      <span class="up-name" title="${user.nombre}">${user.display || user.nombre}</span>
+      <span class="up-name" title="${escapeHTML(user.nombre || user.display || '')}">${escapeHTML(user.display || user.nombre || 'Orientador')}</span>
       <span class="up-role-tag coord">🛡️ ${escapeHTML(user.cargo || 'Orientador Educativo')}</span>
     </div>
   `;
 
   const topUserEl = document.getElementById('adminHeaderUser');
-  if(topUserEl) topUserEl.textContent = `${user.nombre} · ${user.plantel || 'CONALEP Mérida I'}`;
+  if(topUserEl) topUserEl.textContent = `${user.nombre || user.display || 'Orientador'} · ${user.plantel || 'CONALEP Mérida I'}`;
 }
 
 function renderAdminSidebar(){
@@ -1973,8 +1981,12 @@ function renderEquipoCoordinadores(){
       <tr>
         <td>
           <div style="display:flex;align-items:center;gap:12px;">
-            <div class="up-avatar" style="width:38px;height:38px;font-size:14px;background:var(--maroon);color:#FFF;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;">
-              ${initialOf(c.display || c.nombre)}
+            <div class="up-avatar" style="width:38px;height:38px;font-size:14px;background:var(--maroon);color:#FFF;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;overflow:hidden;flex-shrink:0;">
+              ${(c.photo || c.avatar_url) ? `
+                <img src="${escapeHTML(c.photo || c.avatar_url)}" class="up-avatar-img" alt="Foto de ${escapeHTML(c.nombre)}">
+              ` : `
+                ${initialOf(c.display || c.nombre)}
+              `}
             </div>
             <div>
               <strong style="color:var(--ink);font-size:14px;">${escapeHTML(c.nombre)}</strong>
@@ -2424,3 +2436,240 @@ window.addEventListener('naima:dbsynced', function(){
   renderAdminSidebar();
   nav(currentSection);
 });
+
+/* ---------- GESTIÓN DE FOTO DE PERFIL DEL ORIENTADOR (ESTILO FACEBOOK) ---------- */
+let tempAdminPhotoDataUrl = null;
+
+function openAdminPhotoModal(){
+  tempAdminPhotoDataUrl = null;
+  const user = getCurrentUser() || {};
+  const currentPhoto = user.photo || user.avatar_url || (db.users[user.id] && (db.users[user.id].photo || db.users[user.id].avatar_url)) || (db.users[user.email] && (db.users[user.email].photo || db.users[user.email].avatar_url)) || null;
+
+  openModal(`
+    <div class="photo-modal-card">
+      <button class="close-x" onclick="closeModal()">✕</button>
+      
+      <div class="pm-header">
+        <div class="pm-icon-wrap" style="background:#FDF2F4;border-color:#F5C6CB;color:var(--maroon);">🛡️</div>
+        <div>
+          <h3 style="margin:0;font-size:18px;color:var(--ink);">Foto de Perfil del Orientador</h3>
+          <p style="margin:4px 0 0;font-size:13px;color:var(--ink-soft);line-height:1.45;">
+            Sube tu foto real tal como en Facebook para personalizar tu perfil y credencial institucional en NAIMA OS.
+          </p>
+        </div>
+      </div>
+
+      <div class="pm-preview-container">
+        <div class="pm-preview-circle" id="adminPhotoPreviewCircle">
+          ${currentPhoto ? `
+            <img src="${escapeHTML(currentPhoto)}" id="adminPhotoPreviewImg" alt="Foto de perfil actual">
+          ` : `
+            <div class="pm-placeholder-view" id="adminPhotoPlaceholderView">
+              <span style="font-size:48px;">👤</span>
+              <span style="font-size:12px;color:var(--ink-muted);margin-top:4px;">Sin foto seleccionada</span>
+            </div>
+          `}
+        </div>
+      </div>
+
+      <div class="pm-actions-bar">
+        <input type="file" id="adminPhotoFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display:none;" onchange="handleAdminPhotoFileChosen(event)">
+        
+        <button type="button" class="btn-maroon" onclick="document.getElementById('adminPhotoFileInput').click()" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+          <span>📁</span> Seleccionar foto de tu dispositivo
+        </button>
+
+        ${currentPhoto ? `
+          <button type="button" class="btn-ghost" style="color:var(--danger);display:inline-flex;align-items:center;gap:4px;cursor:pointer;" onclick="deleteAdminProfilePhoto()">
+            <span>🗑️</span> Quitar foto actual
+          </button>
+        ` : ''}
+      </div>
+
+      <div id="adminPhotoSaveSection" style="display:none;margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
+        <div style="font-size:12.5px;color:var(--green);font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px;justify-content:center;">
+          <span>✓</span> Vista previa lista. ¿Deseas guardar esta foto?
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button type="button" class="btn-ghost" onclick="cancelAdminPhotoUpload()">Descartar</button>
+          <button type="button" class="btn-maroon" id="btnConfirmAdminPhotoSave" onclick="saveAdminProfilePhoto()">
+            Guardar como foto de perfil →
+          </button>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+function handleAdminPhotoFileChosen(e){
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+
+  if(!file.type.startsWith('image/')){
+    alert('Por favor selecciona un archivo de imagen válido (JPG, PNG o WebP).');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    const img = new Image();
+    img.onload = function(){
+      // Redimensionar y centrar en un canvas cuadrado max 400x400 para optimizar almacenamiento
+      const targetSize = 400;
+      const canvas = document.createElement('canvas');
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+      const ctx = canvas.getContext('2d');
+
+      const minDim = Math.min(img.width, img.height);
+      const sx = (img.width - minDim) / 2;
+      const sy = (img.height - minDim) / 2;
+
+      ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, targetSize, targetSize);
+      tempAdminPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.88);
+
+      // Actualizar vista previa en el modal
+      const circleEl = document.getElementById('adminPhotoPreviewCircle');
+      if(circleEl){
+        circleEl.innerHTML = `<img src="${tempAdminPhotoDataUrl}" alt="Nueva foto de perfil">`;
+      }
+      const saveSec = document.getElementById('adminPhotoSaveSection');
+      if(saveSec) saveSec.style.display = 'block';
+    };
+    img.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function cancelAdminPhotoUpload(){
+  tempAdminPhotoDataUrl = null;
+  const user = getCurrentUser() || {};
+  const currentPhoto = user.photo || user.avatar_url || (db.users[user.id] && (db.users[user.id].photo || db.users[user.id].avatar_url)) || (db.users[user.email] && (db.users[user.email].photo || db.users[user.email].avatar_url)) || null;
+  const circleEl = document.getElementById('adminPhotoPreviewCircle');
+  if(circleEl){
+    if(currentPhoto){
+      circleEl.innerHTML = `<img src="${escapeHTML(currentPhoto)}" alt="Foto de perfil actual">`;
+    } else {
+      circleEl.innerHTML = `
+        <div class="pm-placeholder-view" id="adminPhotoPlaceholderView">
+          <span style="font-size:48px;">👤</span>
+          <span style="font-size:12px;color:var(--ink-muted);margin-top:4px;">Sin foto seleccionada</span>
+        </div>
+      `;
+    }
+  }
+  const saveSec = document.getElementById('adminPhotoSaveSection');
+  if(saveSec) saveSec.style.display = 'none';
+}
+
+async function saveAdminProfilePhoto(){
+  if(!tempAdminPhotoDataUrl) return;
+  const user = getCurrentUser() || {};
+  const saveBtn = document.getElementById('btnConfirmAdminPhotoSave');
+  if(saveBtn){
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando foto...';
+  }
+
+  // 1. Guardar localmente
+  user.photo = tempAdminPhotoDataUrl;
+  user.avatar_url = tempAdminPhotoDataUrl;
+
+  if(user.id && db.users[user.id]){
+    db.users[user.id].photo = tempAdminPhotoDataUrl;
+    db.users[user.id].avatar_url = tempAdminPhotoDataUrl;
+  }
+  if(user.email && db.users[user.email]){
+    db.users[user.email].photo = tempAdminPhotoDataUrl;
+    db.users[user.email].avatar_url = tempAdminPhotoDataUrl;
+  }
+  saveDB();
+
+  // Actualizar sesión activa
+  if(typeof setSessionUser === 'function'){
+    setSessionUser(user);
+  }
+
+  // 2. Sincronizar a Supabase si está en vivo
+  if(isSupabaseLive()){
+    try{
+      const client = getActiveSupabaseClient();
+      if(client){
+        // Intentar actualizar en la tabla coordinadores
+        try {
+          await client.from('coordinadores').update({
+            avatar_url: tempAdminPhotoDataUrl
+          }).or(user.email ? `id.eq.${user.id || ''},email.eq.${user.email}` : `id.eq.${user.id}`);
+        } catch(errC){
+          console.warn('Aviso actualizando avatar_url en coordinadores:', errC);
+        }
+
+        // Intentar actualizar también en profiles si existe
+        if(user.email){
+          try {
+            await client.from('profiles').update({
+              avatar_url: tempAdminPhotoDataUrl
+            }).eq('email', user.email);
+          } catch(errP){}
+        }
+        console.log('✅ Foto de orientador sincronizada con Supabase');
+      }
+    }catch(err){
+      console.warn('Aviso sincronizando foto con Supabase:', err);
+    }
+  }
+
+  closeModal();
+  renderAdminUserProfile();
+  if(currentSection === 'equipo'){
+    renderEquipoCoordinadores();
+  }
+}
+
+async function deleteAdminProfilePhoto(){
+  if(!confirm('¿Estás seguro de que deseas eliminar tu foto de perfil actual?')) return;
+  const user = getCurrentUser() || {};
+
+  delete user.photo;
+  delete user.avatar_url;
+
+  if(user.id && db.users[user.id]){
+    delete db.users[user.id].photo;
+    delete db.users[user.id].avatar_url;
+  }
+  if(user.email && db.users[user.email]){
+    delete db.users[user.email].photo;
+    delete db.users[user.email].avatar_url;
+  }
+  saveDB();
+
+  if(typeof setSessionUser === 'function'){
+    setSessionUser(user);
+  }
+
+  if(isSupabaseLive()){
+    try{
+      const client = getActiveSupabaseClient();
+      if(client){
+        try{
+          await client.from('coordinadores').update({ avatar_url: null })
+            .or(user.email ? `id.eq.${user.id || ''},email.eq.${user.email}` : `id.eq.${user.id}`);
+        }catch(e){}
+        if(user.email){
+          try{
+            await client.from('profiles').update({ avatar_url: null }).eq('email', user.email);
+          }catch(e){}
+        }
+        console.log('✅ Foto de orientador eliminada en Supabase');
+      }
+    }catch(err){
+      console.warn('Aviso eliminando foto en Supabase:', err);
+    }
+  }
+
+  closeModal();
+  renderAdminUserProfile();
+  if(currentSection === 'equipo'){
+    renderEquipoCoordinadores();
+  }
+}

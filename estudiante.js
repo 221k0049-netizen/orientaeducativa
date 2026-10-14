@@ -31,12 +31,15 @@ function renderStudentUserProfile(){
   const studentPhoto = (typeof getStudentPhoto === 'function') ? getStudentPhoto(s) : (s.photo || s.avatar?.photo || null);
 
   el.innerHTML = `
-    <div class="up-avatar student-av" onclick="openStudentPhotoModal()" style="cursor:pointer;" title="Haz clic para cambiar tu foto de perfil">
-      ${studentPhoto ? `
-        <img src="${escapeHTML(studentPhoto)}" class="up-avatar-img" alt="Foto de ${escapeHTML(s.nombre)}">
-      ` : `
-        ${initialOf(s.display || s.nombre)}
-      `}
+    <div class="up-avatar-wrap student-wrap" onclick="openStudentPhotoModal()" title="Haz clic para subir o cambiar tu foto de perfil">
+      <div class="up-avatar student-av">
+        ${studentPhoto ? `
+          <img src="${escapeHTML(studentPhoto)}" class="up-avatar-img" alt="Foto de ${escapeHTML(s.nombre)}">
+        ` : `
+          ${initialOf(s.display || s.nombre)}
+        `}
+      </div>
+      <span class="up-camera-badge" title="Cambiar foto">📷</span>
     </div>
     <div class="up-details">
       <span class="up-name" title="${escapeHTML(s.nombre)}">${escapeHTML(s.display || s.nombre)}</span>

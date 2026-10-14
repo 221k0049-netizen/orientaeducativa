@@ -250,7 +250,8 @@ async function getActivePsychologists(){
             display: c.display || c.nombre,
             cargo: c.cargo || 'Orientador Educativo',
             email: c.email,
-            plantel: c.plantel || 'CONALEP Mérida I'
+            plantel: c.plantel || 'CONALEP Mérida I',
+            photo: c.photo || c.avatar_url || (db.users[c.id]?.photo || db.users[c.email]?.photo) || null
           }));
         }
       }
@@ -268,7 +269,8 @@ async function getActivePsychologists(){
       display: c.display || c.nombre,
       cargo: c.cargo || 'Orientador Educativo',
       email: c.email,
-      plantel: c.plantel || 'CONALEP Mérida I'
+      plantel: c.plantel || 'CONALEP Mérida I',
+      photo: c.photo || c.avatar_url || null
     }));
 }
 
@@ -352,16 +354,19 @@ async function loginUser(identifier, password){
             return { success: false, error: 'Contraseña incorrecta. Por favor verifica tus credenciales.' };
           }
 
+          const existingPhoto = localCoord.photo || localCoord.avatar_url || null;
           await pullSupabaseToLocal();
           db.users[coordData.id] = {
             ...coordData,
+            photo: coordData.photo || coordData.avatar_url || existingPhoto,
+            avatar_url: coordData.avatar_url || coordData.photo || existingPhoto,
             rol: 'coordinador',
             password: password,
             passwordHash: inputHash
           };
           saveDB();
           setCurrentUser(coordData.id);
-          return { success: true, user: coordData, redirectUrl: 'admin.html', source: 'supabase' };
+          return { success: true, user: db.users[coordData.id], redirectUrl: 'admin.html', source: 'supabase' };
         }
 
         // B) Verificar si es un estudiante en Supabase
@@ -1318,7 +1323,9 @@ async function pullSupabaseToLocal(){
           passwordHash: existing.passwordHash || null,
           rol: 'coordinador',
           cargo: c.cargo || 'Orientador Educativo',
-          plantel: c.plantel || 'CONALEP Mérida I'
+          plantel: c.plantel || 'CONALEP Mérida I',
+          photo: c.photo || c.avatar_url || existing.photo || existing.avatar_url || null,
+          avatar_url: c.avatar_url || c.photo || existing.avatar_url || existing.photo || null
         };
       });
     }

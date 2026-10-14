@@ -54,8 +54,10 @@ CREATE TABLE IF NOT EXISTS public.coordinadores (
   email TEXT UNIQUE NOT NULL,
   cargo TEXT DEFAULT 'Orientador Educativo',
   plantel TEXT DEFAULT 'CONALEP Mérida I',
+  avatar_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+ALTER TABLE public.coordinadores ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 
 -- ------------------------------------------------------------
 -- 3. TABLA: students (Expediente Único Digital del Estudiante)
