@@ -3384,4 +3384,65 @@ a{color:inherit;text-decoration:none;}
   .clinical-stu-body { flex-direction: column; align-items: flex-start; }
   .clinical-stu-actions { width: 100%; justify-content: flex-start; }
   .apt-card-native { flex-direction: column; align-items: flex-start; }
+}
+
+/* ============================================================
+   ESTILOS DE IMPRESIÓN OFICIAL (WINDOW.PRINT)
+   ============================================================ */
+@media print {
+  html, body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .sidebar,
+  .admin-top-nav,
+  .student-top-nav,
+  .menu-toggle,
+  .sidebar-overlay,
+  .modal-overlay,
+  .btn-maroon,
+  .btn-outline-maroon,
+  .btn-ghost,
+  .demo-chip,
+  button,
+  .no-print {
+    display: none !important;
+  }
+  .main {
+    margin-left: 0 !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    width: 100% !important;
+  }
+  .content {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  * {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  .card, .tamizaje-student-card {
+    border: 1px solid #CCC !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    background: #FFFFFF !important;
+    margin-bottom: 14px !important;
+    box-shadow: none !important;
+  }
+  canvas {
+    max-width: 100% !important;
+    height: auto !important;
+    page-break-inside: avoid !important;
+  }
 }
