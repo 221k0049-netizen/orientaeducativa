@@ -4453,32 +4453,32 @@ function printOfficialReportView(docId){
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
       <style>
+        @page { size: letter portrait; margin: 6mm 10mm; }
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Inter',sans-serif; color:#1A1A1A; background:#FFF; padding:30px; font-size:12.5px; line-height:1.55; }
-        .sheet { max-width:820px; margin:0 auto; border:1px solid #D5D5D5; padding:36px; border-radius:6px; box-shadow:0 4px 14px rgba(0,0,0,0.06); }
-        .hdr { display:flex; justify-content:space-between; align-items:center; border-bottom:3px double #7E1C3E; padding-bottom:14px; margin-bottom:18px; }
-        .hdr-title { font-size:16px; font-weight:800; color:#7E1C3E; text-transform:uppercase; }
-        .hdr-sub { font-size:11px; font-weight:700; color:#444; letter-spacing:.05em; text-transform:uppercase; margin-top:2px; }
-        .folio-box { font-family:'IBM Plex Mono',monospace; font-size:11px; background:#FAF8F5; border:1px solid #E2DDD5; padding:6px 12px; border-radius:4px; text-align:right; font-weight:700; color:#7E1C3E; }
-        .sec-title { font-size:11.5px; font-weight:800; color:#7E1C3E; text-transform:uppercase; letter-spacing:.05em; border-bottom:1.5px solid #F0ECE1; padding-bottom:4px; margin:14px 0 8px; }
-        .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px; }
-        .item-lbl { font-size:10px; font-weight:700; color:#666; text-transform:uppercase; }
-        .item-val { font-size:12px; color:#111; font-weight:600; margin-top:1px; }
-        .p-block { background:#FAF8F5; border:1px solid #ECE7DD; border-radius:6px; padding:10px 12px; font-size:12px; margin-top:4px; line-height:1.5; white-space:pre-wrap; }
-        .sigs { display:grid; grid-template-columns:1fr 1fr; gap:36px; margin-top:36px; padding-top:14px; text-align:center; }
-        .sig-line { border-top:1.5px solid #333; margin-top:36px; padding-top:6px; font-size:11.5px; font-weight:700; }
-        .stamp { font-size:10px; color:#7E1C3E; font-weight:700; letter-spacing:.1em; margin-top:4px; }
+        html, body { font-family:'Inter',sans-serif; color:#1A1A1A; background:#FFF; padding:12px; font-size:11px; line-height:1.38; }
+        .sheet { max-width:800px; margin:0 auto; border:1px solid #D5D5D5; padding:16px 22px; border-radius:4px; box-shadow:none; }
+        .hdr { display:flex; justify-content:space-between; align-items:center; border-bottom:2px double #7E1C3E; padding-bottom:8px; margin-bottom:10px; }
+        .hdr-title { font-size:13.5px; font-weight:800; color:#7E1C3E; text-transform:uppercase; font-family:'Space Grotesk',sans-serif; line-height:1.15; }
+        .hdr-sub { font-size:10px; font-weight:700; color:#444; letter-spacing:.04em; text-transform:uppercase; margin-top:2px; }
+        .folio-box { font-family:'IBM Plex Mono',monospace; font-size:10px; background:#FAF8F5; border:1px solid #E2DDD5; padding:4px 10px; border-radius:4px; text-align:right; font-weight:700; color:#7E1C3E; flex-shrink:0; }
+        .sec-title { font-size:10.5px; font-weight:800; color:#7E1C3E; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid #EBE5D8; padding-bottom:2px; margin:7px 0 4px; font-family:'Space Grotesk',sans-serif; }
+        .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:4px 12px; font-size:11px; }
+        .item-lbl { font-size:9.5px; font-weight:700; color:#666; text-transform:uppercase; }
+        .item-val { font-size:11.5px; color:#111; font-weight:600; margin-top:1px; }
+        .p-block { background:#FAF8F5; border:1px solid #ECE7DD; border-radius:4px; padding:6px 10px; font-size:10.5px; margin-top:2px; line-height:1.4; white-space:pre-wrap; }
+        .sigs { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:16px; padding-top:4px; text-align:center; }
+        .sig-line { border-top:1.5px solid #333; margin-top:22px; padding-top:3px; font-size:10.5px; font-weight:700; }
         @media print {
-          body { padding:0; background:#FFF; }
-          .sheet { border:none; box-shadow:none; padding:20px; }
-          .no-print { display:none; }
+          html, body { padding:0 !important; margin:0 !important; background:#FFF !important; }
+          .sheet { border:none !important; box-shadow:none !important; padding:4px 8px !important; margin:0 !important; width:100% !important; max-width:100% !important; }
+          .no-print { display:none !important; }
         }
       </style>
     </head>
     <body>
-      <div class="no-print" style="max-width:820px;margin:0 auto 16px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:13px;font-weight:700;color:#7E1C3E;">Vista Oficial CONALEP Mérida 1</span>
-        <button onclick="window.print()" style="background:#7E1C3E;color:#FFF;border:none;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;">
+      <div class="no-print" style="max-width:800px;margin:0 auto 10px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12.5px;font-weight:700;color:#7E1C3E;">Vista Oficial CONALEP Mérida 1</span>
+        <button onclick="window.print()" style="background:#7E1C3E;color:#FFF;border:none;padding:7px 18px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;">
           🖨️ Imprimir / Guardar como PDF
         </button>
       </div>
@@ -4488,11 +4488,11 @@ function printOfficialReportView(docId){
           <div>
             <div class="hdr-title">Colegio de Educación Profesional Técnica del Estado de Yucatán</div>
             <div class="hdr-sub">Plantel Mérida 1 · Departamento de Orientación Educativa & Tutorías</div>
-            <div style="font-size:10.5px;color:#777;margin-top:2px;">Sistema Integral de Psicología Escolar · NAIMA OS</div>
+            <div style="font-size:9.5px;color:#777;margin-top:1px;">Sistema Integral de Psicología Escolar · NAIMA OS</div>
           </div>
           <div class="folio-box">
             FOLIO OFICIAL<br>
-            <span style="font-size:13px;">${doc.folio || 'MER1-OFIC'}</span>
+            <span style="font-size:11px;">${doc.folio || 'MER1-OFIC'}</span>
           </div>
         </div>
 
@@ -4534,14 +4534,12 @@ function printOfficialReportView(docId){
           <div>
             <div class="sig-line">${escapeHTML(doc.orientador || 'Orientador Educativo')}</div>
             <div>Orientador(a) Institucional</div>
-            <div style="font-size:10.5px;color:#777;">Cédula: ${escapeHTML(doc.cedula || 'En trámite')}</div>
-            <div class="stamp">✦ SELLO INSTITUCIONAL PIOE ✦</div>
+            <div style="font-size:9px;color:#777;">Cédula: ${escapeHTML(doc.cedula || 'En trámite')} · Sello PIOE</div>
           </div>
           <div>
             <div class="sig-line">${escapeHTML(doc.studentName || s.nombre || 'Estudiante')}</div>
             <div>Firma del Estudiante / Tutor Legal</div>
-            <div style="font-size:10.5px;color:#777;">Enterado y de Conformidad</div>
-            <div class="stamp">CONALEP MÉRIDA 1</div>
+            <div style="font-size:9px;color:#777;">Enterado y de Conformidad · CONALEP Mérida 1</div>
           </div>
         </div>
       </div>

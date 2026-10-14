@@ -2148,38 +2148,38 @@ function printTamizajeView(){
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
       <style>
+        @page { size: letter portrait; margin: 6mm 10mm; }
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Inter',sans-serif; color:#1A1A1A; background:#FFF; padding:24px; font-size:12px; line-height:1.55; }
-        .sheet { max-width:820px; margin:0 auto; border:1px solid #D5D5D5; padding:32px; border-radius:6px; box-shadow:0 4px 14px rgba(0,0,0,0.06); }
-        .hdr { display:flex; justify-content:space-between; align-items:center; border-bottom:3px double #7E1C3E; padding-bottom:12px; margin-bottom:16px; }
-        .hdr-title { font-size:15px; font-weight:800; color:#7E1C3E; text-transform:uppercase; font-family:'Space Grotesk',sans-serif; }
-        .hdr-sub { font-size:10.5px; font-weight:700; color:#444; letter-spacing:.05em; text-transform:uppercase; margin-top:2px; }
-        .folio-box { font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:#FAF8F5; border:1px solid #E2DDD5; padding:6px 12px; border-radius:4px; text-align:right; font-weight:700; color:#7E1C3E; }
-        .sec-title { font-size:11.5px; font-weight:800; color:#7E1C3E; text-transform:uppercase; letter-spacing:.05em; border-bottom:1.5px solid #F0ECE1; padding-bottom:4px; margin:14px 0 8px; font-family:'Space Grotesk',sans-serif; }
-        .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px; }
-        .item-lbl { font-size:10px; font-weight:700; color:#666; text-transform:uppercase; }
-        .item-val { font-size:12px; color:#111; font-weight:600; margin-top:1px; }
-        .kpi-row { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin:12px 0; }
-        .kpi-box { background:#FAF8F5; border:1px solid #E2DDD5; border-radius:6px; padding:12px; text-align:center; }
-        .kpi-val { font-size:20px; font-weight:800; color:#7E1C3E; font-family:'Space Grotesk',sans-serif; }
-        .kpi-lbl { font-size:10px; color:#555; font-weight:600; margin-top:2px; }
-        .risk-banner { border:1.5px solid #E2DDD5; border-radius:6px; padding:12px 16px; margin:12px 0; display:flex; justify-content:space-between; align-items:center; background:#FAF8F5; }
-        .risk-badge { font-weight:800; padding:4px 12px; border-radius:100px; font-size:11px; text-transform:uppercase; color:#FFF; }
-        .p-block { background:#FAF8F5; border:1px solid #ECE7DD; border-radius:6px; padding:10px 14px; font-size:11.5px; margin-top:4px; line-height:1.55; }
-        .sigs { display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; margin-top:32px; padding-top:12px; text-align:center; }
-        .sig-line { border-top:1.5px solid #333; margin-top:36px; padding-top:4px; font-size:11px; font-weight:700; }
-        .stamp { font-size:9.5px; color:#7E1C3E; font-weight:700; letter-spacing:.08em; margin-top:3px; }
+        html, body { font-family:'Inter',sans-serif; color:#1A1A1A; background:#FFF; padding:12px; font-size:11px; line-height:1.38; }
+        .sheet { max-width:800px; margin:0 auto; border:1px solid #D5D5D5; padding:16px 22px; border-radius:4px; box-shadow:none; }
+        .hdr { display:flex; justify-content:space-between; align-items:center; border-bottom:2px double #7E1C3E; padding-bottom:8px; margin-bottom:10px; }
+        .hdr-title { font-size:13.5px; font-weight:800; color:#7E1C3E; text-transform:uppercase; font-family:'Space Grotesk',sans-serif; line-height:1.15; }
+        .hdr-sub { font-size:10px; font-weight:700; color:#444; letter-spacing:.04em; text-transform:uppercase; margin-top:2px; }
+        .folio-box { font-family:'IBM Plex Mono',monospace; font-size:10px; background:#FAF8F5; border:1px solid #E2DDD5; padding:4px 10px; border-radius:4px; text-align:right; font-weight:700; color:#7E1C3E; flex-shrink:0; }
+        .sec-title { font-size:10.5px; font-weight:800; color:#7E1C3E; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid #EBE5D8; padding-bottom:2px; margin:7px 0 4px; font-family:'Space Grotesk',sans-serif; }
+        .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:4px 12px; font-size:11px; }
+        .item-lbl { font-size:9.5px; font-weight:700; color:#666; text-transform:uppercase; }
+        .item-val { font-size:11.5px; color:#111; font-weight:600; margin-top:1px; }
+        .kpi-row { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin:6px 0; }
+        .kpi-box { background:#FAF8F5; border:1px solid #E2DDD5; border-radius:4px; padding:6px 8px; text-align:center; }
+        .kpi-val { font-size:16px; font-weight:800; color:#7E1C3E; font-family:'Space Grotesk',sans-serif; line-height:1.1; }
+        .kpi-lbl { font-size:9.5px; color:#555; font-weight:600; margin-top:1px; }
+        .risk-banner { border:1px solid #E2DDD5; border-radius:4px; padding:6px 12px; margin:6px 0; display:flex; justify-content:space-between; align-items:center; background:#FAF8F5; }
+        .risk-badge { font-weight:800; padding:2px 10px; border-radius:100px; font-size:10px; text-transform:uppercase; color:#FFF; }
+        .p-block { background:#FAF8F5; border:1px solid #ECE7DD; border-radius:4px; padding:6px 10px; font-size:10.5px; margin-top:2px; line-height:1.4; }
+        .sigs { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:16px; padding-top:4px; text-align:center; }
+        .sig-line { border-top:1.5px solid #333; margin-top:22px; padding-top:3px; font-size:10.5px; font-weight:700; }
         @media print {
-          body { padding:0; background:#FFF; }
-          .sheet { border:none; box-shadow:none; padding:10px; }
-          .no-print { display:none; }
+          html, body { padding:0 !important; margin:0 !important; background:#FFF !important; }
+          .sheet { border:none !important; box-shadow:none !important; padding:4px 8px !important; margin:0 !important; width:100% !important; max-width:100% !important; }
+          .no-print { display:none !important; }
         }
       </style>
     </head>
     <body>
-      <div class="no-print" style="max-width:820px;margin:0 auto 16px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:13px;font-weight:700;color:#7E1C3E;">Vista Oficial CONALEP Mérida 1 — PIOE</span>
-        <button onclick="window.print()" style="background:#7E1C3E;color:#FFF;border:none;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;">
+      <div class="no-print" style="max-width:800px;margin:0 auto 10px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12.5px;font-weight:700;color:#7E1C3E;">Vista Oficial CONALEP Mérida 1 — PIOE</span>
+        <button onclick="window.print()" style="background:#7E1C3E;color:#FFF;border:none;padding:7px 18px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;">
           🖨️ Imprimir / Guardar como PDF
         </button>
       </div>
@@ -2189,11 +2189,11 @@ function printTamizajeView(){
           <div>
             <div class="hdr-title">Colegio de Educación Profesional Técnica del Estado de Yucatán</div>
             <div class="hdr-sub">Plantel Mérida 1 · Departamento de Orientación Educativa & Tutorías</div>
-            <div style="font-size:10px;color:#777;margin-top:2px;">Programa Institucional de Orientación Educativa (PIOE) · NAIMA OS</div>
+            <div style="font-size:9.5px;color:#777;margin-top:1px;">Programa Institucional de Orientación Educativa (PIOE) · NAIMA OS</div>
           </div>
           <div class="folio-box">
             FOLIO REGISTRO<br>
-            <span style="font-size:12px;">${folio}</span>
+            <span style="font-size:11px;">${folio}</span>
           </div>
         </div>
 
@@ -2210,8 +2210,8 @@ function printTamizajeView(){
         <div class="sec-title">2. Estado Global de la Evaluación</div>
         <div class="risk-banner">
           <div>
-            <div style="font-size:13px;font-weight:700;color:#111;">${riskLabel}</div>
-            <div style="font-size:11px;color:#666;">Basado en las escalas psicométricas estandarizadas PHQ-A y GAD-7.</div>
+            <div style="font-size:12px;font-weight:700;color:#111;">${riskLabel}</div>
+            <div style="font-size:10px;color:#666;">Basado en las escalas psicométricas estandarizadas PHQ-A y GAD-7.</div>
           </div>
           <div class="risk-badge" style="background:${riskColor};">${globalRisk.toUpperCase()}</div>
         </div>
@@ -2221,17 +2221,17 @@ function printTamizajeView(){
           <div class="kpi-box">
             <div class="kpi-val">${phq.puntaje} / 27</div>
             <div class="kpi-lbl">Ánimo / Depresión (PHQ-A)</div>
-            <div style="font-size:11px;font-weight:700;color:#7E1C3E;margin-top:2px;">Nivel: ${phq.nivel}</div>
+            <div style="font-size:10px;font-weight:700;color:#7E1C3E;">Nivel: ${phq.nivel}</div>
           </div>
           <div class="kpi-box">
             <div class="kpi-val">${gad.puntaje} / 21</div>
             <div class="kpi-lbl">Ansiedad / Estrés (GAD-7)</div>
-            <div style="font-size:11px;font-weight:700;color:#B47D0A;margin-top:2px;">Nivel: ${gad.nivel}</div>
+            <div style="font-size:10px;font-weight:700;color:#B47D0A;">Nivel: ${gad.nivel}</div>
           </div>
           <div class="kpi-box">
             <div class="kpi-val">${rec.puntaje} / 12</div>
             <div class="kpi-lbl">Factores Protectores</div>
-            <div style="font-size:11px;font-weight:700;color:#1E7E34;margin-top:2px;">Nivel: ${rec.nivel}</div>
+            <div style="font-size:10px;font-weight:700;color:#1E7E34;">Nivel: ${rec.nivel}</div>
           </div>
         </div>
 
@@ -2243,25 +2243,25 @@ function printTamizajeView(){
         <div class="sec-title">5. Recomendaciones de Acompañamiento y Autocuidado</div>
         <div class="p-block">
           • <strong>Orientación Escolar:</strong> El estudiante cuenta con el cubículo de orientación y tutorías para programar sesiones de seguimiento psicopedagógico en cualquier momento.<br>
-          • <strong>Regulación de Hábitos:</strong> Mantener una higiene de sueño adecuada (6 a 8 horas) y balancear las horas dedicadas a proyectos técnicos con actividades de esparcimiento.<br>
-          • <strong>Corresponsabilidad:</strong> La institución y la familia colaboran de forma confidencial para garantizar un entorno seguro y favorable al desarrollo académico.
+          • <strong>Regulación de Hábitos:</strong> Mantener una higiene de sueño adecuada (6 a 8 horas) y balancear el estudio con actividades recreativas.<br>
+          • <strong>Corresponsabilidad:</strong> La institución y la familia colaboran de forma confidencial para garantizar un entorno favorable al desarrollo académico.
         </div>
 
         <div class="sigs">
           <div>
             <div class="sig-line">${escapeHTML(s.nombre || user.nombre || 'Estudiante')}</div>
             <div>Firma del Estudiante</div>
-            <div style="font-size:9.5px;color:#777;">Matrícula: ${matricula}</div>
+            <div style="font-size:9px;color:#777;">Matrícula: ${matricula}</div>
           </div>
           <div>
-            <div class="sig-line">${escapeHTML(s.guardian || 'Orientación Educativa')}</div>
+            <div class="sig-line">${escapeHTML(s.guardian || 'Orientador(a) Institucional')}</div>
             <div>Orientador(a) Institucional</div>
-            <div class="stamp">✦ SELLO DIGITAL PIOE ✦</div>
+            <div style="font-size:9px;color:#777;">Sello Oficial PIOE Mérida 1</div>
           </div>
           <div>
             <div class="sig-line">Padre, Madre o Tutor Legal</div>
             <div>Firma de Enterado</div>
-            <div style="font-size:9.5px;color:#777;">Plantel Mérida 1</div>
+            <div style="font-size:9px;color:#777;">Plantel Mérida 1</div>
           </div>
         </div>
       </div>
