@@ -68,6 +68,7 @@ function loadDB(){
         if(!parsed.documents) parsed.documents = [];
         if(!parsed.students) parsed.students = {};
         if(!parsed.users) parsed.users = {};
+        if(!parsed.appointments) parsed.appointments = [];
 
         // Eliminar completamente cualquier dato o rastro de alumnos simulados y coordinadores viejos
         ['PTB-26001', 'PTB-26002', 'PTB-26003'].forEach(mat => {
@@ -115,6 +116,7 @@ function loadDB(){
     alerts: [],
     tasks: {},
     documents: [],
+    appointments: [],
     diary: {},
     supportRequests: [],
     currentUserId: null

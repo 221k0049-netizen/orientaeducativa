@@ -2785,13 +2785,61 @@ async function deleteAdminProfilePhoto(){
 }
 
 /* ============================================================
-   SECCIONES: PSICOLOGÍA ESCOLAR, AGENDA Y REPORTES OFICIALES
+   SECCIONES: PSICOLOGÍA ESCOLAR, AGENDA Y REPORTES OFICIALES (100% NATIVO)
    ============================================================ */
-function renderAdminPsicologia(){
-  const allStudents = studentsList();
-  const withTamizaje = allStudents.filter(s => s.tamizaje).length;
-  const highRisk = allStudents.filter(s => s.prioridad === 'alto' || (s.tamizaje && (s.tamizaje.resultados?.riesgoGlobal === 'alto' || s.tamizaje.resultados?.riesgoGlobal === 'crisis'))).length;
 
+let adminPsicoSubTab = 'panorama'; // 'panorama' | 'expedientes' | 'agenda' | 'importar' | 'reportes'
+let adminPsicoSearch = '';
+let adminPsicoFilterStatus = '';
+let adminPsicoFilterRisk = '';
+let adminAgendaFilter = 'all'; // 'all' | 'today' | 'week' | 'pending' | 'completed'
+let adminAgendaWeekOffset = 0; // 0 = semana actual
+let pendingImportRows = [];
+let pendingImportHeaders = [];
+
+function getPsicoRisk(s){
+  if(!s) return 'none';
+  if(s.riesgo) return s.riesgo;
+  if(s.tamizaje && s.tamizaje.resultados && s.tamizaje.resultados.riesgoGlobal){
+    const r = s.tamizaje.resultados.riesgoGlobal.toLowerCase();
+    if(r.includes('cris')) return 'crisis';
+    if(r.includes('alt')) return 'high';
+    if(r.includes('mod') || r.includes('med')) return 'mid';
+    if(r.includes('baj')) return 'low';
+  }
+  if(s.prioridad === 'alto') return 'high';
+  if(s.prioridad === 'medio') return 'mid';
+  return 'none';
+}
+
+const PSICO_RISK_LABELS = {
+  none: 'Sin riesgo',
+  low: 'Riesgo bajo',
+  mid: 'Riesgo moderado',
+  high: 'Riesgo alto',
+  crisis: 'Crisis / Urgente'
+};
+
+const PSICO_HOURS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
+const PSICO_DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+
+function setAdminPsicoTab(tab){
+  adminPsicoSubTab = tab;
+  const container = document.getElementById('psicoContent');
+  document.querySelectorAll('.psico-subnav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  if(container){
+    container.innerHTML = renderAdminPsicoCurrentTab();
+    if(tab === 'agenda') attachAgendaListeners();
+    if(tab === 'importar') attachImportListeners();
+  } else {
+    const el = document.getElementById('content');
+    if(el) el.innerHTML = renderAdminPsicologia();
+  }
+}
+
+function renderAdminPsicologia(){
   return `
     <div class="page-head">
       <div>
@@ -2799,170 +2847,1707 @@ function renderAdminPsicologia(){
         <h1>Psicología Escolar & Orientación Clínica</h1>
         <p>Acompañamiento psicopedagógico, expedientes clínicos, agenda semanal de sesiones y reportes oficiales con membrete CONALEP.</p>
       </div>
-      <span class="demo-chip">CONALEP Mérida I</span>
-    </div>
-
-    <div class="clinical-card-grid">
-      <div class="clinical-card">
-        <div class="clinical-card-icon">👤</div>
-        <div class="clinical-card-title">Expedientes & Notas Clínicas</div>
-        <div class="clinical-card-desc">
-          Consulta fichas completas, notas evolutivas cronológicas, registro de citas y acuerdos individuales de tutoría.
-        </div>
-        <div class="clinical-card-actions">
-          <a href="psicologia-escolar.html#tab-expedientes" target="_blank" class="btn-maroon" style="text-decoration:none;font-size:12.5px;padding:8px 14px;">
-            Abrir Expedientes Clínicos ↗
-          </a>
-        </div>
-      </div>
-
-      <div class="clinical-card">
-        <div class="clinical-card-icon">📅</div>
-        <div class="clinical-card-title">Agenda & Disponibilidad Semanal</div>
-        <div class="clinical-card-desc">
-          Control de citas por fecha y hora, disponibilidad de cubículo de orientación y confirmación de asistencia.
-        </div>
-        <div class="clinical-card-actions">
-          <a href="psicologia-escolar.html#tab-agenda" target="_blank" class="btn-maroon" style="text-decoration:none;font-size:12.5px;padding:8px 14px;">
-            Ver Agenda de Citas ↗
-          </a>
-        </div>
-      </div>
-
-      <div class="clinical-card">
-        <div class="clinical-card-icon">📥</div>
-        <div class="clinical-card-title">Importador Masivo (Excel / CSV)</div>
-        <div class="clinical-card-desc">
-          Carga listas grupales en formato .xlsx o .csv con detección inteligente de columnas y creación automática de expedientes.
-        </div>
-        <div class="clinical-card-actions">
-          <a href="psicologia-escolar.html#tab-importar" target="_blank" class="btn-maroon" style="text-decoration:none;font-size:12.5px;padding:8px 14px;">
-            Importar Alumnos desde Excel ↗
-          </a>
-        </div>
-      </div>
-
-      <div class="clinical-card">
-        <div class="clinical-card-icon">📋</div>
-        <div class="clinical-card-title">Reporte Psicológico Oficial (Folio)</div>
-        <div class="clinical-card-desc">
-          Generador de reportes formales con folio MER1-YYMM-XXX, escalas clínicas, diagnóstico CIE-11 y firmas para impresión o PDF.
-        </div>
-        <div class="clinical-card-actions">
-          <a href="reporte-psicologico.html" target="_blank" class="btn-maroon" style="text-decoration:none;font-size:12.5px;padding:8px 14px;">
-            Elaborar Reporte Oficial ↗
-          </a>
-        </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span class="demo-chip">CONALEP Mérida I</span>
+        <button class="btn-maroon" onclick="openAddStudentModal()" style="font-size:12.5px;padding:8px 16px;">
+          ＋ Nuevo Expediente
+        </button>
       </div>
     </div>
 
-    <div class="section-head-row" style="margin:28px 0 14px;">
-      <div>
-        <span class="section-label">Sistema Integral Embebido</span>
-        <h2 class="section-title" style="margin-bottom:0;">Entorno de Trabajo Clínico Integrado</h2>
-      </div>
-      <a href="psicologia-escolar.html" target="_blank" class="btn-outline-maroon" style="text-decoration:none;padding:7px 14px;font-size:12.5px;">
-        Abrir en Pantalla Completa ↗
-      </a>
+    <!-- Barra de Subnavegación Nativa NAIMA OS -->
+    <div class="psico-subnav-bar">
+      <button class="psico-subnav-btn ${adminPsicoSubTab==='panorama'?'active':''}" data-tab="panorama" onclick="setAdminPsicoTab('panorama')">
+        <span>◆</span> Panorama Clínico
+      </button>
+      <button class="psico-subnav-btn ${adminPsicoSubTab==='expedientes'?'active':''}" data-tab="expedientes" onclick="setAdminPsicoTab('expedientes')">
+        <span>👤</span> Expedientes Clínicos
+      </button>
+      <button class="psico-subnav-btn ${adminPsicoSubTab==='agenda'?'active':''}" data-tab="agenda" onclick="setAdminPsicoTab('agenda')">
+        <span>📅</span> Agenda & Citas
+      </button>
+      <button class="psico-subnav-btn ${adminPsicoSubTab==='importar'?'active':''}" data-tab="importar" onclick="setAdminPsicoTab('importar')">
+        <span>📥</span> Importar Excel / CSV
+      </button>
+      <button class="psico-subnav-btn ${adminPsicoSubTab==='reportes'?'active':''}" data-tab="reportes" onclick="setAdminPsicoTab('reportes')">
+        <span>📋</span> Reportes Oficiales
+      </button>
     </div>
 
-    <div class="embed-iframe-container">
-      <iframe src="psicologia-escolar.html" title="Sistema Integral de Psicología Escolar CONALEP"></iframe>
+    <!-- Contenedor Dinámico del Submódulo -->
+    <div id="psicoContent">
+      ${renderAdminPsicoCurrentTab()}
     </div>
   `;
 }
 
 function renderAdminAgenda(){
-  return `
-    <div class="page-head">
-      <div>
-        <span class="eyebrow">PROGRAMACIÓN DE CITAS Y CUBÍCULO</span>
-        <h1>Agenda de Orientación & Tutorías</h1>
-        <p>Gestión de citas programadas, sesiones de seguimiento con estudiantes y reuniones con padres de familia.</p>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <a href="psicologia-escolar.html#tab-agenda" target="_blank" class="btn-maroon" style="text-decoration:none;padding:8px 16px;font-size:12.5px;">
-          Abrir en Pantalla Completa ↗
-        </a>
-      </div>
-    </div>
-
-    <div class="embed-iframe-container">
-      <iframe src="psicologia-escolar.html#tab-agenda" title="Agenda de Citas CONALEP"></iframe>
-    </div>
-  `;
+  adminPsicoSubTab = 'agenda';
+  return renderAdminPsicologia();
 }
 
 function renderAdminReportesOficiales(){
-  const allDocs = (typeof getAllDocuments === 'function') ? getAllDocuments() : (db.documents || []);
+  adminPsicoSubTab = 'reportes';
+  return renderAdminPsicologia();
+}
+
+function renderAdminPsicoCurrentTab(){
+  if(adminPsicoSubTab === 'panorama') return renderPsicoPanorama();
+  if(adminPsicoSubTab === 'expedientes') return renderPsicoExpedientes();
+  if(adminPsicoSubTab === 'agenda') return renderPsicoAgenda();
+  if(adminPsicoSubTab === 'importar') return renderPsicoImportar();
+  if(adminPsicoSubTab === 'reportes') return renderPsicoReportes();
+  return renderPsicoPanorama();
+}
+
+/* ============================================================
+   SUBMÓDULO 1: PANORAMA CLÍNICO
+   ============================================================ */
+function renderPsicoPanorama(){
+  const allStudents = studentsList();
+  const total = allStudents.length;
+  const activos = allStudents.filter(s => s.estado !== 'cerrado').length;
+  const altoRiesgoList = allStudents.filter(s => {
+    const r = getPsicoRisk(s);
+    return r === 'high' || r === 'crisis';
+  });
+  const altoRiesgo = altoRiesgoList.length;
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const apts = db.appointments || [];
+  const citasHoy = apts.filter(a => a.fecha === todayStr && a.estado !== 'Cancelada');
+  const proximasCitas = apts.filter(a => a.fecha >= todayStr && a.estado !== 'Cancelada')
+    .sort((a,b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora))
+    .slice(0, 5);
+
+  const riskCounts = { none: 0, low: 0, mid: 0, high: 0, crisis: 0 };
+  allStudents.forEach(s => {
+    const r = getPsicoRisk(s);
+    if(riskCounts[r] !== undefined) riskCounts[r]++;
+    else riskCounts.none++;
+  });
 
   return `
-    <div class="page-head">
-      <div>
-        <span class="eyebrow">EXPEDIENTES CLÍNICOS & FORMATOS OFICIALES</span>
-        <h1>Reportes Psicológicos Escolares</h1>
-        <p>Generación y resguardo de reportes oficiales de evaluación psicológica, intervenciones y actas con folio institucional.</p>
+    <div class="stat-grid" style="margin-bottom:24px;">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#F0FAF8;color:var(--green);">📁</div>
+        <div class="stat-value" style="color:var(--ink);">${total}</div>
+        <div class="stat-label">Total Expedientes</div>
       </div>
-      <a href="reporte-psicologico.html" target="_blank" class="btn-maroon" style="text-decoration:none;padding:8px 16px;font-size:13px;display:inline-flex;align-items:center;gap:6px;">
-        ＋ Elaborar Nuevo Reporte Oficial (Folio) ↗
-      </a>
-    </div>
-
-    <div class="pioe-banner" style="margin-bottom:24px;">
-      <div class="pioe-banner-body">
-        <span class="pioe-banner-tag">Documento Oficial CONALEP</span>
-        <p class="pioe-banner-desc">
-          El formato oficial incluye membrete oficial del Plantel Mérida 1, folio automatizado, evaluación de 6 áreas del desarrollo, valoración del riesgo y firmas oficiales.
-        </p>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#EBF3FA;color:#185FA5;">🎓</div>
+        <div class="stat-value" style="color:var(--ink);">${activos}</div>
+        <div class="stat-label">Alumnos Activos</div>
       </div>
-      <a href="reporte-psicologico.html" target="_blank" class="btn-maroon" style="text-decoration:none;font-size:12.5px;">
-        Abrir Formato en Blanco →
-      </a>
-    </div>
-
-    <div class="section-head-row">
-      <div>
-        <span class="section-label">Historial de Reportes</span>
-        <h2 class="section-title" style="margin-bottom:0;">Expedientes Registrados en el Sistema (${allDocs.length})</h2>
+      <div class="stat-card" style="${altoRiesgo > 0 ? 'border-color:var(--danger);' : ''}">
+        <div class="stat-icon" style="background:#FDECEA;color:var(--danger);">⚠️</div>
+        <div class="stat-value" style="color:${altoRiesgo > 0 ? 'var(--danger)' : 'var(--ink)'};">${altoRiesgo}</div>
+        <div class="stat-label">Riesgo Alto / Crisis</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#FFF9EB;color:#B47D0A;">📅</div>
+        <div class="stat-value" style="color:var(--ink);">${citasHoy.length}</div>
+        <div class="stat-label">Citas Programadas Hoy</div>
       </div>
     </div>
 
-    <div class="proto-table-wrap">
-      <table class="proto-table">
-        <thead>
-          <tr>
-            <th>Alumno / Matrícula</th>
-            <th>Título del Reporte</th>
-            <th>Folio / Categoría</th>
-            <th>Fecha</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          ${allDocs.length ? allDocs.map(d => `
-            <tr>
-              <td>
-                <strong style="color:var(--ink);">${escapeHTML(d.studentName || d.studentId)}</strong>
-                <div class="mono" style="font-size:11.5px;color:var(--ink-soft);">${d.studentId}</div>
-              </td>
-              <td><strong>${escapeHTML(d.title)}</strong></td>
-              <td><span class="doc-type-badge">${d.folio || d.file_type || 'Reporte'}</span></td>
-              <td><span style="font-size:12px;color:var(--ink-soft);">${d.created_at ? new Date(d.created_at).toLocaleDateString('es-MX') : (d.date || 'Reciente')}</span></td>
-              <td style="text-align:right;">
-                <a href="reporte-psicologico.html?studentId=${encodeURIComponent(d.studentId)}" target="_blank" class="btn-outline-maroon" style="padding:5px 12px;font-size:12px;text-decoration:none;">
-                  🖨️ Ver / Imprimir
-                </a>
-              </td>
-            </tr>
-          `).join('') : `
-            <tr>
-              <td colspan="5" style="text-align:center;padding:32px;color:var(--ink-soft);">
-                No hay reportes elaborados todavía. Haz clic en "Elaborar Nuevo Reporte Oficial" para generar el primero.
-              </td>
-            </tr>
-          `}
-        </tbody>
-      </table>
+    <!-- Panel de Casos Prioritarios si existen -->
+    ${altoRiesgo > 0 ? `
+      <div class="card" style="border-left:4px solid var(--danger);margin-bottom:24px;background:#FFFDFD;">
+        <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div class="card-ttl" style="color:var(--danger);display:flex;align-items:center;gap:8px;">
+            <span>🚨</span> Casos Prioritarios en Riesgo Alto o Crisis (${altoRiesgo})
+          </div>
+          <span style="font-size:12px;color:var(--danger);font-weight:600;">Atención Inmediata Requerida</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));gap:12px;">
+          ${altoRiesgoList.map(s => {
+            const risk = getPsicoRisk(s);
+            const photo = s.photo || s.avatar_url;
+            return `
+              <div style="background:#FFF;border:1px solid #F5C6CB;border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px;">
+                <div class="clinical-stu-avatar" style="width:40px;height:40px;font-size:14px;border-color:#F5C6CB;">
+                  ${photo ? `<img src="${escapeHTML(photo)}" alt="Foto">` : initialOf(s.nombre)}
+                </div>
+                <div style="flex:1;min-width:0;">
+                  <strong style="display:block;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    ${escapeHTML(s.nombre)}
+                  </strong>
+                  <div style="font-size:11px;color:var(--ink-soft);">${escapeHTML(s.carrera || '')} · ${s.matricula || s.id}</div>
+                  <span class="risk-badge-native ${risk}" style="font-size:9.5px;padding:2px 7px;margin-top:4px;">
+                    ${PSICO_RISK_LABELS[risk]}
+                  </span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <button class="btn-outline-maroon" style="padding:4px 8px;font-size:11px;" onclick="openClinicalDetailModal('${s.matricula || s.id}')">
+                    Expediente
+                  </button>
+                  <button class="btn-maroon" style="padding:4px 8px;font-size:11px;" onclick="openAddAppointmentModal({ studentId: '${s.matricula || s.id}' })">
+                    Cita
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));gap:20px;margin-bottom:24px;">
+      <!-- Próximas Citas -->
+      <div class="card">
+        <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div class="card-ttl" style="font-size:15px;color:var(--ink);display:flex;align-items:center;gap:6px;">
+            <span>📅</span> Próximas Citas de Orientación
+          </div>
+          <button class="btn-outline-maroon" style="font-size:11.5px;padding:5px 10px;" onclick="setAdminPsicoTab('agenda')">
+            Ver agenda →
+          </button>
+        </div>
+
+        ${proximasCitas.length ? proximasCitas.map(a => {
+          const statusColor = a.estado === 'Confirmada' ? 'var(--green)' : (a.estado === 'Completada' ? '#185FA5' : '#B47D0A');
+          return `
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);">
+              <div style="width:8px;height:8px;border-radius:50%;background:${statusColor};flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                  ${escapeHTML(a.nombre || a.studentName || 'Estudiante')}
+                </div>
+                <div style="font-size:11px;color:var(--ink-soft);">
+                  ${a.fecha} · ${a.hora} hrs · ${escapeHTML(a.tipo || 'Orientación')}
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span class="tag tg-gr" style="font-size:10px;">${escapeHTML(a.estado)}</span>
+                <button class="btn-ghost" style="padding:4px 6px;font-size:11px;color:var(--green);" title="Marcar asistencia" onclick="quickMarkAttendance('${a.id}', true)">
+                  ✓
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('') : `
+          <div style="text-align:center;padding:32px 16px;color:var(--ink-muted);">
+            <div style="font-size:28px;margin-bottom:6px;">📅</div>
+            <p style="font-size:13px;">No hay citas programadas para hoy ni los próximos días.</p>
+            <button class="btn-maroon" style="margin-top:10px;font-size:12px;padding:6px 14px;" onclick="openAddAppointmentModal()">
+              ＋ Programar Nueva Cita
+            </button>
+          </div>
+        `}
+      </div>
+
+      <!-- Distribución por Semáforo de Riesgo -->
+      <div class="card">
+        <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div class="card-ttl" style="font-size:15px;color:var(--ink);display:flex;align-items:center;gap:6px;">
+            <span>🎯</span> Distribución por Semáforo de Riesgo
+          </div>
+          <span style="font-size:11.5px;color:var(--ink-muted);">${total} evaluados</span>
+        </div>
+
+        ${total ? Object.keys(riskCounts).map(k => {
+          const v = riskCounts[k];
+          const pct = Math.round((v / (total || 1)) * 100);
+          const barColor = k === 'none' ? '#1E7E34' : (k === 'low' ? '#007E67' : (k === 'mid' ? '#B47D0A' : (k === 'high' ? '#C0392B' : '#7A0F0F')));
+          return `
+            <div style="margin-bottom:12px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:4px;">
+                <span class="risk-badge-native ${k}">${PSICO_RISK_LABELS[k]}</span>
+                <strong style="color:var(--ink);">${v} <span style="color:var(--ink-muted);font-weight:400;">(${pct}%)</span></strong>
+              </div>
+              <div style="height:7px;background:var(--sand);border-radius:4px;overflow:hidden;">
+                <div style="width:${pct}%;height:100%;background:${barColor};border-radius:4px;transition:width .3s;"></div>
+              </div>
+            </div>
+          `;
+        }).join('') : `
+          <div style="text-align:center;padding:30px;color:var(--ink-muted);">
+            Sin expedientes registrados para generar estadísticas.
+          </div>
+        `}
+      </div>
+    </div>
+
+    <!-- Expedientes Recientes -->
+    <div class="card">
+      <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div class="card-ttl" style="font-size:15px;color:var(--ink);display:flex;align-items:center;gap:6px;">
+          <span>👤</span> Expedientes Recientes
+        </div>
+        <button class="btn-outline-maroon" style="font-size:11.5px;padding:5px 12px;" onclick="setAdminPsicoTab('expedientes')">
+          Ver todos los expedientes (${total}) →
+        </button>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${allStudents.slice(-5).reverse().map(s => {
+          const risk = getPsicoRisk(s);
+          const photo = s.photo || s.avatar_url;
+          return `
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#FFF;">
+              <div class="clinical-stu-avatar" style="width:38px;height:38px;font-size:14px;">
+                ${photo ? `<img src="${escapeHTML(photo)}" alt="Foto">` : initialOf(s.nombre)}
+              </div>
+              <div style="flex:1;min-width:0;">
+                <strong style="font-size:13.5px;color:var(--ink);">${escapeHTML(s.nombre)}</strong>
+                <div style="font-size:11.5px;color:var(--ink-soft);">${escapeHTML(s.carrera || '')} · Matrícula: ${s.matricula || s.id}</div>
+              </div>
+              <span class="risk-badge-native ${risk}">${PSICO_RISK_LABELS[risk]}</span>
+              <button class="btn-outline-maroon" style="padding:5px 12px;font-size:12px;" onclick="openClinicalDetailModal('${s.matricula || s.id}')">
+                Expediente
+              </button>
+            </div>
+          `;
+        }).join('')}
+      </div>
     </div>
   `;
 }
+
+/* ============================================================
+   SUBMÓDULO 2: EXPEDIENTES CLÍNICOS
+   ============================================================ */
+function renderPsicoExpedientes(){
+  const allStudents = studentsList();
+  const q = (adminPsicoSearch || '').toLowerCase().trim();
+  const fest = adminPsicoFilterStatus || '';
+  const frisk = adminPsicoFilterRisk || '';
+
+  const filtered = allStudents.filter(s => {
+    const risk = getPsicoRisk(s);
+    const mQ = !q || [s.nombre, s.matricula, s.id, s.carrera, s.curp, s.diagnostico, s.dx].some(v => v && v.toLowerCase().includes(q));
+    const mEst = !fest || (s.estado || 'activo') === fest;
+    const mRisk = !frisk || risk === frisk;
+    return mQ && mEst && mRisk;
+  });
+
+  return `
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div class="card-ttl" style="font-size:16px;color:var(--ink);">
+            👤 Expedientes Estudiantiles & Clínicos (${filtered.length} de ${allStudents.length})
+          </div>
+          <p style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">
+            Historial de notas evolutivas, impresiones diagnósticas y valoraciones del riesgo.
+          </p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-maroon" onclick="openAddStudentModal()" style="font-size:12px;padding:7px 14px;">
+            ＋ Nuevo Expediente
+          </button>
+          <button class="btn-outline-maroon" onclick="setAdminPsicoTab('importar')" style="font-size:12px;padding:7px 14px;">
+            📥 Importar Excel / CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros y Búsqueda -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:10px;margin-bottom:16px;">
+        <input type="text" id="inpPsicoSearch" placeholder="🔍 Buscar por nombre, matrícula, carrera, diagnóstico…"
+               value="${escapeHTML(adminPsicoSearch)}"
+               oninput="adminPsicoSearch=this.value; renderPsicoExpedientesList();"
+               style="padding:8px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:12.5px;">
+
+        <select id="selPsicoFilterStatus" onchange="adminPsicoFilterStatus=this.value; renderPsicoExpedientesList();"
+                style="padding:8px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:12.5px;">
+          <option value="" ${fest===''?'selected':''}>Todos los estados</option>
+          <option value="activo" ${fest==='activo'?'selected':''}>Activo</option>
+          <option value="seguimiento" ${fest==='seguimiento'?'selected':''}>En Seguimiento</option>
+          <option value="cerrado" ${fest==='cerrado'?'selected':''}>Cerrado</option>
+        </select>
+
+        <select id="selPsicoFilterRisk" onchange="adminPsicoFilterRisk=this.value; renderPsicoExpedientesList();"
+                style="padding:8px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:12.5px;">
+          <option value="" ${frisk===''?'selected':''}>Todos los niveles de riesgo</option>
+          <option value="none" ${frisk==='none'?'selected':''}>Sin riesgo</option>
+          <option value="low" ${frisk==='low'?'selected':''}>Riesgo bajo</option>
+          <option value="mid" ${frisk==='mid'?'selected':''}>Riesgo moderado</option>
+          <option value="high" ${frisk==='high'?'selected':''}>Riesgo alto</option>
+          <option value="crisis" ${frisk==='crisis'?'selected':''}>Crisis</option>
+        </select>
+      </div>
+
+      <div id="psicoExpedientesListContainer">
+        ${renderPsicoExpedientesCards(filtered)}
+      </div>
+    </div>
+  `;
+}
+
+function renderPsicoExpedientesList(){
+  const container = document.getElementById('psicoExpedientesListContainer');
+  if(!container) return;
+  const allStudents = studentsList();
+  const q = (adminPsicoSearch || '').toLowerCase().trim();
+  const fest = adminPsicoFilterStatus || '';
+  const frisk = adminPsicoFilterRisk || '';
+
+  const filtered = allStudents.filter(s => {
+    const risk = getPsicoRisk(s);
+    const mQ = !q || [s.nombre, s.matricula, s.id, s.carrera, s.curp, s.diagnostico, s.dx].some(v => v && v.toLowerCase().includes(q));
+    const mEst = !fest || (s.estado || 'activo') === fest;
+    const mRisk = !frisk || risk === frisk;
+    return mQ && mEst && mRisk;
+  });
+
+  container.innerHTML = renderPsicoExpedientesCards(filtered);
+}
+
+function renderPsicoExpedientesCards(list){
+  if(!list.length){
+    return `
+      <div style="text-align:center;padding:40px 16px;color:var(--ink-muted);">
+        <div style="font-size:32px;margin-bottom:8px;">🔍</div>
+        <h3>No se encontraron expedientes con los criterios seleccionados</h3>
+        <p style="font-size:13px;margin-top:4px;">Intenta cambiar el término de búsqueda o limpia los filtros.</p>
+      </div>
+    `;
+  }
+
+  const allApts = db.appointments || [];
+
+  return list.map(s => {
+    const risk = getPsicoRisk(s);
+    const stripColor = risk === 'none' ? '#1E7E34' : (risk === 'low' ? '#007E67' : (risk === 'mid' ? '#B47D0A' : (risk === 'high' ? '#C0392B' : '#7A0F0F')));
+    const photo = s.photo || s.avatar_url;
+    const aptsCount = allApts.filter(a => a.studentId === (s.matricula || s.id)).length;
+    const notasCount = (s.notas || []).length;
+
+    return `
+      <div class="clinical-stu-card">
+        <div class="clinical-stu-strip" style="background:${stripColor};"></div>
+        <div class="clinical-stu-body">
+          <div class="clinical-stu-avatar">
+            ${photo ? `<img src="${escapeHTML(photo)}" alt="Foto">` : initialOf(s.nombre)}
+          </div>
+          <div class="clinical-stu-info">
+            <div class="clinical-stu-name">${escapeHTML(s.nombre)}</div>
+            <div class="clinical-stu-sub">
+              ${escapeHTML(s.carrera || 'Técnico')} · ${s.semestre ? s.semestre + ' Sem' : ''} ${s.grupo ? 'Grupo ' + s.grupo : ''} · Matrícula: <strong>${s.matricula || s.id}</strong>
+            </div>
+            <div class="clinical-stu-tags">
+              <span class="risk-badge-native ${risk}">${PSICO_RISK_LABELS[risk]}</span>
+              <span class="tag tg-az">${escapeHTML(s.estado || 'activo')}</span>
+              ${s.diagnostico || s.dx ? `<span class="tag tg-gr">🩺 ${escapeHTML(s.diagnostico || s.dx)}</span>` : ''}
+              <span class="tag tg-gr">📅 ${aptsCount} cita${aptsCount!==1?'s':''}</span>
+              <span class="tag tg-gr">📝 ${notasCount} nota${notasCount!==1?'s':''}</span>
+            </div>
+          </div>
+          <div class="clinical-stu-actions">
+            <button class="btn-maroon" style="padding:6px 12px;font-size:12px;" onclick="openClinicalDetailModal('${s.matricula || s.id}')">
+              👤 Expediente
+            </button>
+            <button class="btn-outline-maroon" style="padding:6px 12px;font-size:12px;" onclick="openCreateOfficialReportModal('${s.matricula || s.id}')">
+              📋 Reporte Folio
+            </button>
+            <button class="btn-outline-maroon" style="padding:6px 10px;font-size:12px;" onclick="openAddAppointmentModal({ studentId: '${s.matricula || s.id}' })" title="Programar cita">
+              📅 Cita
+            </button>
+            <button class="btn-ghost" style="padding:6px 8px;font-size:13px;" onclick="openEditStudent('${s.matricula || s.id}')" title="Editar estudiante">
+              ✏️
+            </button>
+            <button class="btn-ghost" style="padding:6px 8px;font-size:13px;color:var(--danger);" onclick="deleteStudentPsico('${s.matricula || s.id}')" title="Eliminar expediente">
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* Modal Detalle de Expediente Clínico */
+function openClinicalDetailModal(id){
+  const s = db.students[id] || Object.values(db.students || {}).find(x => x.matricula === id || x.id === id);
+  if(!s){
+    alert('Expediente no encontrado');
+    return;
+  }
+
+  const risk = getPsicoRisk(s);
+  const photo = s.photo || s.avatar_url;
+  const notas = (s.notas || []).slice().reverse();
+  const apts = (db.appointments || []).filter(a => a.studentId === (s.matricula || s.id))
+    .sort((a,b) => (b.fecha + b.hora).localeCompare(a.fecha + a.hora));
+
+  openModal(`
+    <div style="max-width:850px;width:100%;">
+      <button class="close-x" onclick="closeModal()">✕</button>
+
+      <div style="display:flex;align-items:flex-start;gap:16px;border-bottom:1.5px solid var(--line);padding-bottom:18px;margin-bottom:18px;flex-wrap:wrap;">
+        <div class="clinical-stu-avatar" style="width:58px;height:58px;font-size:22px;">
+          ${photo ? `<img src="${escapeHTML(photo)}" alt="Foto">` : initialOf(s.nombre)}
+        </div>
+        <div style="flex:1;min-width:240px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h2 style="margin:0;font-size:20px;color:var(--ink);">${escapeHTML(s.nombre)}</h2>
+            <span class="risk-badge-native ${risk}">${PSICO_RISK_LABELS[risk]}</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--ink-soft);margin-top:4px;">
+            ${escapeHTML(s.carrera || 'Técnico')} · ${s.semestre || ''} ${s.grupo || ''} · Matrícula: <strong>${s.matricula || s.id}</strong> · Turno: ${s.turno || 'Matutino'}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-maroon" style="padding:7px 14px;font-size:12px;" onclick="openAddNoteModal('${s.matricula || s.id}')">
+            📝 + Nueva Nota
+          </button>
+          <button class="btn-outline-maroon" style="padding:7px 14px;font-size:12px;" onclick="openAddAppointmentModal({ studentId: '${s.matricula || s.id}' })">
+            📅 + Agendar Cita
+          </button>
+          <button class="btn-outline-maroon" style="padding:7px 14px;font-size:12px;" onclick="openCreateOfficialReportModal('${s.matricula || s.id}')">
+            📋 Reporte Oficial
+          </button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;margin-bottom:20px;">
+        <!-- Ficha de Identificación -->
+        <div style="background:#FAF8F5;border:1px solid var(--line);border-radius:8px;padding:16px;">
+          <h4 style="margin:0 0 10px;font-size:13px;color:var(--maroon);text-transform:uppercase;letter-spacing:.05em;">
+            👤 Ficha de Identificación
+          </h4>
+          <div style="font-size:12px;display:flex;flex-direction:column;gap:6px;">
+            <div><strong>CURP:</strong> ${escapeHTML(s.curp || '—')}</div>
+            <div><strong>Edad:</strong> ${s.edad ? s.edad + ' años' : '—'} · <strong>Sexo:</strong> ${s.sexo || '—'}</div>
+            <div><strong>Teléfono:</strong> ${escapeHTML(s.telefono || s.tel || '—')}</div>
+            <div><strong>Correo:</strong> ${escapeHTML(s.correo || s.email || '—')}</div>
+            <div style="border-top:1px dashed var(--line);padding-top:6px;margin-top:2px;">
+              <strong>Tutor Legal:</strong> ${escapeHTML(s.tutor || 'Por registrar')} (${escapeHTML(s.tel_tutor || s.tutor_tel || 'Sin teléfono')})
+            </div>
+            <div><strong>Motivo Inicial:</strong> ${escapeHTML(s.motivo || 'Ingreso general / Detección oportuna')}</div>
+          </div>
+
+          <!-- Modificar Semáforo de Riesgo Directamente -->
+          <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px;">
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;text-transform:uppercase;">
+              Actualizar Nivel de Riesgo Clínico:
+            </label>
+            <select style="width:100%;padding:6px 10px;border-radius:6px;border:1.5px solid var(--line);font-size:12px;"
+                    onchange="updateStudentRiskDirectly('${s.matricula || s.id}', this.value)">
+              <option value="none" ${risk==='none'?'selected':''}>Sin riesgo</option>
+              <option value="low" ${risk==='low'?'selected':''}>Riesgo bajo</option>
+              <option value="mid" ${risk==='mid'?'selected':''}>Riesgo moderado</option>
+              <option value="high" ${risk==='high'?'selected':''}>Riesgo alto</option>
+              <option value="crisis" ${risk==='crisis'?'selected':''}>Crisis / Urgente</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Impresión Diagnóstica -->
+        <div style="background:#FAF8F5;border:1px solid var(--line);border-radius:8px;padding:16px;">
+          <h4 style="margin:0 0 10px;font-size:13px;color:var(--maroon);text-transform:uppercase;letter-spacing:.05em;">
+            🩺 Impresión Diagnóstica & Seguimiento
+          </h4>
+          <textarea id="diagText_${s.matricula || s.id}" style="width:100%;height:110px;padding:8px 10px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;resize:vertical;" placeholder="Escribe aquí la hipótesis diagnóstica, CIE-11 o acuerdos generales…">${escapeHTML(s.diagnostico || s.dx || '')}</textarea>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+            <button class="btn-maroon" style="padding:6px 14px;font-size:11.5px;" onclick="saveStudentDiagnosis('${s.matricula || s.id}')">
+              Guardar Diagnóstico
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Línea de Tiempo de Notas Evolutivas -->
+      <div style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h3 style="margin:0;font-size:15px;color:var(--ink);">
+            📝 Notas Evolutivas Cronológicas (${notas.length})
+          </h3>
+          <button class="btn-maroon" style="padding:5px 12px;font-size:11.5px;" onclick="openAddNoteModal('${s.matricula || s.id}')">
+            ＋ Nueva Nota Evolutiva
+          </button>
+        </div>
+
+        <div class="clinical-note-timeline">
+          ${notas.length ? notas.map(n => `
+            <div class="cnt-item">
+              <div class="cnt-dot"></div>
+              <div class="cnt-body">
+                <div class="cnt-meta">
+                  ${n.fecha || 'Reciente'} · <strong>${escapeHTML(n.tipo || 'Sesión Individual')}</strong> · Sesión #${n.sesion || '1'} ${n.orientador ? '· ' + escapeHTML(n.orientador) : ''}
+                </div>
+                <div class="cnt-text">${escapeHTML(n.texto || '')}</div>
+                ${n.dx_update ? `
+                  <div style="margin-top:6px;font-size:11.5px;color:var(--maroon);font-weight:600;">
+                    → Actualización diagnóstica: ${escapeHTML(n.dx_update)}
+                  </div>
+                ` : ''}
+                ${n.acuerdos ? `
+                  <div style="margin-top:4px;font-size:11.5px;color:var(--green);font-weight:600;">
+                    ✓ Acuerdos: ${escapeHTML(n.acuerdos)}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          `).join('') : `
+            <div style="text-align:center;padding:24px;color:var(--ink-muted);background:#FAF8F5;border-radius:8px;">
+              No hay notas evolutivas registradas en este expediente. Haz clic en "+ Nueva Nota Evolutiva" para registrar la primera.
+            </div>
+          `}
+        </div>
+      </div>
+
+      <!-- Historial de Citas del Alumno -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h3 style="margin:0;font-size:15px;color:var(--ink);">
+            📅 Historial de Citas y Sesiones (${apts.length})
+          </h3>
+          <button class="btn-outline-maroon" style="padding:5px 12px;font-size:11.5px;" onclick="openAddAppointmentModal({ studentId: '${s.matricula || s.id}' })">
+            ＋ Agendar Cita
+          </button>
+        </div>
+
+        ${apts.length ? apts.map(a => `
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;background:#FFF;">
+            <div class="mono" style="font-size:11px;font-weight:700;color:var(--maroon);">${a.fecha} ${a.hora}</div>
+            <div style="flex:1;font-size:12px;color:var(--ink);">${escapeHTML(a.tipo || 'Orientación')}</div>
+            <span class="tag ${a.estado==='Completada'?'tg-g':(a.estado==='Cancelada'?'tg-r':'tg-a')}">${escapeHTML(a.estado)}</span>
+            <div style="display:flex;gap:4px;">
+              <button class="btn-ghost" style="padding:2px 6px;font-size:11px;color:var(--green);" onclick="quickMarkAttendance('${a.id}', true)">✓ Asistió</button>
+              <button class="btn-ghost" style="padding:2px 6px;font-size:11px;color:var(--danger);" onclick="quickMarkAttendance('${a.id}', false)">✕ No asistió</button>
+            </div>
+          </div>
+        `).join('') : `
+          <div style="font-size:12.5px;color:var(--ink-muted);padding:12px 0;">Sin citas registradas para este estudiante.</div>
+        `}
+      </div>
+    </div>
+  `);
+}
+
+function updateStudentRiskDirectly(studentId, newRisk){
+  const s = db.students[studentId] || Object.values(db.students || {}).find(x => x.matricula === studentId || x.id === studentId);
+  if(!s) return;
+  s.riesgo = newRisk;
+  saveDB();
+  alert('Nivel de riesgo actualizado con éxito.');
+  openClinicalDetailModal(studentId);
+  if(adminPsicoSubTab === 'expedientes') renderPsicoExpedientesList();
+}
+
+function saveStudentDiagnosis(studentId){
+  const s = db.students[studentId] || Object.values(db.students || {}).find(x => x.matricula === studentId || x.id === studentId);
+  const textEl = document.getElementById('diagText_' + studentId);
+  if(!s || !textEl) return;
+  s.diagnostico = textEl.value.trim();
+  s.dx = s.diagnostico;
+  saveDB();
+  alert('Impresión diagnóstica guardada con éxito.');
+}
+
+function deleteStudentPsico(studentId){
+  const s = db.students[studentId] || Object.values(db.students || {}).find(x => x.matricula === studentId || x.id === studentId);
+  const name = s ? s.nombre : studentId;
+  if(!confirm(`¿Estás seguro de eliminar el expediente de "${name}"? Esta acción no se puede deshacer.`)) return;
+
+  delete db.students[studentId];
+  if(s && s.matricula && db.students[s.matricula]) delete db.students[s.matricula];
+  saveDB();
+  alert('Expediente eliminado con éxito.');
+  setAdminPsicoTab('expedientes');
+}
+
+/* Modal Nueva Nota Evolutiva */
+function openAddNoteModal(studentId){
+  const s = db.students[studentId] || Object.values(db.students || {}).find(x => x.matricula === studentId || x.id === studentId);
+  if(!s) return;
+  const user = getCurrentUser() || {};
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const nextSesNum = ((s.notas || []).length || 0) + 1;
+
+  openModal(`
+    <div style="max-width:550px;width:100%;">
+      <button class="close-x" onclick="openClinicalDetailModal('${studentId}')">✕</button>
+      <h3 style="margin:0 0 6px;color:var(--ink);">📝 Registrar Nueva Nota Evolutiva</h3>
+      <p style="margin:0 0 16px;font-size:12.5px;color:var(--ink-soft);">
+        Alumno: <strong>${escapeHTML(s.nombre)}</strong> (${s.matricula || s.id})
+      </p>
+
+      <form onsubmit="handleSaveClinicalNote(event, '${studentId}')">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Fecha de la Sesión *</label>
+            <input type="date" id="noteFecha" value="${todayStr}" required style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Número de Sesión *</label>
+            <input type="number" id="noteSesion" value="${nextSesNum}" min="1" required style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Tipo de Intervención</label>
+            <select id="noteTipo" style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+              <option>Sesión Individual de Orientación</option>
+              <option>Intervención en Crisis / Emergencia</option>
+              <option>Seguimiento Emocional</option>
+              <option>Reunión con Tutor / Padres de Familia</option>
+              <option>Canalización Externa (Salud Mental)</option>
+              <option>Tutoría Académica de Apoyo</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Orientador Responsable</label>
+            <input type="text" id="noteOrientador" value="${escapeHTML(user.nombre || user.display || 'Orientador Educativo')}" required style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Evolución Clínica & Observaciones del Proceso *</label>
+          <textarea id="noteTexto" rows="4" required placeholder="Describe el estado anímico, temas abordados, respuestas conductuales y evolución del estudiante..." style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;resize:vertical;"></textarea>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Acuerdos y Tareas Terapéuticas / Escolares</label>
+          <input type="text" id="noteAcuerdos" placeholder="Ej. Asistir a talleres de respiración, entregar reporte académico el viernes..." style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+          <button type="button" class="btn-ghost" onclick="openClinicalDetailModal('${studentId}')">Cancelar</button>
+          <button type="submit" class="btn-maroon">Guardar Nota Evolutiva →</button>
+        </div>
+      </form>
+    </div>
+  `);
+}
+
+function handleSaveClinicalNote(e, studentId){
+  e.preventDefault();
+  const s = db.students[studentId] || Object.values(db.students || {}).find(x => x.matricula === studentId || x.id === studentId);
+  if(!s) return;
+
+  if(!s.notas) s.notas = [];
+  const newNote = {
+    id: 'note_' + Date.now(),
+    fecha: document.getElementById('noteFecha').value,
+    sesion: parseInt(document.getElementById('noteSesion').value, 10) || (s.notas.length + 1),
+    tipo: document.getElementById('noteTipo').value,
+    orientador: document.getElementById('noteOrientador').value.trim(),
+    texto: document.getElementById('noteTexto').value.trim(),
+    acuerdos: document.getElementById('noteAcuerdos').value.trim(),
+    created_at: new Date().toISOString()
+  };
+
+  s.notas.push(newNote);
+  saveDB();
+  alert('Nota evolutiva registrada exitosamente.');
+  openClinicalDetailModal(studentId);
+}
+
+/* ============================================================
+   SUBMÓDULO 3: AGENDA SEMANAL & CITAS
+   ============================================================ */
+function renderPsicoAgenda(){
+  const apts = db.appointments || [];
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  // Calcular fechas de la semana seleccionada (Lunes a Viernes)
+  const baseDate = new Date();
+  baseDate.setDate(baseDate.getDate() + (adminAgendaWeekOffset * 7));
+  const currentDayOfWeek = baseDate.getDay(); // 0 domingo, 1 lunes...
+  const mondayOffset = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
+  const monday = new Date(baseDate);
+  monday.setDate(baseDate.getDate() + mondayOffset);
+
+  const weekDates = [];
+  for(let i = 0; i < 5; i++){
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    weekDates.push({
+      dayName: PSICO_DAYS[i],
+      dateStr: d.toISOString().slice(0, 10),
+      displayDate: d.toLocaleDateString('es-MX', { day:'2-digit', month:'short' })
+    });
+  }
+
+  const weekTitle = `Semana del ${weekDates[0].displayDate} al ${weekDates[4].displayDate}`;
+
+  // Filtrado de citas para la lista inferior
+  let filteredApts = apts.slice().sort((a,b) => (b.fecha + b.hora).localeCompare(a.fecha + a.hora));
+  if(adminAgendaFilter === 'today'){
+    filteredApts = filteredApts.filter(a => a.fecha === todayStr);
+  } else if(adminAgendaFilter === 'week'){
+    const wStart = weekDates[0].dateStr;
+    const wEnd = weekDates[4].dateStr;
+    filteredApts = filteredApts.filter(a => a.fecha >= wStart && a.fecha <= wEnd);
+  } else if(adminAgendaFilter === 'pending'){
+    filteredApts = filteredApts.filter(a => a.estado === 'Programada' || a.estado === 'Confirmada');
+  } else if(adminAgendaFilter === 'completed'){
+    filteredApts = filteredApts.filter(a => a.estado === 'Completada');
+  }
+
+  return `
+    <div class="card" style="margin-bottom:24px;">
+      <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div class="card-ttl" style="font-size:16px;color:var(--ink);display:flex;align-items:center;gap:8px;">
+            <span>📅</span> Agenda Semanal & Disponibilidad de Cubículo
+          </div>
+          <p style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">
+            Cubículo 1 de Orientación Educativa · Lunes a Viernes de 08:00 a 16:00 hrs.
+          </p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-maroon" onclick="openAddAppointmentModal()" style="font-size:12px;padding:7px 16px;">
+            ＋ Agendar Nueva Cita
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de Navegación de Semana -->
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#FAF8F5;border:1px solid var(--line);border-radius:8px;padding:10px 16px;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;gap:6px;">
+          <button class="btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="changeAgendaWeek(-1)">
+            ◀ Anterior
+          </button>
+          <button class="btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="adminAgendaWeekOffset=0; setAdminPsicoTab('agenda');">
+            Semana Actual
+          </button>
+          <button class="btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="changeAgendaWeek(1)">
+            Siguiente ▶
+          </button>
+        </div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;color:var(--maroon);">
+          ${weekTitle}
+        </div>
+      </div>
+
+      <!-- Cuadrícula Semanal Interactiva -->
+      <div style="overflow-x:auto;">
+        <table class="avail-grid-table">
+          <thead>
+            <tr>
+              <th style="width:80px;">Hora</th>
+              ${weekDates.map(w => `
+                <th>
+                  <div>${w.dayName}</div>
+                  <div style="font-size:10px;font-weight:400;opacity:0.9;">${w.displayDate}</div>
+                </th>
+              `).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${PSICO_HOURS.map(h => `
+              <tr>
+                <td style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--ink-soft);background:#FAF8F5;">
+                  ${h}
+                </td>
+                ${weekDates.map(w => {
+                  const matchApt = apts.find(a => a.fecha === w.dateStr && a.hora === h && a.estado !== 'Cancelada');
+                  if(matchApt){
+                    return `
+                      <td>
+                        <div class="avail-slot-native busy" onclick="openAptDetailModal('${matchApt.id}')" title="${escapeHTML(matchApt.studentName || matchApt.nombre)}: ${escapeHTML(matchApt.tipo || 'Cita')}">
+                          <div style="font-size:10.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            ${escapeHTML(matchApt.studentName || matchApt.nombre || 'Ocupado')}
+                          </div>
+                          <div style="font-size:9.5px;opacity:0.85;">${matchApt.estado}</div>
+                        </div>
+                      </td>
+                    `;
+                  } else {
+                    return `
+                      <td>
+                        <div class="avail-slot-native free" onclick="openAddAppointmentModal({ fecha: '${w.dateStr}', hora: '${h}' })" title="Clic para agendar sesión">
+                          ＋ Libre
+                        </div>
+                      </td>
+                    `;
+                  }
+                }).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Lista de Citas con Filtros y Asistencia Directa -->
+    <div class="card">
+      <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div class="card-ttl" style="font-size:15px;color:var(--ink);">
+          📋 Listado General de Sesiones (${filteredApts.length})
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn-ghost ${adminAgendaFilter==='all'?'active':''}" style="padding:4px 10px;font-size:11.5px;" onclick="adminAgendaFilter='all'; setAdminPsicoTab('agenda');">
+            Todas
+          </button>
+          <button class="btn-ghost ${adminAgendaFilter==='today'?'active':''}" style="padding:4px 10px;font-size:11.5px;" onclick="adminAgendaFilter='today'; setAdminPsicoTab('agenda');">
+            Hoy
+          </button>
+          <button class="btn-ghost ${adminAgendaFilter==='week'?'active':''}" style="padding:4px 10px;font-size:11.5px;" onclick="adminAgendaFilter='week'; setAdminPsicoTab('agenda');">
+            Esta Semana
+          </button>
+          <button class="btn-ghost ${adminAgendaFilter==='pending'?'active':''}" style="padding:4px 10px;font-size:11.5px;" onclick="adminAgendaFilter='pending'; setAdminPsicoTab('agenda');">
+            Pendientes
+          </button>
+          <button class="btn-ghost ${adminAgendaFilter==='completed'?'active':''}" style="padding:4px 10px;font-size:11.5px;" onclick="adminAgendaFilter='completed'; setAdminPsicoTab('agenda');">
+            Completadas
+          </button>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${filteredApts.length ? filteredApts.map(a => {
+          const isDone = a.estado === 'Completada';
+          const isMiss = a.estado === 'No asistió';
+          const isCancel = a.estado === 'Cancelada';
+          const dotColor = isDone ? 'var(--green)' : (isMiss ? 'var(--danger)' : (isCancel ? 'gray' : '#B47D0A'));
+
+          return `
+            <div class="apt-card-native">
+              <div class="apt-status-indicator" style="background:${dotColor};"></div>
+              <div class="apt-time-badge">
+                <div>${a.fecha}</div>
+                <div style="font-size:14px;font-weight:700;">${a.hora}</div>
+              </div>
+              <div style="flex:1;min-width:200px;">
+                <div style="font-size:14px;font-weight:700;color:var(--ink);">
+                  ${escapeHTML(a.studentName || a.nombre || 'Estudiante')}
+                </div>
+                <div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">
+                  ${escapeHTML(a.tipo || 'Orientación General')} · Modalidad: ${escapeHTML(a.modalidad || 'Cubículo Presencial')}
+                </div>
+                ${a.motivo ? `
+                  <div style="font-size:11.5px;color:var(--ink-muted);font-style:italic;margin-top:2px;">
+                    "${escapeHTML(a.motivo)}"
+                  </div>
+                ` : ''}
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span class="tag ${isDone?'tg-g':(isMiss?'tg-r':'tg-a')}">${escapeHTML(a.estado)}</span>
+                <button class="btn-ghost" style="padding:5px 10px;font-size:11.5px;color:var(--green);font-weight:700;" onclick="quickMarkAttendance('${a.id}', true)">
+                  ✓ Asistió
+                </button>
+                <button class="btn-ghost" style="padding:5px 10px;font-size:11.5px;color:var(--danger);" onclick="quickMarkAttendance('${a.id}', false)">
+                  ✕ No asistió
+                </button>
+                <button class="btn-ghost" style="padding:5px 8px;font-size:12px;color:var(--danger);" onclick="deleteAppointmentPsico('${a.id}')" title="Eliminar cita">
+                  🗑️
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('') : `
+          <div style="text-align:center;padding:32px 16px;color:var(--ink-muted);">
+            No hay citas registradas con el filtro seleccionado.
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+function changeAgendaWeek(offset){
+  adminAgendaWeekOffset += offset;
+  setAdminPsicoTab('agenda');
+}
+
+function attachAgendaListeners(){}
+
+/* Modal para Agendar Cita */
+function openAddAppointmentModal(prefill){
+  prefill = prefill || {};
+  const allStudents = studentsList();
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const user = getCurrentUser() || {};
+
+  openModal(`
+    <div style="max-width:540px;width:100%;">
+      <button class="close-x" onclick="closeModal()">✕</button>
+      <h3 style="margin:0 0 6px;color:var(--ink);">📅 Programar Cita de Orientación</h3>
+      <p style="margin:0 0 16px;font-size:12.5px;color:var(--ink-soft);">
+        Asigna un espacio en el cubículo de atención psicopedagógica CONALEP Mérida 1.
+      </p>
+
+      <form onsubmit="handleSaveAppointment(event)">
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Estudiante *</label>
+          <select id="aptStudentSel" required style="width:100%;padding:8px 10px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+            <option value="">Selecciona un alumno…</option>
+            ${allStudents.map(s => `
+              <option value="${s.matricula || s.id}" ${(prefill.studentId && (s.matricula===prefill.studentId || s.id===prefill.studentId)) ? 'selected' : ''}>
+                ${escapeHTML(s.nombre)} (${s.matricula || s.id}) · ${escapeHTML(s.carrera || '')}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Fecha *</label>
+            <input type="date" id="aptFecha" value="${prefill.fecha || todayStr}" required style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Hora de Inicio *</label>
+            <select id="aptHora" required style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+              ${PSICO_HOURS.map(h => `
+                <option value="${h}" ${prefill.hora===h?'selected':''}>${h} hrs</option>
+              `).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Tipo de Sesión</label>
+            <select id="aptTipo" style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+              <option>Orientación Inicial</option>
+              <option>Seguimiento Emocional</option>
+              <option>Intervención en Crisis</option>
+              <option>Reunión con Tutor / Padres</option>
+              <option>Tutoría Académica</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Modalidad</label>
+            <select id="aptModalidad" style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+              <option>Cubículo Presencial Mérida 1</option>
+              <option>Virtual / Videollamada</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Motivo o Asunto a Tratar</label>
+          <textarea id="aptMotivo" rows="3" placeholder="Motivo de la cita, acuerdos o notas preparatorias…" style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;resize:vertical;"></textarea>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+          <button type="button" class="btn-ghost" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="btn-maroon">Agendar Cita →</button>
+        </div>
+      </form>
+    </div>
+  `);
+}
+
+function handleSaveAppointment(e){
+  e.preventDefault();
+  const studentId = document.getElementById('aptStudentSel').value;
+  const s = db.students[studentId] || Object.values(db.students || {}).find(x => x.matricula === studentId || x.id === studentId);
+  if(!s){
+    alert('Por favor selecciona un estudiante válido.');
+    return;
+  }
+
+  const user = getCurrentUser() || {};
+  if(!db.appointments) db.appointments = [];
+
+  const newApt = {
+    id: 'apt_' + Date.now(),
+    studentId: s.matricula || s.id,
+    studentName: s.nombre,
+    nombre: s.nombre,
+    fecha: document.getElementById('aptFecha').value,
+    hora: document.getElementById('aptHora').value,
+    tipo: document.getElementById('aptTipo').value,
+    modalidad: document.getElementById('aptModalidad').value,
+    motivo: document.getElementById('aptMotivo').value.trim(),
+    estado: 'Programada',
+    orientador: user.nombre || user.display || 'Orientador Educativo',
+    created_at: new Date().toISOString()
+  };
+
+  db.appointments.push(newApt);
+  saveDB();
+  closeModal();
+  alert('Cita agendada exitosamente.');
+  setAdminPsicoTab('agenda');
+}
+
+function quickMarkAttendance(aptId, attended){
+  if(!db.appointments) return;
+  const apt = db.appointments.find(a => a.id === aptId);
+  if(!apt) return;
+  apt.asistio = attended;
+  apt.estado = attended ? 'Completada' : 'No asistió';
+  saveDB();
+  setAdminPsicoTab(adminPsicoSubTab);
+}
+
+function deleteAppointmentPsico(aptId){
+  if(!confirm('¿Deseas eliminar esta cita de la agenda?')) return;
+  db.appointments = (db.appointments || []).filter(a => a.id !== aptId);
+  saveDB();
+  setAdminPsicoTab('agenda');
+}
+
+/* ============================================================
+   SUBMÓDULO 4: IMPORTADOR MASIVO EXCEL / CSV CON SHEETJS
+   ============================================================ */
+const COL_ALIASES = {
+  nombre:     ['nombre','nombre completo','alumno','estudiante','nombres','nombre(s)','alumnos'],
+  matricula:  ['matricula','mat','control','no control','num control','id','expediente','no. control'],
+  carrera:    ['carrera','carrera tecnica','especialidad','programa','carrera técnica'],
+  semestre:   ['semestre','sem','grado','nivel'],
+  grupo:      ['grupo','grp','gpo','seccion','salón','salon'],
+  turno:      ['turno','horario'],
+  telefono:   ['telefono','tel','celular','movil','teléfono','cel'],
+  correo:     ['correo','email','correo institucional','correo electronico','e-mail','mail'],
+  tutor:      ['tutor','padre','madre','tutor legal','responsable','familiar'],
+  tel_tutor:  ['tel tutor','telefono tutor','tel_tutor','tel. tutor','contacto tutor'],
+  diagnostico:['diagnostico','dx','diagnóstico','motivo','impresion','observaciones'],
+  riesgo:     ['riesgo','nivel riesgo','semaforo','semáforo','prioridad']
+};
+
+function buildHeaderMap(headers){
+  const map = {};
+  headers.forEach(h => {
+    const clean = String(h).toLowerCase().trim().replace(/[\._\-]/g,' ');
+    for(const [canonical, aliases] of Object.entries(COL_ALIASES)){
+      if(aliases.some(a => clean === a || clean.includes(a))){
+        if(!map[canonical]) map[canonical] = h;
+      }
+    }
+  });
+  return map;
+}
+
+function getColValue(row, canonical, map){
+  const originalHeader = map[canonical];
+  if(!originalHeader) return '';
+  return String(row[originalHeader] || '').trim();
+}
+
+function renderPsicoImportar(){
+  return `
+    <div class="card" style="margin-bottom:24px;">
+      <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div class="card-ttl" style="font-size:16px;color:var(--ink);display:flex;align-items:center;gap:8px;">
+            <span>📥</span> Importador Masivo de Estudiantes (Excel / CSV)
+          </div>
+          <p style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">
+            Carga listas grupales en formato .xlsx o .csv con detección inteligente de columnas.
+          </p>
+        </div>
+        <button class="btn-outline-maroon" onclick="downloadExcelTemplate()" style="font-size:12px;padding:7px 14px;">
+          📄 Descargar Plantilla Excel (.xlsx)
+        </button>
+      </div>
+
+      <!-- Zona Drag & Drop -->
+      <div class="upload-zone-native" id="nativeUploadZone" onclick="document.getElementById('nativeExcelInput').click()">
+        <input type="file" id="nativeExcelInput" accept=".xlsx, .xls, .csv" style="display:none;" onchange="handleExcelFileSelected(event)">
+        <div style="font-size:42px;margin-bottom:8px;">📊</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;color:var(--maroon);">
+          Arrastra tu archivo Excel (.xlsx) o CSV aquí
+        </div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">
+          o haz clic para examinar archivos de tu dispositivo
+        </div>
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:8px;">
+          Compatible con encabezados oficiales CONALEP Mérida 1
+        </div>
+      </div>
+
+      <!-- Contenedor de Vista Previa de Datos -->
+      <div id="importPreviewArea" style="display:none;margin-top:24px;"></div>
+    </div>
+  `;
+}
+
+function attachImportListeners(){
+  const zone = document.getElementById('nativeUploadZone');
+  if(!zone) return;
+
+  ['dragenter', 'dragover'].forEach(evt => {
+    zone.addEventListener(evt, e => { e.preventDefault(); zone.classList.add('over'); });
+  });
+  ['dragleave', 'drop'].forEach(evt => {
+    zone.addEventListener(evt, e => { e.preventDefault(); zone.classList.remove('over'); });
+  });
+  zone.addEventListener('drop', e => {
+    const dt = e.dataTransfer;
+    if(dt && dt.files && dt.files.length){
+      processExcelFile(dt.files[0]);
+    }
+  });
+}
+
+function handleExcelFileSelected(e){
+  const file = e.target.files && e.target.files[0];
+  if(file) processExcelFile(file);
+}
+
+function processExcelFile(file){
+  if(typeof XLSX === 'undefined'){
+    alert('Librería SheetJS (XLSX) cargando. Por favor reintenta en un momento.');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[firstSheet];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+      if(!rows.length){
+        alert('El archivo no contiene filas de datos.');
+        return;
+      }
+
+      pendingImportRows = rows;
+      pendingImportHeaders = Object.keys(rows[0] || {});
+      renderImportPreviewTable();
+    }catch(err){
+      console.error(err);
+      alert('Error procesando archivo Excel: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderImportPreviewTable(){
+  const container = document.getElementById('importPreviewArea');
+  if(!container) return;
+
+  const hmap = buildHeaderMap(pendingImportHeaders);
+  const totalRows = pendingImportRows.length;
+  const previewSlice = pendingImportRows.slice(0, 8);
+
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div style="border-top:1.5px solid var(--line);padding-top:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <h3 style="margin:0;font-size:16px;color:var(--ink);">
+            ✓ Vista Previa de Datos Detectados (${totalRows} filas)
+          </h3>
+          <p style="margin:2px 0 0;font-size:12.5px;color:var(--ink-soft);">
+            Verifica que las columnas coincidan correctamente antes de aplicar a la base de datos.
+          </p>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn-ghost" onclick="cancelExcelImport()">Descartar</button>
+          <button class="btn-maroon" onclick="confirmExcelImport()">
+            📥 Confirmar e Importar Alumnos (${totalRows}) →
+          </button>
+        </div>
+      </div>
+
+      <div class="proto-table-wrap" style="max-height:300px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;">
+        <table class="proto-table" style="font-size:12px;">
+          <thead>
+            <tr>
+              <th>Nombre del Estudiante</th>
+              <th>Matrícula</th>
+              <th>Carrera</th>
+              <th>Sem / Grupo</th>
+              <th>Teléfono</th>
+              <th>Tutor Legal</th>
+              <th>Nivel de Riesgo</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${previewSlice.map(r => {
+              const nom = getColValue(r, 'nombre', hmap) || '(Sin nombre)';
+              const mat = getColValue(r, 'matricula', hmap) || '—';
+              const car = getColValue(r, 'carrera', hmap) || '—';
+              const sem = getColValue(r, 'semestre', hmap);
+              const grp = getColValue(r, 'grupo', hmap);
+              const tel = getColValue(r, 'telefono', hmap) || '—';
+              const tut = getColValue(r, 'tutor', hmap) || '—';
+              let rsk = getColValue(r, 'riesgo', hmap).toLowerCase();
+              if(rsk.includes('alt') || rsk.includes('cris')) rsk = 'high';
+              else if(rsk.includes('mod') || rsk.includes('med')) rsk = 'mid';
+              else if(rsk.includes('baj')) rsk = 'low';
+              else rsk = 'none';
+
+              return `
+                <tr>
+                  <td><strong>${escapeHTML(nom)}</strong></td>
+                  <td class="mono">${escapeHTML(mat)}</td>
+                  <td>${escapeHTML(car)}</td>
+                  <td>${escapeHTML(sem)} ${escapeHTML(grp)}</td>
+                  <td>${escapeHTML(tel)}</td>
+                  <td>${escapeHTML(tut)}</td>
+                  <td><span class="risk-badge-native ${rsk}">${PSICO_RISK_LABELS[rsk]}</span></td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${totalRows > 8 ? `
+        <div style="font-size:11.5px;color:var(--ink-muted);margin-top:6px;text-align:right;">
+          Mostrando primeras 8 de ${totalRows} filas.
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function cancelExcelImport(){
+  pendingImportRows = [];
+  pendingImportHeaders = [];
+  const container = document.getElementById('importPreviewArea');
+  if(container) container.style.display = 'none';
+}
+
+function confirmExcelImport(){
+  if(!pendingImportRows.length) return;
+  const hmap = buildHeaderMap(pendingImportHeaders);
+  let added = 0;
+  let updated = 0;
+
+  if(!db.students) db.students = {};
+
+  pendingImportRows.forEach(row => {
+    const nombre = getColValue(row, 'nombre', hmap);
+    if(!nombre || nombre.length < 2) return;
+
+    let mat = getColValue(row, 'matricula', hmap);
+    if(!mat){
+      mat = 'PTB-' + Math.floor(Math.random() * 89999 + 10000);
+    }
+
+    const carrera = getColValue(row, 'carrera', hmap) || 'Técnico en Informática';
+    const semestre = getColValue(row, 'semestre', hmap) || '4°';
+    const grupo = getColValue(row, 'grupo', hmap) || '402';
+    const turno = getColValue(row, 'turno', hmap) || 'Matutino';
+    const telefono = getColValue(row, 'telefono', hmap);
+    const email = getColValue(row, 'correo', hmap) || (mat.toLowerCase() + '@conalepmex.edu.mx');
+    const tutor = getColValue(row, 'tutor', hmap);
+    const tel_tutor = getColValue(row, 'tel_tutor', hmap);
+    const diagnostico = getColValue(row, 'diagnostico', hmap);
+
+    let riesgoRaw = (getColValue(row, 'riesgo', hmap) || 'none').toLowerCase();
+    let riesgo = 'none';
+    if(riesgoRaw.includes('cris')) riesgo = 'crisis';
+    else if(riesgoRaw.includes('alt') || riesgoRaw.includes('high')) riesgo = 'high';
+    else if(riesgoRaw.includes('med') || riesgoRaw.includes('mod')) riesgo = 'mid';
+    else if(riesgoRaw.includes('baj') || riesgoRaw.includes('low')) riesgo = 'low';
+
+    // Verificar si ya existe por matrícula o nombre
+    let existing = db.students[mat] || Object.values(db.students).find(s => s.nombre.toLowerCase() === nombre.toLowerCase());
+
+    if(existing){
+      existing.nombre = nombre;
+      existing.carrera = carrera;
+      existing.semestre = semestre;
+      existing.grupo = grupo;
+      existing.turno = turno;
+      if(telefono) existing.telefono = telefono;
+      if(email) existing.email = email;
+      if(tutor) existing.tutor = tutor;
+      if(tel_tutor) existing.tel_tutor = tel_tutor;
+      if(diagnostico) existing.diagnostico = diagnostico;
+      if(riesgo !== 'none') existing.riesgo = riesgo;
+      updated++;
+    } else {
+      db.students[mat] = {
+        id: mat,
+        matricula: mat,
+        nombre: nombre,
+        carrera: carrera,
+        semestre: semestre,
+        grupo: grupo,
+        turno: turno,
+        telefono: telefono,
+        email: email,
+        tutor: tutor,
+        tel_tutor: tel_tutor,
+        diagnostico: diagnostico,
+        dx: diagnostico,
+        riesgo: riesgo,
+        estado: 'activo',
+        notas: [],
+        created_at: new Date().toISOString()
+      };
+      added++;
+    }
+  });
+
+  saveDB();
+  alert(`✓ Importación completada: ${added} nuevos estudiantes agregados y ${updated} actualizados.`);
+  cancelExcelImport();
+  setAdminPsicoTab('expedientes');
+}
+
+function downloadExcelTemplate(){
+  if(typeof XLSX === 'undefined'){
+    alert('Cargando librería XLSX...');
+    return;
+  }
+  const headers = [['nombre', 'matricula', 'carrera', 'semestre', 'grupo', 'turno', 'telefono', 'correo', 'tutor', 'tel_tutor', 'diagnostico', 'riesgo']];
+  const example = [
+    ['García López Juan', 'PTB-26101', 'Técnico en Informática', '4°', '402', 'Matutino', '9991234567', 'juan@gmail.com', 'García Pedro', '9997654321', 'Ansiedad ante exámenes', 'bajo'],
+    ['Pérez Chan Mariana', 'PTB-26102', 'Técnico en Enfermería General', '4°', '401', 'Matutino', '9992345678', 'mariana@gmail.com', 'Chan Rosa', '9998765432', 'Apoyo psicopedagógico', 'sin riesgo']
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(headers.concat(example));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Alumnos');
+  XLSX.writeFile(wb, 'Plantilla_CONALEP_Alumnos.xlsx');
+}
+
+/* ============================================================
+   SUBMÓDULO 5: REPORTES OFICIALES CON FOLIO
+   ============================================================ */
+function renderPsicoReportes(){
+  const allDocs = (typeof getAllDocuments === 'function') ? getAllDocuments() : (db.documents || []);
+
+  return `
+    <div class="card" style="margin-bottom:24px;">
+      <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div class="card-ttl" style="font-size:16px;color:var(--ink);display:flex;align-items:center;gap:8px;">
+            <span>📋</span> Expedientes Clínicos & Formatos Oficiales CONALEP
+          </div>
+          <p style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">
+            Generación y resguardo de reportes de evaluación psicológica con membrete oficial y folio institucional MER1.
+          </p>
+        </div>
+        <button class="btn-maroon" onclick="openCreateOfficialReportModal()" style="font-size:12.5px;padding:8px 16px;">
+          ＋ Elaborar Nuevo Reporte Oficial (Folio) ↗
+        </button>
+      </div>
+
+      <div class="pioe-banner" style="margin-bottom:20px;">
+        <div class="pioe-banner-body">
+          <span class="pioe-banner-tag">Documento Oficial CONALEP</span>
+          <p class="pioe-banner-desc">
+            El formato oficial incluye membrete institucional del Plantel Mérida 1, folio automatizado, evaluación de 6 áreas del desarrollo, valoración del riesgo y firmas oficiales.
+          </p>
+        </div>
+      </div>
+
+      <div class="proto-table-wrap">
+        <table class="proto-table">
+          <thead>
+            <tr>
+              <th>Alumno / Matrícula</th>
+              <th>Título del Reporte</th>
+              <th>Folio / Categoría</th>
+              <th>Fecha</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${allDocs.length ? allDocs.map(d => `
+              <tr>
+                <td>
+                  <strong style="color:var(--ink);">${escapeHTML(d.studentName || d.studentId)}</strong>
+                  <div class="mono" style="font-size:11.5px;color:var(--ink-soft);">${d.studentId}</div>
+                </td>
+                <td><strong>${escapeHTML(d.title)}</strong></td>
+                <td><span class="doc-type-badge">${d.folio || d.file_type || 'Reporte'}</span></td>
+                <td><span style="font-size:12px;color:var(--ink-soft);">${d.created_at ? new Date(d.created_at).toLocaleDateString('es-MX') : (d.date || 'Reciente')}</span></td>
+                <td style="text-align:right;">
+                  <button class="btn-outline-maroon" style="padding:5px 12px;font-size:12px;" onclick="printOfficialReportView('${d.id}')">
+                    🖨️ Ver / Imprimir
+                  </button>
+                  <button class="btn-ghost" style="padding:5px 8px;font-size:12px;color:var(--danger);" onclick="deleteOfficialReport('${d.id}')" title="Eliminar reporte">
+                    🗑️
+                  </button>
+                </td>
+              </tr>
+            `).join('') : `
+              <tr>
+                <td colspan="5" style="text-align:center;padding:32px;color:var(--ink-soft);">
+                  No hay reportes elaborados todavía. Haz clic en "Elaborar Nuevo Reporte Oficial" para generar el primero.
+                </td>
+              </tr>
+            `}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/* Modal Generador de Reporte Oficial con Folio */
+function openCreateOfficialReportModal(prefillStudentId){
+  const allStudents = studentsList();
+  const user = getCurrentUser() || {};
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const seq = Math.floor(100 + Math.random() * 900);
+  const generatedFolio = `MER1-${yy}${mm}-${seq}`;
+
+  openModal(`
+    <div style="max-width:820px;width:100%;max-height:85vh;overflow-y:auto;">
+      <button class="close-x" onclick="closeModal()">✕</button>
+
+      <div style="border-bottom:2px solid var(--maroon);padding-bottom:12px;margin-bottom:16px;">
+        <span class="eyebrow" style="color:var(--maroon);">FORMATO INSTITUCIONAL OFICIAL</span>
+        <h2 style="margin:2px 0 0;font-size:18px;color:var(--ink);">Elaboración de Reporte Psicológico Escolar</h2>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--maroon);margin-top:4px;">
+          FOLIO ASIGNADO: ${generatedFolio}
+        </div>
+      </div>
+
+      <form onsubmit="handleSaveOfficialReport(event, '${generatedFolio}')">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Seleccionar Estudiante *</label>
+            <select id="repStudentSel" required style="width:100%;padding:8px 10px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+              <option value="">Selecciona un alumno…</option>
+              ${allStudents.map(s => `
+                <option value="${s.matricula || s.id}" ${(prefillStudentId && (s.matricula===prefillStudentId || s.id===prefillStudentId)) ? 'selected' : ''}>
+                  ${escapeHTML(s.nombre)} (${s.matricula || s.id}) · ${escapeHTML(s.carrera || '')}
+                </option>
+              `).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Fecha de Evaluación *</label>
+            <input type="date" id="repFecha" value="${todayStr}" required style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Orientador(a) / Psicólogo Evaluador *</label>
+            <input type="text" id="repOrientador" value="${escapeHTML(user.nombre || user.display || 'Orientador Educativo')}" required style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Cédula Profesional</label>
+            <input type="text" id="repCedula" placeholder="Ej. 12345678" style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Título del Reporte *</label>
+          <input type="text" id="repTitulo" value="Reporte de Evaluación Psicopedagógica y Conductual" required style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Motivo de Consulta o Referencia *</label>
+          <textarea id="repMotivo" rows="2" required placeholder="Motivo de la referencia o solicitud de intervención psicopedagógica..." style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;resize:vertical;">Canalización por orientación educativa ante indicadores de estrés escolar y bajo rendimiento.</textarea>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Instrumentos y Técnicas Aplicadas</label>
+          <input type="text" id="repInstrumentos" value="Entrevista Clínica Semiestructurada, Tamizaje PIOE (PHQ-A, GAD-7), Observación Conductual" style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Área Personal y Emocional</label>
+            <textarea id="repAreaPersonal" rows="3" placeholder="Estado afectivo, autorregulación emocional, autoimagen..." style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12px;resize:vertical;">El estudiante presenta adecuada disposición al diálogo, reportando periodos de sobrecarga y tensión ante evaluaciones.</textarea>
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Área Familiar y Red de Apoyo</label>
+            <textarea id="repAreaFamiliar" rows="3" placeholder="Dinámica familiar, comunicación con tutores..." style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12px;resize:vertical;">Comunicación abierta con tutor legal, se mantiene seguimiento continuo en casa.</textarea>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Impresión Diagnóstica (CIE-11)</label>
+            <input type="text" id="repDiagnostico" value="Reacción al estrés no especificada / Acompañamiento psicopedagógico" style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Valoración del Nivel de Riesgo *</label>
+            <select id="repRiesgo" style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;">
+              <option value="none">Sin riesgo</option>
+              <option value="low" selected>Riesgo bajo (preventivo)</option>
+              <option value="mid">Riesgo moderado</option>
+              <option value="high">Riesgo alto</option>
+              <option value="crisis">Crisis / Urgente</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;">Recomendaciones y Plan de Acompañamiento *</label>
+          <textarea id="repRecomendaciones" rows="3" required placeholder="Estrategias psicopedagógicas, acuerdos escolares y fechas de revisión..." style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--line);font-size:12.5px;resize:vertical;">1. Continuar con sesiones quincenales de seguimiento emocional en cubículo de orientación.
+2. Coordinación con docentes titulares para balancear entregas de proyectos.
+3. Notificar a tutor legal los avances al término del periodo parcial.</textarea>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;">
+          <button type="button" class="btn-ghost" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="btn-maroon">
+            💾 Guardar y Generar Reporte con Membrete →
+          </button>
+        </div>
+      </form>
+    </div>
+  `);
+}
+
+function handleSaveOfficialReport(e, folio){
+  e.preventDefault();
+  const studentId = document.getElementById('repStudentSel').value;
+  const s = db.students[studentId] || Object.values(db.students || {}).find(x => x.matricula === studentId || x.id === studentId);
+  if(!s){
+    alert('Por favor selecciona un estudiante.');
+    return;
+  }
+
+  const newDoc = {
+    id: 'doc_' + Date.now(),
+    studentId: s.matricula || s.id,
+    studentName: s.nombre,
+    matricula: s.matricula || s.id,
+    carrera: s.carrera,
+    semestre: s.semestre,
+    grupo: s.grupo,
+    folio: folio,
+    file_type: 'Reporte Oficial',
+    title: document.getElementById('repTitulo').value.trim(),
+    fecha: document.getElementById('repFecha').value,
+    orientador: document.getElementById('repOrientador').value.trim(),
+    cedula: document.getElementById('repCedula').value.trim(),
+    motivo: document.getElementById('repMotivo').value.trim(),
+    instrumentos: document.getElementById('repInstrumentos').value.trim(),
+    areaPersonal: document.getElementById('repAreaPersonal').value.trim(),
+    areaFamiliar: document.getElementById('repAreaFamiliar').value.trim(),
+    diagnostico: document.getElementById('repDiagnostico').value.trim(),
+    riesgo: document.getElementById('repRiesgo').value,
+    recomendaciones: document.getElementById('repRecomendaciones').value.trim(),
+    created_at: new Date().toISOString()
+  };
+
+  if(!db.documents) db.documents = [];
+  db.documents.unshift(newDoc);
+  saveDB();
+  closeModal();
+  alert(`✓ Reporte generado con éxito bajo el folio ${folio}.`);
+  setAdminPsicoTab('reportes');
+  printOfficialReportView(newDoc.id);
+}
+
+function deleteOfficialReport(docId){
+  if(!confirm('¿Deseas eliminar este reporte oficial?')) return;
+  db.documents = (db.documents || []).filter(d => d.id !== docId);
+  saveDB();
+  setAdminPsicoTab('reportes');
+}
+
+function printOfficialReportView(docId){
+  const allDocs = (typeof getAllDocuments === 'function') ? getAllDocuments() : (db.documents || []);
+  const doc = allDocs.find(d => d.id === docId);
+  if(!doc){
+    alert('Reporte no encontrado');
+    return;
+  }
+
+  const s = db.students[doc.studentId] || Object.values(db.students || {}).find(x => x.matricula === doc.studentId || x.id === doc.studentId) || {};
+
+  const printWindow = window.open('', '_blank');
+  if(!printWindow){
+    alert('Por favor permite ventanas emergentes para ver e imprimir el reporte.');
+    return;
+  }
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <title>Reporte Oficial — ${doc.folio || 'CONALEP'}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+      <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; color:#1A1A1A; background:#FFF; padding:30px; font-size:12.5px; line-height:1.55; }
+        .sheet { max-width:820px; margin:0 auto; border:1px solid #D5D5D5; padding:36px; border-radius:6px; box-shadow:0 4px 14px rgba(0,0,0,0.06); }
+        .hdr { display:flex; justify-content:space-between; align-items:center; border-bottom:3px double #7E1C3E; padding-bottom:14px; margin-bottom:18px; }
+        .hdr-title { font-size:16px; font-weight:800; color:#7E1C3E; text-transform:uppercase; }
+        .hdr-sub { font-size:11px; font-weight:700; color:#444; letter-spacing:.05em; text-transform:uppercase; margin-top:2px; }
+        .folio-box { font-family:'IBM Plex Mono',monospace; font-size:11px; background:#FAF8F5; border:1px solid #E2DDD5; padding:6px 12px; border-radius:4px; text-align:right; font-weight:700; color:#7E1C3E; }
+        .sec-title { font-size:11.5px; font-weight:800; color:#7E1C3E; text-transform:uppercase; letter-spacing:.05em; border-bottom:1.5px solid #F0ECE1; padding-bottom:4px; margin:14px 0 8px; }
+        .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px; }
+        .item-lbl { font-size:10px; font-weight:700; color:#666; text-transform:uppercase; }
+        .item-val { font-size:12px; color:#111; font-weight:600; margin-top:1px; }
+        .p-block { background:#FAF8F5; border:1px solid #ECE7DD; border-radius:6px; padding:10px 12px; font-size:12px; margin-top:4px; line-height:1.5; white-space:pre-wrap; }
+        .sigs { display:grid; grid-template-columns:1fr 1fr; gap:36px; margin-top:36px; padding-top:14px; text-align:center; }
+        .sig-line { border-top:1.5px solid #333; margin-top:36px; padding-top:6px; font-size:11.5px; font-weight:700; }
+        .stamp { font-size:10px; color:#7E1C3E; font-weight:700; letter-spacing:.1em; margin-top:4px; }
+        @media print {
+          body { padding:0; background:#FFF; }
+          .sheet { border:none; box-shadow:none; padding:20px; }
+          .no-print { display:none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="no-print" style="max-width:820px;margin:0 auto 16px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;font-weight:700;color:#7E1C3E;">Vista Oficial CONALEP Mérida 1</span>
+        <button onclick="window.print()" style="background:#7E1C3E;color:#FFF;border:none;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;">
+          🖨️ Imprimir / Guardar como PDF
+        </button>
+      </div>
+
+      <div class="sheet">
+        <div class="hdr">
+          <div>
+            <div class="hdr-title">Colegio de Educación Profesional Técnica del Estado de Yucatán</div>
+            <div class="hdr-sub">Plantel Mérida 1 · Departamento de Orientación Educativa & Tutorías</div>
+            <div style="font-size:10.5px;color:#777;margin-top:2px;">Sistema Integral de Psicología Escolar · NAIMA OS</div>
+          </div>
+          <div class="folio-box">
+            FOLIO OFICIAL<br>
+            <span style="font-size:13px;">${doc.folio || 'MER1-OFIC'}</span>
+          </div>
+        </div>
+
+        <div class="sec-title">1. Datos del Estudiante</div>
+        <div class="grid2">
+          <div><div class="item-lbl">Nombre del Alumno:</div><div class="item-val">${escapeHTML(doc.studentName || s.nombre || '—')}</div></div>
+          <div><div class="item-lbl">Matrícula Escolar:</div><div class="item-val">${escapeHTML(doc.matricula || s.matricula || doc.studentId)}</div></div>
+          <div><div class="item-lbl">Carrera Técnica:</div><div class="item-val">${escapeHTML(doc.carrera || s.carrera || 'Técnico')}</div></div>
+          <div><div class="item-lbl">Semestre / Grupo:</div><div class="item-val">${doc.semestre || s.semestre || '—'} · ${doc.grupo || s.grupo || '—'}</div></div>
+          <div><div class="item-lbl">Fecha de Emisión:</div><div class="item-val">${doc.fecha || 'Reciente'}</div></div>
+          <div><div class="item-lbl">Nivel de Riesgo Evaluado:</div><div class="item-val" style="color:#7E1C3E;">${PSICO_RISK_LABELS[doc.riesgo] || doc.riesgo || 'Bajo'}</div></div>
+        </div>
+
+        <div class="sec-title">2. Motivo de Evaluación</div>
+        <div class="p-block">${escapeHTML(doc.motivo || 'Evaluación psicopedagógica y seguimiento oportuno')}</div>
+
+        <div class="sec-title">3. Instrumentos Aplicados</div>
+        <div class="p-block">${escapeHTML(doc.instrumentos || 'Entrevista clínica y cuestionario PIOE')}</div>
+
+        <div class="sec-title">4. Evaluación de Áreas del Desarrollo</div>
+        <div class="grid2">
+          <div>
+            <div class="item-lbl">Área Personal y Emocional:</div>
+            <div class="p-block">${escapeHTML(doc.areaPersonal || 'Adecuada regulación afectiva y disposición al acompañamiento.')}</div>
+          </div>
+          <div>
+            <div class="item-lbl">Área Familiar y Contextual:</div>
+            <div class="p-block">${escapeHTML(doc.areaFamiliar || 'Red de apoyo familiar presente.')}</div>
+          </div>
+        </div>
+
+        <div class="sec-title">5. Impresión Diagnóstica</div>
+        <div class="p-block"><strong>Diagnóstico (CIE-11):</strong> ${escapeHTML(doc.diagnostico || 'En proceso de seguimiento')}</div>
+
+        <div class="sec-title">6. Recomendaciones y Plan de Acompañamiento</div>
+        <div class="p-block">${escapeHTML(doc.recomendaciones || 'Seguimiento psicopedagógico en el cubículo de orientación institucional.')}</div>
+
+        <div class="sigs">
+          <div>
+            <div class="sig-line">${escapeHTML(doc.orientador || 'Orientador Educativo')}</div>
+            <div>Orientador(a) Institucional</div>
+            <div style="font-size:10.5px;color:#777;">Cédula: ${escapeHTML(doc.cedula || 'En trámite')}</div>
+            <div class="stamp">✦ SELLO INSTITUCIONAL PIOE ✦</div>
+          </div>
+          <div>
+            <div class="sig-line">${escapeHTML(doc.studentName || s.nombre || 'Estudiante')}</div>
+            <div>Firma del Estudiante / Tutor Legal</div>
+            <div style="font-size:10.5px;color:#777;">Enterado y de Conformidad</div>
+            <div class="stamp">CONALEP MÉRIDA 1</div>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+

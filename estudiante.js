@@ -1639,88 +1639,469 @@ async function deleteStudentProfilePhoto(){
 }
 
 /* ============================================================
-   SECCIÓN: TAMIZAJE PSICOEMOCIONAL ESTUDIANTIL (PIOE)
+   SECCIÓN: TAMIZAJE PSICOEMOCIONAL ESTUDIANTIL (PIOE - 100% NATIVO)
    ============================================================ */
+
+let tamizajeQuizActive = false;
+let tamizajeCurrentStep = 1; // 1: PHQ-A, 2: GAD-7, 3: Hábitos y Recursos
+let tamizajeAnswers = {};
+
+const TAMIZAJE_OPTS = [
+  { val: 0, lbl: 'Para nada (0)' },
+  { val: 1, lbl: 'Varios días (1)' },
+  { val: 2, lbl: 'Más de la mitad (2)' },
+  { val: 3, lbl: 'Casi todos los días (3)' }
+];
+
+const PHQ_QUESTIONS = [
+  { id: 'phq1', text: '1. ¿Poco interés o placer en hacer cosas que antes disfrutabas?' },
+  { id: 'phq2', text: '2. ¿Sensación de estar decaído/a, triste, deprimido/a o sin esperanzas?' },
+  { id: 'phq3', text: '3. ¿Dificultad para conciliar el sueño, permanecer dormido/a, o dormir demasiado?' },
+  { id: 'phq4', text: '4. ¿Sensación de cansancio crónico, agotamiento o falta de energía?' },
+  { id: 'phq5', text: '5. ¿Poco apetito o tendencia a comer en exceso?' },
+  { id: 'phq6', text: '6. ¿Sentirte mal contigo mismo/a, sentir que has fracasado o decepcionado a tu familia?' },
+  { id: 'phq7', text: '7. ¿Dificultad para concentrarte en tus tareas escolares, clases o lecturas?' },
+  { id: 'phq8', text: '8. ¿Moverte o hablar tan lento que otros lo notan, o al revés, inquietud excesiva?' },
+  { id: 'phq9', text: '9. ¿Pensamientos de que estarías mejor muerto/a o deseos de hacerte daño?' }
+];
+
+const GAD_QUESTIONS = [
+  { id: 'gad1', text: '1. ¿Sentirte nervioso/a, intranquilo/a o con los nervios de punta?' },
+  { id: 'gad2', text: '2. ¿No poder parar o controlar las preocupaciones constantes?' },
+  { id: 'gad3', text: '3. ¿Preocuparte demasiado por diferentes cosas a la vez?' },
+  { id: 'gad4', text: '4. ¿Dificultad para relajarte o desconectarte de los pendientes?' },
+  { id: 'gad5', text: '5. ¿Estar tan inquieto/a que te resulta difícil quedarte quieto/a?' },
+  { id: 'gad6', text: '6. ¿Molestarte, irritarte o enojarte con mucha facilidad?' },
+  { id: 'gad7', text: '7. ¿Sentir miedo o temor repentino como si algo terrible fuera a pasar?' }
+];
+
+const HABIT_QUESTIONS = [
+  { id: 'hab1', text: '1. ¿Cuentas con al menos una persona de confianza en tu familia o amigos con quien hablar si tienes un problema?' },
+  { id: 'hab2', text: '2. ¿Duermes entre 6 y 8 horas diarias de forma reparadora?' },
+  { id: 'hab3', text: '3. ¿Sientes que puedes manejar la carga académica y las entregas de proyectos sin colapsar?' },
+  { id: 'hab4', text: '4. ¿Realizas actividades recreativas, físicas o artísticas fuera del horario escolar?' }
+];
+
 function renderStudentTamizaje(){
   const user = getCurrentUser();
-  const s = db.students[user.matricula || user.id] || user;
+  const matricula = user.matricula || user.id;
+  const s = db.students[matricula] || user;
   const t = s.tamizaje || null;
+
+  if(!t || tamizajeQuizActive){
+    return renderStudentTamizajeQuiz(s);
+  } else {
+    return renderStudentTamizajeDashboard(s, t);
+  }
+}
+
+function startTamizajeQuiz(){
+  tamizajeQuizActive = true;
+  tamizajeCurrentStep = 1;
+  tamizajeAnswers = {};
+  nav('student_tamizaje');
+}
+
+function renderStudentTamizajeQuiz(s){
+  let stepTitle = 'Dimensión 1: Estado de Ánimo & Afecto (PHQ-A)';
+  let stepDesc = 'Durante las últimas 2 semanas, ¿con qué frecuencia te han molestado los siguientes problemas?';
+  let questions = PHQ_QUESTIONS;
+
+  if(tamizajeCurrentStep === 2){
+    stepTitle = 'Dimensión 2: Ansiedad & Manejo del Estrés (GAD-7)';
+    stepDesc = 'Durante las últimas 2 semanas, ¿con qué frecuencia te has sentido afectado/a por estas situaciones?';
+    questions = GAD_QUESTIONS;
+  } else if(tamizajeCurrentStep === 3){
+    stepTitle = 'Dimensión 3: Hábitos Saludables & Factores Protectores';
+    stepDesc = 'Evalúa tu entorno cotidiano y los recursos con los que cuentas en CONALEP Mérida 1.';
+    questions = HABIT_QUESTIONS;
+  }
+
+  const totalSteps = 3;
+  const pct = Math.round((tamizajeCurrentStep / totalSteps) * 100);
 
   return `
     <div class="page-head">
       <div>
         <span class="eyebrow">PROGRAMA INSTITUCIONAL DE ORIENTACIÓN EDUCATIVA (PIOE)</span>
         <h1>Tamizaje Psicoemocional Estudiantil</h1>
-        <p>Cuestionario confidencial de tamizaje para la detección oportuna de necesidades de apoyo y fortalecimiento de tu bienestar en CONALEP Mérida 1.</p>
+        <p>Cuestionario confidencial de tamizaje escolar para acompañar tu bienestar integral en CONALEP Mérida 1.</p>
       </div>
-      <span class="demo-chip">CONALEP Mérida I</span>
+      <span class="demo-chip">Paso ${tamizajeCurrentStep} de ${totalSteps}</span>
     </div>
 
-    ${t ? `
-      <div class="tamizaje-student-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-          <div>
-            <span class="section-label" style="margin:0;">Última evaluación registrada</span>
-            <h3 style="font-size:18px;margin:2px 0 0 0;color:var(--ink);">Resultados de tu Evaluación PIOE</h3>
-          </div>
-          <span class="badge-tamizaje ${(t.resultados && t.resultados.riesgoGlobal) || 'bajo'}">
-            Estado Global: ${((t.resultados && t.resultados.riesgoGlobal) || 'bajo').toUpperCase()}
-          </span>
-        </div>
-
-        <p style="font-size:13px;color:var(--ink-soft);line-height:1.5;margin-bottom:16px;">
-          Evaluación realizada el <strong>${new Date(t.fecha).toLocaleDateString('es-MX', {day:'2-digit',month:'long',year:'numeric'})}</strong>. Tus indicadores han sido enviados confidencialmente a tu orientador(a) institucional.
-        </p>
-
-        <div class="tamizaje-kpi-grid">
-          <div class="tamizaje-kpi-box">
-            <div class="val">${(t.resultados && t.resultados.phq ? t.resultados.phq.nivel : 'Sin indicadores')}</div>
-            <div class="lbl">Estado de Ánimo (PHQ-A)</div>
-          </div>
-          <div class="tamizaje-kpi-box">
-            <div class="val">${(t.resultados && t.resultados.gad ? t.resultados.gad.nivel : 'Sin indicadores')}</div>
-            <div class="lbl">Ansiedad / Estrés (GAD-7)</div>
-          </div>
-          <div class="tamizaje-kpi-box">
-            <div class="val">${(t.resultados && t.resultados.assist ? t.resultados.assist.nivel : 'Sin riesgo')}</div>
-            <div class="lbl">Hábitos y Salud (ASSIST)</div>
-          </div>
-          <div class="tamizaje-kpi-box">
-            <div class="val">${(t.resultados && t.resultados.posit ? t.resultados.posit.nivel : 'Protegido')}</div>
-            <div class="lbl">Entorno Psicosocial</div>
-          </div>
-        </div>
-
-        <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
-          <a href="evaluacion-estudiantil.html" target="_blank" class="btn-maroon" style="padding:10px 18px;font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
-            📋 Ver Detalle Completo o Repetir Cuestionario ↗
-          </a>
-        </div>
+    <!-- Barra de Progreso -->
+    <div style="background:#FFF;border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin-bottom:20px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:700;color:var(--maroon);margin-bottom:6px;">
+        <span>${stepTitle}</span>
+        <span>${pct}% Completado</span>
       </div>
-    ` : `
-      <div class="banner" style="border-left-color:var(--maroon);margin-bottom:24px;">
-        <div class="b-icon">📋</div>
-        <div class="b-body">
-          <span class="b-tag">Bienestar y Salud Mental</span>
-          <div class="b-title">Tu bienestar es fundamental para tu éxito en CONALEP</div>
-          <div class="b-desc">Este cuestionario incluye escalas reconocidas internacionalmente (PHQ-A y GAD-7) para ayudarte a identificar cómo te sientes y darte recomendaciones inmediatas.</div>
-        </div>
-        <a href="evaluacion-estudiantil.html" target="_blank" class="btn-maroon" style="text-decoration:none;">Iniciar Cuestionario →</a>
+      <div style="height:8px;background:var(--sand);border-radius:10px;overflow:hidden;">
+        <div style="width:${pct}%;height:100%;background:var(--maroon);border-radius:10px;transition:width .3s ease;"></div>
       </div>
-    `}
-
-    <div class="section-head-row" style="margin:24px 0 14px;">
-      <div>
-        <span class="section-label">Cuestionario en Pantalla</span>
-        <h2 class="section-title" style="margin-bottom:0;">Evaluación Estudiantil Integrada</h2>
+      <div style="font-size:12px;color:var(--ink-soft);margin-top:8px;">
+        ${stepDesc}
       </div>
-      <a href="evaluacion-estudiantil.html" target="_blank" class="btn-outline-maroon" style="text-decoration:none;padding:6px 14px;font-size:12.5px;">
-        Abrir en Pantalla Completa ↗
-      </a>
     </div>
 
-    <div class="embed-iframe-container" style="height:760px;">
-      <iframe src="evaluacion-estudiantil.html" title="Evaluación Estudiantil CONALEP"></iframe>
+    <!-- Formulario de Preguntas -->
+    <div class="tamizaje-quiz-card">
+      ${questions.map((q, idx) => {
+        const currentVal = tamizajeAnswers[q.id];
+        return `
+          <div class="tamizaje-q-item">
+            <div class="tamizaje-q-title">${escapeHTML(q.text)}</div>
+            <div class="tamizaje-opts-row">
+              ${TAMIZAJE_OPTS.map(opt => `
+                <div class="tamizaje-opt-btn ${currentVal === opt.val ? 'active' : ''}"
+                     id="btnOpt_${q.id}_${opt.val}"
+                     onclick="selectTamizajeAnswer('${q.id}', ${opt.val})">
+                  ${opt.lbl}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('')}
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:24px;padding-top:16px;border-top:1px solid var(--line);flex-wrap:wrap;gap:12px;">
+        <div>
+          ${tamizajeCurrentStep > 1 ? `
+            <button type="button" class="btn-ghost" onclick="tamizajeGoStep(${tamizajeCurrentStep - 1})">
+              ← Anterior
+            </button>
+          ` : `
+            ${s.tamizaje ? `
+              <button type="button" class="btn-ghost" onclick="tamizajeQuizActive=false; nav('student_tamizaje');">
+                ✕ Cancelar y volver al informe
+              </button>
+            ` : ''}
+          `}
+        </div>
+
+        <div>
+          ${tamizajeCurrentStep < totalSteps ? `
+            <button type="button" class="btn-maroon" onclick="tamizajeNextStep(${tamizajeCurrentStep + 1})">
+              Siguiente Sección →
+            </button>
+          ` : `
+            <button type="button" class="btn-maroon" onclick="finishTamizajeQuiz()">
+              ✓ Finalizar y Generar Resultados
+            </button>
+          `}
+        </div>
+      </div>
     </div>
   `;
 }
+
+function selectTamizajeAnswer(qId, val){
+  tamizajeAnswers[qId] = val;
+  TAMIZAJE_OPTS.forEach(opt => {
+    const el = document.getElementById(`btnOpt_${qId}_${opt.val}`);
+    if(el) el.classList.toggle('active', opt.val === val);
+  });
+}
+
+function tamizajeGoStep(step){
+  tamizajeCurrentStep = step;
+  nav('student_tamizaje');
+  window.scrollTo(0, 0);
+}
+
+function tamizajeNextStep(nextStep){
+  const currentQs = tamizajeCurrentStep === 1 ? PHQ_QUESTIONS : (tamizajeCurrentStep === 2 ? GAD_QUESTIONS : HABIT_QUESTIONS);
+  const unanswered = currentQs.filter(q => tamizajeAnswers[q.id] === undefined);
+
+  if(unanswered.length > 0){
+    alert(`Por favor responde todas las preguntas antes de avanzar (${unanswered.length} pendiente${unanswered.length!==1?'s':''}).`);
+    return;
+  }
+
+  tamizajeCurrentStep = nextStep;
+  nav('student_tamizaje');
+  window.scrollTo(0, 0);
+}
+
+function finishTamizajeQuiz(){
+  const allQs = [...PHQ_QUESTIONS, ...GAD_QUESTIONS, ...HABIT_QUESTIONS];
+  const unanswered = allQs.filter(q => tamizajeAnswers[q.id] === undefined);
+
+  if(unanswered.length > 0){
+    alert(`Por favor responde todas las preguntas del cuestionario (${unanswered.length} pendiente${unanswered.length!==1?'s':''}).`);
+    return;
+  }
+
+  // 1. Puntaje PHQ-A (0-27)
+  let phqScore = 0;
+  PHQ_QUESTIONS.forEach(q => { phqScore += (tamizajeAnswers[q.id] || 0); });
+  let phqLevel = 'Mínimo';
+  if(phqScore >= 20) phqLevel = 'Grave';
+  else if(phqScore >= 15) phqLevel = 'Moderadamente grave';
+  else if(phqScore >= 10) phqLevel = 'Moderado';
+  else if(phqScore >= 5) phqLevel = 'Leve';
+
+  // 2. Puntaje GAD-7 (0-21)
+  let gadScore = 0;
+  GAD_QUESTIONS.forEach(q => { gadScore += (tamizajeAnswers[q.id] || 0); });
+  let gadLevel = 'Mínima';
+  if(gadScore >= 15) gadLevel = 'Severa';
+  else if(gadScore >= 10) gadLevel = 'Moderada';
+  else if(gadScore >= 5) gadLevel = 'Leve';
+
+  // 3. Puntaje Hábitos y Factores Protectores (0-12)
+  let habScore = 0;
+  HABIT_QUESTIONS.forEach(q => { habScore += (tamizajeAnswers[q.id] || 0); });
+  let habLevel = habScore >= 8 ? 'Alto' : (habScore >= 4 ? 'Moderado' : 'Bajo');
+
+  // 4. Riesgo Global
+  const selfHarmAlert = (tamizajeAnswers['phq9'] || 0) >= 1;
+  let globalRisk = 'none';
+
+  if(selfHarmAlert || phqScore >= 20 || gadScore >= 15){
+    globalRisk = 'crisis';
+  } else if(phqScore >= 15 || gadScore >= 10){
+    globalRisk = 'high';
+  } else if(phqScore >= 10 || gadScore >= 8){
+    globalRisk = 'mid';
+  } else if(phqScore >= 5 || gadScore >= 5){
+    globalRisk = 'low';
+  }
+
+  const user = getCurrentUser();
+  const matricula = user.matricula || user.id;
+  const s = db.students[matricula] || user;
+
+  const results = {
+    fecha: new Date().toISOString(),
+    respuestas: { ...tamizajeAnswers },
+    resultados: {
+      phq: { puntaje: phqScore, max: 27, nivel: phqLevel },
+      gad: { puntaje: gadScore, max: 21, nivel: gadLevel },
+      recursos: { puntaje: habScore, max: 12, nivel: habLevel },
+      alertaAutolesion: selfHarmAlert,
+      riesgoGlobal: globalRisk
+    }
+  };
+
+  s.tamizaje = results;
+  s.riesgo = globalRisk;
+  db.students[matricula] = s;
+
+  // Registrar alerta en orientador si es riesgo alto o crisis
+  if(globalRisk === 'high' || globalRisk === 'crisis'){
+    if(!db.alerts) db.alerts = [];
+    const newAlert = {
+      id: 'alt_tam_' + Date.now(),
+      studentId: matricula,
+      studentName: s.nombre,
+      tipo: globalRisk === 'crisis' ? 'Tamizaje: Urgente / Crisis' : 'Tamizaje: Riesgo Alto',
+      mensaje: `El estudiante ${s.nombre} completó el cuestionario PIOE con puntajes de atención prioritaria (PHQ-A: ${phqScore}/27, GAD-7: ${gadScore}/21${selfHarmAlert ? ', Indicador de alerta activa en reactivo 9' : ''}).`,
+      priority: globalRisk === 'crisis' ? 'alta' : 'media',
+      status: 'pendiente',
+      created_at: new Date().toISOString()
+    };
+    db.alerts.unshift(newAlert);
+  }
+
+  saveDB();
+  tamizajeQuizActive = false;
+  nav('student_tamizaje');
+  alert('✓ Evaluación procesada con éxito. Ya puedes consultar tu informe de bienestar.');
+}
+
+/* ============================================================
+   PANEL DE RESULTADOS NATIVO (CHART.JS)
+   ============================================================ */
+function renderStudentTamizajeDashboard(s, t){
+  const r = t.resultados || {};
+  const globalRisk = r.riesgoGlobal || 'none';
+  const phq = r.phq || { puntaje: 0, nivel: 'Mínimo' };
+  const gad = r.gad || { puntaje: 0, nivel: 'Mínima' };
+  const rec = r.recursos || { puntaje: 0, nivel: 'Moderado' };
+
+  const riskLabel = {
+    none: 'Sin riesgo / Bienestar estable',
+    low: 'Riesgo bajo / Preventivo',
+    mid: 'Riesgo moderado / Atención oportuna',
+    high: 'Riesgo alto / Seguimiento prioritario',
+    crisis: 'Alerta prioritaria / Acompañamiento inmediato'
+  }[globalRisk] || 'En evaluación';
+
+  setTimeout(() => mountTamizajeCharts(phq.puntaje, gad.puntaje, rec.puntaje), 150);
+
+  return `
+    <div class="page-head">
+      <div>
+        <span class="eyebrow">PROGRAMA INSTITUCIONAL DE ORIENTACIÓN EDUCATIVA (PIOE)</span>
+        <h1>Informe de Bienestar Psicoemocional</h1>
+        <p>Resultados individualizados conforme a las escalas validadas PHQ-A y GAD-7 de salud escolar.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-outline-maroon" onclick="printTamizajeView()" style="font-size:12px;padding:7px 14px;">
+          🖨 Imprimir Informe
+        </button>
+        <button class="btn-maroon" onclick="startTamizajeQuiz()" style="font-size:12px;padding:7px 14px;">
+          🔄 Repetir Evaluación
+        </button>
+      </div>
+    </div>
+
+    <!-- Banner de Estado Global -->
+    <div class="tamizaje-student-card" style="margin-bottom:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
+        <div>
+          <span class="section-label" style="margin:0;">ESTADO GENERAL DE LA EVALUACIÓN</span>
+          <h2 style="font-size:20px;margin:2px 0 0 0;color:var(--ink);">${riskLabel}</h2>
+        </div>
+        <span class="risk-badge-native ${globalRisk}" style="font-size:13px;padding:6px 14px;">
+          ${(globalRisk).toUpperCase()}
+        </span>
+      </div>
+
+      <p style="font-size:13px;color:var(--ink-soft);line-height:1.55;margin-bottom:16px;">
+        Evaluación realizada el <strong>${new Date(t.fecha).toLocaleDateString('es-MX', {day:'2-digit',month:'long',year:'numeric'})}</strong>. Tus indicadores quedan resguardados de forma confidencial en el Departamento de Orientación y Tutorías de CONALEP Mérida 1.
+      </p>
+
+      <div class="tamizaje-kpi-grid">
+        <div class="tamizaje-kpi-box">
+          <div class="val" style="color:var(--maroon);">${phq.puntaje} / 27</div>
+          <div class="lbl">Ánimo / Depresión (PHQ-A: ${phq.nivel})</div>
+        </div>
+        <div class="tamizaje-kpi-box">
+          <div class="val" style="color:#B47D0A;">${gad.puntaje} / 21</div>
+          <div class="lbl">Estrés / Ansiedad (GAD-7: ${gad.nivel})</div>
+        </div>
+        <div class="tamizaje-kpi-box">
+          <div class="val" style="color:var(--green);">${rec.puntaje} / 12</div>
+          <div class="lbl">Factores Protectores (${rec.nivel})</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gráficas Nativas Chart.js -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:20px;margin-bottom:24px;">
+      <div class="card">
+        <div class="card-hdr" style="margin-bottom:14px;">
+          <div class="card-ttl" style="font-size:14px;color:var(--ink);">
+            📊 Puntuación por Escala Clínica
+          </div>
+        </div>
+        <div style="position:relative;height:220px;">
+          <canvas id="tamizajeChartBar"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hdr" style="margin-bottom:14px;">
+          <div class="card-ttl" style="font-size:14px;color:var(--ink);">
+            🕸️ Radar de Vulnerabilidad y Protección
+          </div>
+        </div>
+        <div style="position:relative;height:220px;">
+          <canvas id="tamizajeChartRadar"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recomendaciones Personalizadas -->
+    <div class="card" style="border-left:4px solid var(--maroon);">
+      <div class="card-hdr" style="margin-bottom:12px;">
+        <div class="card-ttl" style="font-size:15px;color:var(--maroon);">
+          💡 Orientaciones y Recomendaciones Institucionales
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.6;color:var(--ink-soft);">
+        <div>
+          <strong style="color:var(--ink);">1. Acompañamiento en Cubículo de Orientación:</strong>
+          Si sientes que el estrés escolar, la carga de tareas o alguna situación personal te sobrepasa, puedes solicitar una cita directa con tu orientador(a) en cualquier momento desde tu portal.
+        </div>
+        <div>
+          <strong style="color:var(--ink);">2. Hábitos de Sueño y Recuperación:</strong>
+          Mantener horarios regulares para dormir ayuda a disminuir la fatiga mental y mejora notablemente la concentración durante tus módulos técnicos.
+        </div>
+        <div>
+          <strong style="color:var(--ink);">3. Red de Apoyo Escolar:</strong>
+          Recuerda que cuentas con docentes tutores y el equipo de tutorías en el Plantel Mérida 1 para apoyarte en cualquier ajuste académico que requieras.
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function mountTamizajeCharts(phq, gad, rec){
+  if(typeof Chart === 'undefined') return;
+
+  const barCtx = document.getElementById('tamizajeChartBar');
+  if(barCtx){
+    if(window._chartTamBar) window._chartTamBar.destroy();
+    window._chartTamBar = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: ['PHQ-A (Ánimo)', 'GAD-7 (Ansiedad)', 'Factores Protectores'],
+        datasets: [{
+          label: 'Tu Puntuación',
+          data: [phq, gad, rec],
+          backgroundColor: ['#7E1C3E', '#B47D0A', '#1E7E34'],
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true, max: 27, grid: { color: 'rgba(0,0,0,0.06)' } },
+          x: { grid: { display: false } }
+        },
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
+
+  const radarCtx = document.getElementById('tamizajeChartRadar');
+  if(radarCtx){
+    if(window._chartTamRadar) window._chartTamRadar.destroy();
+    window._chartTamRadar = new Chart(radarCtx, {
+      type: 'radar',
+      data: {
+        labels: ['Regulación Afectiva', 'Control de Ansiedad', 'Red de Apoyo', 'Sueño & Energía', 'Disposición Escolar'],
+        datasets: [{
+          label: 'Nivel Estimado',
+          data: [
+            Math.max(1, 10 - Math.round(phq / 3)),
+            Math.max(1, 10 - Math.round(gad / 2.5)),
+            Math.min(10, Math.round(rec * 2)),
+            Math.max(2, 10 - Math.round((phq + gad) / 5)),
+            8
+          ],
+          backgroundColor: 'rgba(126, 28, 62, 0.2)',
+          borderColor: '#7E1C3E',
+          pointBackgroundColor: '#7E1C3E'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          r: {
+            suggestedMin: 0,
+            suggestedMax: 10,
+            grid: { color: 'rgba(0,0,0,0.06)' },
+            angleLines: { color: 'rgba(0,0,0,0.06)' }
+          }
+        },
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
+}
+
+function printTamizajeView(){
+  window.print();
+}
+
