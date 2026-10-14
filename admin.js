@@ -771,13 +771,19 @@ function openStudentModal(matricula, activeTab = 'checkins'){
   if(activeTab === 'tareas') activeTabHTML = tasksTabContent;
   if(activeTab === 'documentos') activeTabHTML = docsTabContent;
 
+  const studentPhoto = (typeof getStudentPhoto === 'function') ? getStudentPhoto(s) : (s.photo || s.avatar?.photo || null);
+
   openModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     
     <!-- Encabezado del Alumno -->
     <div class="modal-head" style="align-items:flex-start;margin-bottom:14px;">
-      <div class="thumb" style="width:68px;height:88px;border-radius:14px;overflow:hidden;flex-shrink:0;">
-        ${buildAvatarSVG(s.avatar,'modal')}
+      <div class="thumb" style="width:72px;height:72px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg);border:2px solid var(--line);box-shadow:var(--shadow);">
+        ${studentPhoto ? `
+          <img src="${escapeHTML(studentPhoto)}" alt="Foto de ${escapeHTML(s.nombre)}" style="width:100%;height:100%;object-fit:cover;display:block;">
+        ` : `
+          ${buildAvatarSVG(s.avatar,'modal')}
+        `}
       </div>
       <div style="flex:1;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">

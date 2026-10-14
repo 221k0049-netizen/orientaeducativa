@@ -28,14 +28,19 @@ function renderStudentUserProfile(){
   if(!el) return;
   const user = getCurrentUser();
   const s = db.students[user.matricula || user.id] || user;
+  const studentPhoto = (typeof getStudentPhoto === 'function') ? getStudentPhoto(s) : (s.photo || s.avatar?.photo || null);
 
   el.innerHTML = `
-    <div class="up-avatar student-av">
-      ${initialOf(s.display || s.nombre)}
+    <div class="up-avatar student-av" onclick="openStudentPhotoModal()" style="cursor:pointer;" title="Haz clic para cambiar tu foto de perfil">
+      ${studentPhoto ? `
+        <img src="${escapeHTML(studentPhoto)}" class="up-avatar-img" alt="Foto de ${escapeHTML(s.nombre)}">
+      ` : `
+        ${initialOf(s.display || s.nombre)}
+      `}
     </div>
     <div class="up-details">
-      <span class="up-name" title="${s.nombre}">${s.display || s.nombre}</span>
-      <span class="up-role-tag student">🎓 ${s.matricula || 'Alumno'}</span>
+      <span class="up-name" title="${escapeHTML(s.nombre)}">${escapeHTML(s.display || s.nombre)}</span>
+      <span class="up-role-tag student">🎓 ${escapeHTML(s.matricula || 'Alumno')}</span>
     </div>
   `;
 
@@ -118,10 +123,22 @@ function renderStudentInicio(){
   const pct = tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0;
   const docs = getStudentDocuments(s.matricula);
 
+  const studentPhoto = (typeof getStudentPhoto === 'function') ? getStudentPhoto(s) : (s.photo || s.avatar?.photo || null);
+
   return `
   <div class="student-hero">
-    <div class="sh-avatar-wrap">
-      ${buildAvatarSVG(s.avatar || DEFAULT_AVATAR, 'sh')}
+    <div class="sh-avatar-wrap" onclick="openStudentPhotoModal()" title="Haz clic para subir o cambiar tu foto de perfil">
+      ${studentPhoto ? `
+        <img src="${escapeHTML(studentPhoto)}" alt="Foto de perfil de ${escapeHTML(s.nombre)}" class="sh-fb-photo">
+      ` : `
+        <div class="sh-fb-placeholder">
+          <span class="sh-fb-placeholder-icon">👤</span>
+          <span class="sh-fb-placeholder-initial">${initialOf(s.display || s.nombre)}</span>
+        </div>
+      `}
+      <div class="sh-fb-camera-badge" title="Cambiar foto de perfil">
+        <span>📷</span>
+      </div>
     </div>
     <div class="sh-body">
       <span class="sh-badge">✦ Espacio del Alumno · CONALEP</span>
@@ -1371,3 +1388,218 @@ window.addEventListener('naima:dbsynced', function(){
   renderStudentSidebar();
   nav(currentStudentSection);
 });
+
+/* ============================================================
+   GESTIÓN DE FOTO DE PERFIL ESTILO RED SOCIAL (FACEBOOK)
+   ============================================================ */
+let tempProfilePhotoDataUrl = null;
+
+function openStudentPhotoModal(){
+  tempProfilePhotoDataUrl = null;
+  const user = getCurrentUser();
+  const s = db.students[user.matricula || user.id] || user;
+  const currentPhoto = (typeof getStudentPhoto === 'function') ? getStudentPhoto(s) : (s.photo || s.avatar?.photo || null);
+
+  openModal(`
+    <div class="photo-modal-card">
+      <button class="close-x" onclick="closeModal()">✕</button>
+      
+      <div class="pm-header">
+        <div class="pm-icon-wrap">📷</div>
+        <div>
+          <h3 style="margin:0;font-size:18px;color:var(--ink);">Foto de Perfil del Alumno</h3>
+          <p style="margin:4px 0 0;font-size:13px;color:var(--ink-soft);line-height:1.45;">
+            Sube tu foto real tal como en Facebook para que tu orientador(a) te identifique fácilmente en tus reportes y expediente.
+          </p>
+        </div>
+      </div>
+
+      <div class="pm-preview-container">
+        <div class="pm-preview-circle" id="photoPreviewCircle">
+          ${currentPhoto ? `
+            <img src="${escapeHTML(currentPhoto)}" id="photoPreviewImg" alt="Foto de perfil actual">
+          ` : `
+            <div class="pm-placeholder-view" id="photoPlaceholderView">
+              <span style="font-size:48px;">👤</span>
+              <span style="font-size:12px;color:var(--ink-muted);margin-top:4px;">Sin foto seleccionada</span>
+            </div>
+          `}
+        </div>
+      </div>
+
+      <div class="pm-actions-bar">
+        <input type="file" id="studentPhotoFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display:none;" onchange="handleStudentPhotoFileChosen(event)">
+        
+        <button type="button" class="btn-maroon" onclick="document.getElementById('studentPhotoFileInput').click()" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+          <span>📁</span> Seleccionar foto de tu dispositivo
+        </button>
+
+        ${currentPhoto ? `
+          <button type="button" class="btn-ghost" style="color:var(--danger);display:inline-flex;align-items:center;gap:4px;cursor:pointer;" onclick="deleteStudentProfilePhoto()">
+            <span>🗑️</span> Quitar foto actual
+          </button>
+        ` : ''}
+      </div>
+
+      <div id="photoSaveSection" style="display:none;margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
+        <div style="font-size:12.5px;color:var(--green);font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px;justify-content:center;">
+          <span>✓</span> Vista previa lista. ¿Deseas guardar esta foto?
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button type="button" class="btn-ghost" onclick="cancelPhotoUpload()">Descartar</button>
+          <button type="button" class="btn-maroon" id="btnConfirmPhotoSave" onclick="saveStudentProfilePhoto()">
+            Guardar como foto de perfil →
+          </button>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+function handleStudentPhotoFileChosen(e){
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+
+  if(!file.type.startsWith('image/')){
+    alert('Por favor selecciona un archivo de imagen válido (JPG, PNG o WebP).');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    const img = new Image();
+    img.onload = function(){
+      // Redimensionar y centrar en un canvas cuadrado max 400x400 para optimizar almacenamiento
+      const targetSize = 400;
+      const canvas = document.createElement('canvas');
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+      const ctx = canvas.getContext('2d');
+
+      const minDim = Math.min(img.width, img.height);
+      const sx = (img.width - minDim) / 2;
+      const sy = (img.height - minDim) / 2;
+
+      ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, targetSize, targetSize);
+      tempProfilePhotoDataUrl = canvas.toDataURL('image/jpeg', 0.88);
+
+      // Actualizar vista previa en el modal
+      const circleEl = document.getElementById('photoPreviewCircle');
+      if(circleEl){
+        circleEl.innerHTML = `<img src="${tempProfilePhotoDataUrl}" alt="Nueva foto de perfil">`;
+      }
+      const saveSec = document.getElementById('photoSaveSection');
+      if(saveSec) saveSec.style.display = 'block';
+    };
+    img.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function cancelPhotoUpload(){
+  tempProfilePhotoDataUrl = null;
+  const user = getCurrentUser();
+  const s = db.students[user.matricula || user.id] || user;
+  const currentPhoto = (typeof getStudentPhoto === 'function') ? getStudentPhoto(s) : (s.photo || s.avatar?.photo || null);
+  const circleEl = document.getElementById('photoPreviewCircle');
+  if(circleEl){
+    if(currentPhoto){
+      circleEl.innerHTML = `<img src="${escapeHTML(currentPhoto)}" alt="Foto de perfil actual">`;
+    } else {
+      circleEl.innerHTML = `
+        <div class="pm-placeholder-view" id="photoPlaceholderView">
+          <span style="font-size:48px;">👤</span>
+          <span style="font-size:12px;color:var(--ink-muted);margin-top:4px;">Sin foto seleccionada</span>
+        </div>
+      `;
+    }
+  }
+  const saveSec = document.getElementById('photoSaveSection');
+  if(saveSec) saveSec.style.display = 'none';
+}
+
+async function saveStudentProfilePhoto(){
+  if(!tempProfilePhotoDataUrl) return;
+  const user = getCurrentUser();
+  const matricula = user.matricula || user.id;
+  const s = db.students[matricula] || user;
+
+  const saveBtn = document.getElementById('btnConfirmPhotoSave');
+  if(saveBtn){
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando foto...';
+  }
+
+  // 1. Guardar localmente
+  s.photo = tempProfilePhotoDataUrl;
+  if(!s.avatar) s.avatar = {};
+  s.avatar.photo = tempProfilePhotoDataUrl;
+
+  db.students[matricula] = s;
+  if(db.users[matricula]) db.users[matricula] = s;
+  saveDB();
+
+  // Actualizar sesión activa
+  if(typeof setSessionUser === 'function'){
+    setSessionUser(s);
+  }
+
+  // 2. Sincronizar a Supabase si está en vivo
+  if(isSupabaseLive()){
+    try{
+      const client = getActiveSupabaseClient();
+      if(client){
+        await client.from('students').update({
+          avatar_config: { ...(s.avatar || {}), photo: tempProfilePhotoDataUrl }
+        }).eq('matricula', matricula);
+        console.log('✅ Foto de perfil sincronizada con Supabase para matrícula:', matricula);
+      }
+    }catch(err){
+      console.warn('Aviso sincronizando foto con Supabase:', err);
+    }
+  }
+
+  closeModal();
+  renderStudentUserProfile();
+  if(currentStudentSection === 'student_inicio'){
+    nav('student_inicio');
+  }
+}
+
+async function deleteStudentProfilePhoto(){
+  if(!confirm('¿Estás seguro de que deseas eliminar tu foto de perfil actual?')) return;
+  const user = getCurrentUser();
+  const matricula = user.matricula || user.id;
+  const s = db.students[matricula] || user;
+
+  delete s.photo;
+  if(s.avatar) delete s.avatar.photo;
+
+  db.students[matricula] = s;
+  if(db.users[matricula]) db.users[matricula] = s;
+  saveDB();
+
+  if(typeof setSessionUser === 'function'){
+    setSessionUser(s);
+  }
+
+  if(isSupabaseLive()){
+    try{
+      const client = getActiveSupabaseClient();
+      if(client){
+        await client.from('students').update({
+          avatar_config: { ...(s.avatar || {}), photo: null }
+        }).eq('matricula', matricula);
+        console.log('✅ Foto eliminada en Supabase para matrícula:', matricula);
+      }
+    }catch(err){
+      console.warn('Aviso eliminando foto en Supabase:', err);
+    }
+  }
+
+  closeModal();
+  renderStudentUserProfile();
+  if(currentStudentSection === 'student_inicio'){
+    nav('student_inicio');
+  }
+}

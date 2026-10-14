@@ -709,8 +709,18 @@ function eireneGreeting(){
   return { text:'¡Buenas noches!', icon:'🌙' };
 }
 
-/* ---------- Generador de Avatar Vectorial (SVG) ---------- */
+/* ---------- Helper de Foto de Perfil del Alumno ---------- */
+function getStudentPhoto(s){
+  if(!s) return null;
+  return s.photo || s.avatar_url || (s.avatar && (s.avatar.photo || s.avatar.photoUrl || s.avatar.avatar_url)) || null;
+}
+
+/* ---------- Generador de Avatar Vectorial (SVG) / Foto de Perfil ---------- */
 function buildAvatarSVG(av, uid){
+  if(av && (av.photo || av.photoUrl || av.avatar_url)){
+    const photoUrl = av.photo || av.photoUrl || av.avatar_url;
+    return `<img src="${photoUrl}" alt="Foto de perfil" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;">`;
+  }
   uid = uid || 'p';
   av = av || DEFAULT_AVATAR;
   const s = av.skin || '#E8B48C';
@@ -1259,6 +1269,7 @@ async function pullSupabaseToLocal(){
         const existing = db.students[st.matricula];
         const existingHist = existing?.historial || [];
         const avatarCfg = st.avatar_config || DEFAULT_AVATAR;
+        const photo = avatarCfg?.photo || st.avatar_url || existing?.photo || null;
         const pwdHash = avatarCfg?._auth_hash || existing?.passwordHash || null;
         const pwd = existing?.password || null;
 
@@ -1275,7 +1286,8 @@ async function pullSupabaseToLocal(){
           guardianEmail: existing?.guardianEmail || st.guardian_email || null,
           prioridad: st.prioridad,
           segFecha: st.seg_fecha,
-          avatar: avatarCfg,
+          avatar: { ...avatarCfg, photo: photo },
+          photo: photo,
           password: pwd,
           passwordHash: pwdHash,
           historial: existingHist
