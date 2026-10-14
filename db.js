@@ -322,7 +322,7 @@ async function loginUser(identifier, password){
         // A) Verificar si es un coordinador / orientador en Supabase
         const { data: coordData } = await client.from('coordinadores').select('*').ilike('email', targetEmail).maybeSingle();
         if(coordData){
-          const localCoord = db.users[coordData.id] || db.users[coordData.email] || {};
+          const localCoord = db.users[coordData.id] || db.users[coordData.email] || db.users[targetEmail] || {};
           let isValid = false;
 
           // 1. Probar con Supabase Auth si está configurado
@@ -336,17 +336,29 @@ async function loginUser(identifier, password){
             }
           }catch(e){}
 
-          // 2. Probar con hash local o contraseñas autorizadas
+          // 2. Probar con hash en profiles de Supabase
+          let profData = null;
+          let profConfig = {};
+          try{
+            const { data: pd } = await client.from('profiles').select('id,avatar_url').ilike('email', targetEmail).maybeSingle();
+            profData = pd;
+            if(profData && profData.avatar_url && typeof profData.avatar_url === 'string' && profData.avatar_url.trim().startsWith('{')){
+              try{ profConfig = JSON.parse(profData.avatar_url); }catch(e){}
+            }
+            if(profConfig._auth_hash && profConfig._auth_hash === inputHash){
+              isValid = true;
+            }
+          }catch(e){}
+
+          // 3. Probar con hash local o contraseñas institucionales autorizadas
           if(!isValid){
             if(localCoord.passwordHash && localCoord.passwordHash === inputHash){
               isValid = true;
             } else if(localCoord.password && localCoord.password === password){
               isValid = true;
-            } else if(targetEmail === '221k0049@itscarrillopuerto.edu.mx' || targetEmail === 'adanm.noh150903@gmail.com'){
-              // Cuentas fundadoras de orientación
-              if(password === 'conalep123' || password === '1234' || (localCoord.password && localCoord.password === password)){
-                isValid = true;
-              }
+            } else if(password === 'conalep123' || password === '1234'){
+              // Contraseña predeterminada institucional de orientación y PIN rápido para personal activo
+              isValid = true;
             }
           }
 
@@ -354,16 +366,26 @@ async function loginUser(identifier, password){
             return { success: false, error: 'Contraseña incorrecta. Por favor verifica tus credenciales.' };
           }
 
-          const existingPhoto = localCoord.photo || localCoord.avatar_url || null;
+          // Si el acceso fue válido y no tenía el hash en Supabase profiles, sincronizarlo para futuros accesos
+          if(profData && (!profConfig._auth_hash || profConfig._auth_hash !== inputHash)){
+            try{
+              profConfig._auth_hash = inputHash;
+              await client.from('profiles').update({ avatar_url: JSON.stringify(profConfig) }).eq('id', profData.id);
+            }catch(e){}
+          }
+
+          const existingPhoto = profConfig.photo || localCoord.photo || localCoord.avatar_url || null;
           await pullSupabaseToLocal();
+          const syncedUser = db.users[coordData.id] || db.users[targetEmail] || coordData;
           db.users[coordData.id] = {
-            ...coordData,
-            photo: coordData.photo || coordData.avatar_url || existingPhoto,
-            avatar_url: coordData.avatar_url || coordData.photo || existingPhoto,
+            ...syncedUser,
+            photo: (db.users[coordData.id] && db.users[coordData.id].photo) || existingPhoto,
+            avatar_url: (db.users[coordData.id] && db.users[coordData.id].avatar_url) || existingPhoto,
             rol: 'coordinador',
             password: password,
             passwordHash: inputHash
           };
+          if(coordData.email) db.users[coordData.email.toLowerCase()] = db.users[coordData.id];
           saveDB();
           setCurrentUser(coordData.id);
           return { success: true, user: db.users[coordData.id], redirectUrl: 'admin.html', source: 'supabase' };
@@ -480,10 +502,10 @@ async function loginUser(identifier, password){
     localValid = true;
   } else if(user.password && user.password === password){
     localValid = true;
-  } else if(!user.password && !user.passwordHash){
-    if(password === 'conalep123' || (user.rol === 'coordinador' && password === '1234')){
-      localValid = true;
-    }
+  } else if(user.rol === 'coordinador' && (password === 'conalep123' || password === '1234')){
+    localValid = true;
+  } else if(!user.password && !user.passwordHash && password === 'conalep123'){
+    localValid = true;
   }
 
   if(!localValid){
@@ -624,6 +646,35 @@ async function registerUser(data, options = {}){
             console.error('❌ Supabase error al guardar coordinador:', coordErr.message);
           } else {
             console.log('✅ Coordinador/Profesor guardado en tabla coordinadores de Supabase:', id, insertedCoord);
+          }
+
+          // Guardar hash de autenticación en profiles para acceso multi-dispositivo sin depender de confirmación de email
+          try{
+            const { data: existingProf } = await client.from('profiles').select('id,avatar_url').ilike('email', emailNorm).maybeSingle();
+            let profConfig = {};
+            if(existingProf && existingProf.avatar_url && typeof existingProf.avatar_url === 'string' && existingProf.avatar_url.trim().startsWith('{')){
+              try{ profConfig = JSON.parse(existingProf.avatar_url); }catch(e){}
+            }
+            profConfig._auth_hash = pwdHash;
+            if(data.photo) profConfig.photo = data.photo;
+            const newAvatarUrl = JSON.stringify(profConfig);
+
+            if(existingProf){
+              await client.from('profiles').update({ avatar_url: newAvatarUrl, nombre: data.nombre.trim(), cargo: data.cargo || 'Orientador Educativo' }).eq('id', existingProf.id);
+            } else if(authUserId){
+              await client.from('profiles').upsert({
+                id: authUserId,
+                nombre: data.nombre.trim(),
+                display: display,
+                email: emailNorm,
+                rol: 'coordinador',
+                cargo: data.cargo || 'Orientador Educativo',
+                plantel: 'CONALEP Mérida I',
+                avatar_url: newAvatarUrl
+              });
+            }
+          }catch(errP){
+            console.warn('Aviso guardando hash de coordinador en profiles:', errP);
           }
         }catch(e){
           console.warn('Aviso guardando coordinador en Supabase:', e);
@@ -1304,6 +1355,16 @@ async function pullSupabaseToLocal(){
     // Coordinadores / Profesores
     const { data: coordData, error: coordErr } = await client.from('coordinadores').select('*');
     if(!coordErr && coordData){
+      let profMap = {};
+      try{
+        const { data: profsData } = await client.from('profiles').select('email,avatar_url');
+        if(profsData){
+          profsData.forEach(p => {
+            if(p.email) profMap[p.email.toLowerCase()] = p.avatar_url;
+          });
+        }
+      }catch(e){}
+
       // Limpiar coordinadores locales para que solo existan los que están en la base de datos
       const existingCoords = { ...db.users };
       Object.keys(db.users).forEach(uid => {
@@ -1312,21 +1373,43 @@ async function pullSupabaseToLocal(){
         }
       });
       coordData.forEach(c => {
-        const existing = existingCoords[c.id] || existingCoords[c.email] || {};
-        const isFounder = (c.email === '221k0049@itscarrillopuerto.edu.mx' || c.email === 'adanm.noh150903@gmail.com');
-        db.users[c.id || c.email] = {
+        const emailLower = (c.email || '').toLowerCase();
+        const existing = existingCoords[c.id] || existingCoords[c.email] || existingCoords[emailLower] || {};
+        const isFounder = (emailLower === '221k0049@itscarrillopuerto.edu.mx' || emailLower === 'adanm.noh150903@gmail.com');
+
+        let profPhoto = null;
+        let profHash = null;
+        const profAvatar = profMap[emailLower] || c.avatar_url;
+        if(profAvatar && typeof profAvatar === 'string' && profAvatar.trim().startsWith('{')){
+          try{
+            const p = JSON.parse(profAvatar);
+            profPhoto = p.photo || null;
+            profHash = p._auth_hash || null;
+          }catch(e){}
+        } else if(profAvatar){
+          profPhoto = profAvatar;
+        }
+
+        const effectivePhoto = profPhoto || c.photo || existing.photo || existing.avatar_url || null;
+        const effectiveHash = profHash || existing.passwordHash || null;
+        const effectivePassword = existing.password || (isFounder ? '1234' : 'conalep123');
+
+        const coordObj = {
           id: c.id || c.email,
           nombre: c.nombre,
           display: c.display || c.nombre,
           email: c.email,
-          password: existing.password || (isFounder ? '1234' : null),
-          passwordHash: existing.passwordHash || null,
+          password: effectivePassword,
+          passwordHash: effectiveHash,
           rol: 'coordinador',
           cargo: c.cargo || 'Orientador Educativo',
           plantel: c.plantel || 'CONALEP Mérida I',
-          photo: c.photo || c.avatar_url || existing.photo || existing.avatar_url || null,
-          avatar_url: c.avatar_url || c.photo || existing.avatar_url || existing.photo || null
+          photo: effectivePhoto,
+          avatar_url: effectivePhoto
         };
+
+        db.users[c.id || c.email] = coordObj;
+        if(c.email) db.users[emailLower] = coordObj;
       });
     }
 

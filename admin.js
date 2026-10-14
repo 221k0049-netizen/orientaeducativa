@@ -31,7 +31,11 @@ function renderAdminUserProfile(){
   const el = document.getElementById('userProfileBlock');
   if(!el) return;
   const user = getCurrentUser() || {};
-  const photo = user.photo || user.avatar_url || (db.users[user.id] && (db.users[user.id].photo || db.users[user.id].avatar_url)) || (db.users[user.email] && (db.users[user.email].photo || db.users[user.email].avatar_url)) || null;
+  let rawPhoto = user.photo || user.avatar_url || (db.users[user.id] && (db.users[user.id].photo || db.users[user.id].avatar_url)) || (db.users[user.email] && (db.users[user.email].photo || db.users[user.email].avatar_url)) || null;
+  if(rawPhoto && typeof rawPhoto === 'string' && rawPhoto.trim().startsWith('{')){
+    try{ rawPhoto = JSON.parse(rawPhoto).photo || null; }catch(e){}
+  }
+  const photo = rawPhoto;
 
   el.innerHTML = `
     <div class="up-avatar-wrap" onclick="openAdminPhotoModal()" title="Haz clic para subir o cambiar tu foto de perfil">
@@ -1977,13 +1981,17 @@ function renderEquipoCoordinadores(){
 
   const rows = coords.map(c => {
     const isMe = (c.id === currentUser.id || c.email === currentUser.email);
+    let cPhoto = c.photo || c.avatar_url;
+    if(cPhoto && typeof cPhoto === 'string' && cPhoto.trim().startsWith('{')){
+      try{ cPhoto = JSON.parse(cPhoto).photo || null; }catch(e){}
+    }
     return `
       <tr>
         <td>
           <div style="display:flex;align-items:center;gap:12px;">
             <div class="up-avatar" style="width:38px;height:38px;font-size:14px;background:var(--maroon);color:#FFF;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;overflow:hidden;flex-shrink:0;">
-              ${(c.photo || c.avatar_url) ? `
-                <img src="${escapeHTML(c.photo || c.avatar_url)}" class="up-avatar-img" alt="Foto de ${escapeHTML(c.nombre)}">
+              ${cPhoto ? `
+                <img src="${escapeHTML(cPhoto)}" class="up-avatar-img" alt="Foto de ${escapeHTML(c.nombre)}">
               ` : `
                 ${initialOf(c.display || c.nombre)}
               `}
@@ -2443,7 +2451,11 @@ let tempAdminPhotoDataUrl = null;
 function openAdminPhotoModal(){
   tempAdminPhotoDataUrl = null;
   const user = getCurrentUser() || {};
-  const currentPhoto = user.photo || user.avatar_url || (db.users[user.id] && (db.users[user.id].photo || db.users[user.id].avatar_url)) || (db.users[user.email] && (db.users[user.email].photo || db.users[user.email].avatar_url)) || null;
+  let rawCurrentPhoto = user.photo || user.avatar_url || (db.users[user.id] && (db.users[user.id].photo || db.users[user.id].avatar_url)) || (db.users[user.email] && (db.users[user.email].photo || db.users[user.email].avatar_url)) || null;
+  if(rawCurrentPhoto && typeof rawCurrentPhoto === 'string' && rawCurrentPhoto.trim().startsWith('{')){
+    try{ rawCurrentPhoto = JSON.parse(rawCurrentPhoto).photo || null; }catch(e){}
+  }
+  const currentPhoto = rawCurrentPhoto;
 
   openModal(`
     <div class="photo-modal-card">
@@ -2604,12 +2616,18 @@ async function saveAdminProfilePhoto(){
           console.warn('Aviso actualizando avatar_url en coordinadores:', errC);
         }
 
-        // Intentar actualizar también en profiles si existe
+        // Intentar actualizar también en profiles si existe (preservando _auth_hash)
         if(user.email){
           try {
-            await client.from('profiles').update({
-              avatar_url: tempAdminPhotoDataUrl
-            }).eq('email', user.email);
+            const { data: profData } = await client.from('profiles').select('id,avatar_url').ilike('email', user.email).maybeSingle();
+            let profConfig = {};
+            if(profData && profData.avatar_url && typeof profData.avatar_url === 'string' && profData.avatar_url.trim().startsWith('{')){
+              try{ profConfig = JSON.parse(profData.avatar_url); }catch(e){}
+            }
+            profConfig.photo = tempAdminPhotoDataUrl;
+            if(profData){
+              await client.from('profiles').update({ avatar_url: JSON.stringify(profConfig) }).eq('id', profData.id);
+            }
           } catch(errP){}
         }
         console.log('✅ Foto de orientador sincronizada con Supabase');
@@ -2657,7 +2675,15 @@ async function deleteAdminProfilePhoto(){
         }catch(e){}
         if(user.email){
           try{
-            await client.from('profiles').update({ avatar_url: null }).eq('email', user.email);
+            const { data: profData } = await client.from('profiles').select('id,avatar_url').ilike('email', user.email).maybeSingle();
+            let profConfig = {};
+            if(profData && profData.avatar_url && typeof profData.avatar_url === 'string' && profData.avatar_url.trim().startsWith('{')){
+              try{ profConfig = JSON.parse(profData.avatar_url); }catch(e){}
+            }
+            profConfig.photo = null;
+            if(profData){
+              await client.from('profiles').update({ avatar_url: JSON.stringify(profConfig) }).eq('id', profData.id);
+            }
           }catch(e){}
         }
         console.log('✅ Foto de orientador eliminada en Supabase');
