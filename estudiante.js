@@ -2148,38 +2148,149 @@ function printTamizajeView(){
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
       <style>
-        @page { size: letter portrait; margin: 6mm 10mm; }
+        @page {
+          size: letter portrait;
+          margin: 10mm 15mm 10mm 15mm;
+        }
         * { margin:0; padding:0; box-sizing:border-box; }
-        html, body { font-family:'Inter',sans-serif; color:#1A1A1A; background:#FFF; padding:12px; font-size:11px; line-height:1.38; }
-        .sheet { max-width:800px; margin:0 auto; border:1px solid #D5D5D5; padding:16px 22px; border-radius:4px; box-shadow:none; }
-        .hdr { display:flex; justify-content:space-between; align-items:center; border-bottom:2px double #7E1C3E; padding-bottom:8px; margin-bottom:10px; }
-        .hdr-title { font-size:13.5px; font-weight:800; color:#7E1C3E; text-transform:uppercase; font-family:'Space Grotesk',sans-serif; line-height:1.15; }
-        .hdr-sub { font-size:10px; font-weight:700; color:#444; letter-spacing:.04em; text-transform:uppercase; margin-top:2px; }
-        .folio-box { font-family:'IBM Plex Mono',monospace; font-size:10px; background:#FAF8F5; border:1px solid #E2DDD5; padding:4px 10px; border-radius:4px; text-align:right; font-weight:700; color:#7E1C3E; flex-shrink:0; }
-        .sec-title { font-size:10.5px; font-weight:800; color:#7E1C3E; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid #EBE5D8; padding-bottom:2px; margin:7px 0 4px; font-family:'Space Grotesk',sans-serif; }
-        .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:4px 12px; font-size:11px; }
-        .item-lbl { font-size:9.5px; font-weight:700; color:#666; text-transform:uppercase; }
-        .item-val { font-size:11.5px; color:#111; font-weight:600; margin-top:1px; }
-        .kpi-row { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin:6px 0; }
-        .kpi-box { background:#FAF8F5; border:1px solid #E2DDD5; border-radius:4px; padding:6px 8px; text-align:center; }
-        .kpi-val { font-size:16px; font-weight:800; color:#7E1C3E; font-family:'Space Grotesk',sans-serif; line-height:1.1; }
-        .kpi-lbl { font-size:9.5px; color:#555; font-weight:600; margin-top:1px; }
-        .risk-banner { border:1px solid #E2DDD5; border-radius:4px; padding:6px 12px; margin:6px 0; display:flex; justify-content:space-between; align-items:center; background:#FAF8F5; }
-        .risk-badge { font-weight:800; padding:2px 10px; border-radius:100px; font-size:10px; text-transform:uppercase; color:#FFF; }
-        .p-block { background:#FAF8F5; border:1px solid #ECE7DD; border-radius:4px; padding:6px 10px; font-size:10.5px; margin-top:2px; line-height:1.4; }
-        .sigs { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:16px; padding-top:4px; text-align:center; }
-        .sig-line { border-top:1.5px solid #333; margin-top:22px; padding-top:3px; font-size:10.5px; font-weight:700; }
+        html, body {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          color: #1A1A1A;
+          background: #FFF;
+          font-size: 11.5px;
+          line-height: 1.48;
+          height: 100%;
+        }
+        .sheet {
+          max-width: 820px;
+          margin: 0 auto;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          height: 100%;
+          min-height: 258mm;
+          padding: 20px 24px;
+        }
+        .hdr {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 2.5px double #7E1C3E;
+          padding-bottom: 11px;
+        }
+        .hdr-title { font-size: 14.5px; font-weight: 800; color: #7E1C3E; text-transform: uppercase; font-family:'Space Grotesk',sans-serif; letter-spacing: -0.01em; }
+        .hdr-sub { font-size: 10.5px; font-weight: 700; color: #333; margin-top: 2px; }
+        .hdr-inst { font-size: 9.5px; color: #666; margin-top: 2px; }
+        .folio-box { font-family: 'IBM Plex Mono',monospace; font-size: 10.5px; background: #FAF8F5; border: 1px solid #E2DDD5; padding: 6px 12px; border-radius: 4px; text-align: right; font-weight: 700; color: #7E1C3E; flex-shrink: 0; }
+        
+        .sec-title {
+          font-size: 11px;
+          font-weight: 800;
+          color: #7E1C3E;
+          text-transform: uppercase;
+          letter-spacing: .03em;
+          border-bottom: 1.5px solid #F0ECE1;
+          padding-bottom: 3px;
+          margin-bottom: 6px;
+          font-family:'Space Grotesk',sans-serif;
+        }
+        .grid2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 6px 20px;
+          font-size: 11.5px;
+          background: #FAFAFA;
+          border: 1px solid #ECE7DD;
+          border-radius: 4px;
+          padding: 9px 14px;
+        }
+        .item-lbl { font-size: 9.5px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: .02em; }
+        .item-val { font-size: 12px; color: #111; font-weight: 600; margin-top: 1px; }
+
+        .risk-banner {
+          border: 1.5px solid #E2DDD5;
+          border-radius: 4px;
+          padding: 10px 14px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: #FAF8F5;
+        }
+        .risk-badge { font-weight: 800; padding: 4px 14px; border-radius: 100px; font-size: 11px; text-transform: uppercase; color: #FFF; letter-spacing: .04em; }
+
+        .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .kpi-box { background: #FAF8F5; border: 1px solid #E2DDD5; border-radius: 4px; padding: 11px 10px; text-align: center; }
+        .kpi-val { font-size: 20px; font-weight: 800; color: #7E1C3E; font-family:'Space Grotesk',sans-serif; line-height: 1.1; }
+        .kpi-lbl { font-size: 10px; color: #555; font-weight: 600; margin-top: 3px; }
+        .kpi-badge { font-size: 10.5px; font-weight: 700; margin-top: 3px; }
+
+        .p-block {
+          background: #FAF8F5;
+          border: 1px solid #ECE7DD;
+          border-radius: 4px;
+          padding: 10px 14px;
+          font-size: 11px;
+          line-height: 1.55;
+        }
+
+        .sigs {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 20px;
+          text-align: center;
+        }
+        .sig-line {
+          border-top: 1.5px solid #222;
+          margin-top: 38px;
+          padding-top: 4px;
+          font-size: 11px;
+          font-weight: 700;
+        }
+        .sig-role { font-size: 10px; color: #444; margin-top: 2px; }
+        .sig-sub { font-size: 9px; color: #777; margin-top: 2px; }
+
+        .doc-footer {
+          border-top: 1px dashed #DDD;
+          padding-top: 7px;
+          display: flex;
+          justify-content: space-between;
+          font-size: 8.5px;
+          color: #888;
+        }
+
         @media print {
-          html, body { padding:0 !important; margin:0 !important; background:#FFF !important; }
-          .sheet { border:none !important; box-shadow:none !important; padding:4px 8px !important; margin:0 !important; width:100% !important; max-width:100% !important; }
-          .no-print { display:none !important; }
+          html, body {
+            height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #FFF !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .sheet {
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 100% !important;
+            min-height: 258mm !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .no-print { display: none !important; }
         }
       </style>
     </head>
     <body>
-      <div class="no-print" style="max-width:800px;margin:0 auto 10px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:12.5px;font-weight:700;color:#7E1C3E;">Vista Oficial CONALEP Mérida 1 — PIOE</span>
-        <button onclick="window.print()" style="background:#7E1C3E;color:#FFF;border:none;padding:7px 18px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;">
+      <div class="no-print" style="max-width:820px;margin:0 auto 12px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;font-weight:700;color:#7E1C3E;">Vista Oficial CONALEP Mérida 1 — PIOE (Formato Carta)</span>
+        <button onclick="window.print()" style="background:#7E1C3E;color:#FFF;border:none;padding:8px 18px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;">
           🖨️ Imprimir / Guardar como PDF
         </button>
       </div>
@@ -2189,80 +2300,95 @@ function printTamizajeView(){
           <div>
             <div class="hdr-title">Colegio de Educación Profesional Técnica del Estado de Yucatán</div>
             <div class="hdr-sub">Plantel Mérida 1 · Departamento de Orientación Educativa & Tutorías</div>
-            <div style="font-size:9.5px;color:#777;margin-top:1px;">Programa Institucional de Orientación Educativa (PIOE) · NAIMA OS</div>
+            <div class="hdr-inst">Programa Institucional de Orientación Educativa (PIOE) · NAIMA OS</div>
           </div>
           <div class="folio-box">
             FOLIO REGISTRO<br>
-            <span style="font-size:11px;">${folio}</span>
+            <span style="font-size:12px;">${folio}</span>
           </div>
         </div>
 
-        <div class="sec-title">1. Datos del Estudiante</div>
-        <div class="grid2">
-          <div><div class="item-lbl">Nombre del Alumno:</div><div class="item-val">${escapeHTML(s.nombre || user.nombre || '—')}</div></div>
-          <div><div class="item-lbl">Matrícula Escolar:</div><div class="item-val">${matricula}</div></div>
-          <div><div class="item-lbl">Carrera Técnica:</div><div class="item-val">${escapeHTML(s.carrera || 'Técnico')}</div></div>
-          <div><div class="item-lbl">Semestre / Grupo:</div><div class="item-val">${s.semestre || '—'} · ${s.grupo || '—'}</div></div>
-          <div><div class="item-lbl">Fecha de Evaluación:</div><div class="item-val">${dateStr}</div></div>
-          <div><div class="item-lbl">Orientador(a) Institucional:</div><div class="item-val">${escapeHTML(s.guardian || 'Departamento de Orientación y Tutorías')}</div></div>
-        </div>
-
-        <div class="sec-title">2. Estado Global de la Evaluación</div>
-        <div class="risk-banner">
-          <div>
-            <div style="font-size:12px;font-weight:700;color:#111;">${riskLabel}</div>
-            <div style="font-size:10px;color:#666;">Basado en las escalas psicométricas estandarizadas PHQ-A y GAD-7.</div>
-          </div>
-          <div class="risk-badge" style="background:${riskColor};">${globalRisk.toUpperCase()}</div>
-        </div>
-
-        <div class="sec-title">3. Puntuaciones Obtenidas por Dimensión Clínica</div>
-        <div class="kpi-row">
-          <div class="kpi-box">
-            <div class="kpi-val">${phq.puntaje} / 27</div>
-            <div class="kpi-lbl">Ánimo / Depresión (PHQ-A)</div>
-            <div style="font-size:10px;font-weight:700;color:#7E1C3E;">Nivel: ${phq.nivel}</div>
-          </div>
-          <div class="kpi-box">
-            <div class="kpi-val">${gad.puntaje} / 21</div>
-            <div class="kpi-lbl">Ansiedad / Estrés (GAD-7)</div>
-            <div style="font-size:10px;font-weight:700;color:#B47D0A;">Nivel: ${gad.nivel}</div>
-          </div>
-          <div class="kpi-box">
-            <div class="kpi-val">${rec.puntaje} / 12</div>
-            <div class="kpi-lbl">Factores Protectores</div>
-            <div style="font-size:10px;font-weight:700;color:#1E7E34;">Nivel: ${rec.nivel}</div>
+        <div>
+          <div class="sec-title">1. Datos del Estudiante</div>
+          <div class="grid2">
+            <div><div class="item-lbl">Nombre del Alumno:</div><div class="item-val">${escapeHTML(s.nombre || user.nombre || '—')}</div></div>
+            <div><div class="item-lbl">Matrícula Escolar:</div><div class="item-val">${matricula}</div></div>
+            <div><div class="item-lbl">Carrera Técnica:</div><div class="item-val">${escapeHTML(s.carrera || 'Técnico')}</div></div>
+            <div><div class="item-lbl">Semestre / Grupo:</div><div class="item-val">${s.semestre || '—'} · ${s.grupo || '—'}</div></div>
+            <div><div class="item-lbl">Fecha de Evaluación:</div><div class="item-val">${dateStr}</div></div>
+            <div><div class="item-lbl">Orientador(a) Institucional:</div><div class="item-val">${escapeHTML(s.guardian || 'Departamento de Orientación y Tutorías')}</div></div>
           </div>
         </div>
 
-        <div class="sec-title">4. Interpretación Psicopedagógica</div>
-        <div class="p-block">
-          El presente instrumento de tamizaje socioemocional tiene fines preventivos y de detección temprana en el marco del Modelo Académico CONALEP. Los indicadores reflejan la percepción subjetiva del estudiante durante las últimas dos semanas lectivas.
+        <div>
+          <div class="sec-title">2. Estado Global de la Evaluación</div>
+          <div class="risk-banner">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#111;">${riskLabel}</div>
+              <div style="font-size:11px;color:#666;margin-top:2px;">Basado en las escalas psicométricas estandarizadas PHQ-A y GAD-7.</div>
+            </div>
+            <div class="risk-badge" style="background:${riskColor};">${globalRisk.toUpperCase()}</div>
+          </div>
         </div>
 
-        <div class="sec-title">5. Recomendaciones de Acompañamiento y Autocuidado</div>
-        <div class="p-block">
-          • <strong>Orientación Escolar:</strong> El estudiante cuenta con el cubículo de orientación y tutorías para programar sesiones de seguimiento psicopedagógico en cualquier momento.<br>
-          • <strong>Regulación de Hábitos:</strong> Mantener una higiene de sueño adecuada (6 a 8 horas) y balancear el estudio con actividades recreativas.<br>
-          • <strong>Corresponsabilidad:</strong> La institución y la familia colaboran de forma confidencial para garantizar un entorno favorable al desarrollo académico.
+        <div>
+          <div class="sec-title">3. Puntuaciones Obtenidas por Dimensión Clínica</div>
+          <div class="kpi-row">
+            <div class="kpi-box">
+              <div class="kpi-val">${phq.puntaje} / 27</div>
+              <div class="kpi-lbl">Ánimo / Depresión (PHQ-A)</div>
+              <div class="kpi-badge" style="color:#7E1C3E;">Nivel: ${phq.nivel}</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-val">${gad.puntaje} / 21</div>
+              <div class="kpi-lbl">Ansiedad / Estrés (GAD-7)</div>
+              <div class="kpi-badge" style="color:#B47D0A;">Nivel: ${gad.nivel}</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-val">${rec.puntaje} / 12</div>
+              <div class="kpi-lbl">Factores Protectores</div>
+              <div class="kpi-badge" style="color:#1E7E34;">Nivel: ${rec.nivel}</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="sec-title">4. Interpretación Psicopedagógica</div>
+          <div class="p-block">
+            El presente instrumento de tamizaje socioemocional tiene fines preventivos y de detección temprana en el marco del Modelo Académico CONALEP. Los indicadores reflejan la percepción subjetiva del estudiante durante las últimas dos semanas lectivas evaluadas.
+          </div>
+        </div>
+
+        <div>
+          <div class="sec-title">5. Recomendaciones de Acompañamiento y Autocuidado</div>
+          <div class="p-block">
+            • <strong>Orientación Escolar:</strong> El estudiante cuenta con el cubículo de orientación y tutorías para programar sesiones de seguimiento psicopedagógico en cualquier momento.<br>
+            • <strong>Regulación de Hábitos:</strong> Mantener una higiene de sueño adecuada (6 a 8 horas) y balancear las horas dedicadas a proyectos técnicos con actividades de esparcimiento.<br>
+            • <strong>Corresponsabilidad:</strong> La institución y la familia colaboran de forma confidencial para garantizar un entorno seguro y favorable al desarrollo académico.
+          </div>
         </div>
 
         <div class="sigs">
           <div>
             <div class="sig-line">${escapeHTML(s.nombre || user.nombre || 'Estudiante')}</div>
-            <div>Firma del Estudiante</div>
-            <div style="font-size:9px;color:#777;">Matrícula: ${matricula}</div>
+            <div class="sig-role">Firma del Estudiante</div>
+            <div class="sig-sub">Matrícula: ${matricula}</div>
           </div>
           <div>
             <div class="sig-line">${escapeHTML(s.guardian || 'Orientador(a) Institucional')}</div>
-            <div>Orientador(a) Institucional</div>
-            <div style="font-size:9px;color:#777;">Sello Oficial PIOE Mérida 1</div>
+            <div class="sig-role">Orientador(a) Institucional</div>
+            <div class="sig-sub">Sello Oficial PIOE Mérida 1</div>
           </div>
           <div>
             <div class="sig-line">Padre, Madre o Tutor Legal</div>
-            <div>Firma de Enterado</div>
-            <div style="font-size:9px;color:#777;">Plantel Mérida 1</div>
+            <div class="sig-role">Firma de Enterado</div>
+            <div class="sig-sub">Plantel Mérida 1</div>
           </div>
+        </div>
+
+        <div class="doc-footer">
+          <span>Sistema Integral de Orientación Educativa y Tutorías (PIOE) · Plantel Mérida 1</span>
+          <span>Documento institucional oficial · Registro confidencial</span>
         </div>
       </div>
     </body>

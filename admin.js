@@ -4451,34 +4451,135 @@ function printOfficialReportView(docId){
       <title>Reporte Oficial — ${doc.folio || 'CONALEP'}</title>
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
       <style>
-        @page { size: letter portrait; margin: 6mm 10mm; }
+        @page {
+          size: letter portrait;
+          margin: 10mm 15mm 10mm 15mm;
+        }
         * { margin:0; padding:0; box-sizing:border-box; }
-        html, body { font-family:'Inter',sans-serif; color:#1A1A1A; background:#FFF; padding:12px; font-size:11px; line-height:1.38; }
-        .sheet { max-width:800px; margin:0 auto; border:1px solid #D5D5D5; padding:16px 22px; border-radius:4px; box-shadow:none; }
-        .hdr { display:flex; justify-content:space-between; align-items:center; border-bottom:2px double #7E1C3E; padding-bottom:8px; margin-bottom:10px; }
-        .hdr-title { font-size:13.5px; font-weight:800; color:#7E1C3E; text-transform:uppercase; font-family:'Space Grotesk',sans-serif; line-height:1.15; }
-        .hdr-sub { font-size:10px; font-weight:700; color:#444; letter-spacing:.04em; text-transform:uppercase; margin-top:2px; }
-        .folio-box { font-family:'IBM Plex Mono',monospace; font-size:10px; background:#FAF8F5; border:1px solid #E2DDD5; padding:4px 10px; border-radius:4px; text-align:right; font-weight:700; color:#7E1C3E; flex-shrink:0; }
-        .sec-title { font-size:10.5px; font-weight:800; color:#7E1C3E; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid #EBE5D8; padding-bottom:2px; margin:7px 0 4px; font-family:'Space Grotesk',sans-serif; }
-        .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:4px 12px; font-size:11px; }
-        .item-lbl { font-size:9.5px; font-weight:700; color:#666; text-transform:uppercase; }
-        .item-val { font-size:11.5px; color:#111; font-weight:600; margin-top:1px; }
-        .p-block { background:#FAF8F5; border:1px solid #ECE7DD; border-radius:4px; padding:6px 10px; font-size:10.5px; margin-top:2px; line-height:1.4; white-space:pre-wrap; }
-        .sigs { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:16px; padding-top:4px; text-align:center; }
-        .sig-line { border-top:1.5px solid #333; margin-top:22px; padding-top:3px; font-size:10.5px; font-weight:700; }
+        html, body {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          color: #1A1A1A;
+          background: #FFF;
+          font-size: 11.5px;
+          line-height: 1.45;
+          height: 100%;
+        }
+        .sheet {
+          max-width: 820px;
+          margin: 0 auto;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          height: 100%;
+          min-height: 258mm;
+          padding: 20px 24px;
+        }
+        .hdr {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 2.5px double #7E1C3E;
+          padding-bottom: 10px;
+        }
+        .hdr-title { font-size: 14.5px; font-weight: 800; color: #7E1C3E; text-transform: uppercase; font-family:'Space Grotesk',sans-serif; }
+        .hdr-sub { font-size: 10.5px; font-weight: 700; color: #333; margin-top: 2px; }
+        .hdr-inst { font-size: 9.5px; color: #666; margin-top: 2px; }
+        .folio-box { font-family: 'IBM Plex Mono',monospace; font-size: 10.5px; background: #FAF8F5; border: 1px solid #E2DDD5; padding: 6px 12px; border-radius: 4px; text-align: right; font-weight: 700; color: #7E1C3E; flex-shrink: 0; }
+        
+        .sec-title {
+          font-size: 11px;
+          font-weight: 800;
+          color: #7E1C3E;
+          text-transform: uppercase;
+          letter-spacing: .03em;
+          border-bottom: 1.5px solid #F0ECE1;
+          padding-bottom: 3px;
+          margin-bottom: 5px;
+          font-family:'Space Grotesk',sans-serif;
+        }
+        .grid2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 6px 20px;
+          font-size: 11.5px;
+          background: #FAFAFA;
+          border: 1px solid #ECE7DD;
+          border-radius: 4px;
+          padding: 8px 14px;
+        }
+        .item-lbl { font-size: 9.5px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: .02em; }
+        .item-val { font-size: 12px; color: #111; font-weight: 600; margin-top: 1px; }
+
+        .p-block {
+          background: #FAF8F5;
+          border: 1px solid #ECE7DD;
+          border-radius: 4px;
+          padding: 8px 12px;
+          font-size: 11px;
+          line-height: 1.5;
+          white-space: pre-wrap;
+        }
+
+        .sigs {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 32px;
+          text-align: center;
+        }
+        .sig-line {
+          border-top: 1.5px solid #222;
+          margin-top: 36px;
+          padding-top: 4px;
+          font-size: 11px;
+          font-weight: 700;
+        }
+        .sig-role { font-size: 10px; color: #444; margin-top: 2px; }
+        .sig-sub { font-size: 9px; color: #777; margin-top: 2px; }
+
+        .doc-footer {
+          border-top: 1px dashed #DDD;
+          padding-top: 7px;
+          display: flex;
+          justify-content: space-between;
+          font-size: 8.5px;
+          color: #888;
+        }
+
         @media print {
-          html, body { padding:0 !important; margin:0 !important; background:#FFF !important; }
-          .sheet { border:none !important; box-shadow:none !important; padding:4px 8px !important; margin:0 !important; width:100% !important; max-width:100% !important; }
-          .no-print { display:none !important; }
+          html, body {
+            height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #FFF !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .sheet {
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 100% !important;
+            min-height: 258mm !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .no-print { display: none !important; }
         }
       </style>
     </head>
     <body>
-      <div class="no-print" style="max-width:800px;margin:0 auto 10px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:12.5px;font-weight:700;color:#7E1C3E;">Vista Oficial CONALEP Mérida 1</span>
-        <button onclick="window.print()" style="background:#7E1C3E;color:#FFF;border:none;padding:7px 18px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;">
+      <div class="no-print" style="max-width:820px;margin:0 auto 12px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;font-weight:700;color:#7E1C3E;">Vista Oficial CONALEP Mérida 1 (Formato Carta)</span>
+        <button onclick="window.print()" style="background:#7E1C3E;color:#FFF;border:none;padding:8px 18px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;">
           🖨️ Imprimir / Guardar como PDF
         </button>
       </div>
@@ -4488,7 +4589,7 @@ function printOfficialReportView(docId){
           <div>
             <div class="hdr-title">Colegio de Educación Profesional Técnica del Estado de Yucatán</div>
             <div class="hdr-sub">Plantel Mérida 1 · Departamento de Orientación Educativa & Tutorías</div>
-            <div style="font-size:9.5px;color:#777;margin-top:1px;">Sistema Integral de Psicología Escolar · NAIMA OS</div>
+            <div class="hdr-inst">Sistema Integral de Psicología Escolar · NAIMA OS</div>
           </div>
           <div class="folio-box">
             FOLIO OFICIAL<br>
@@ -4496,51 +4597,68 @@ function printOfficialReportView(docId){
           </div>
         </div>
 
-        <div class="sec-title">1. Datos del Estudiante</div>
-        <div class="grid2">
-          <div><div class="item-lbl">Nombre del Alumno:</div><div class="item-val">${escapeHTML(doc.studentName || s.nombre || '—')}</div></div>
-          <div><div class="item-lbl">Matrícula Escolar:</div><div class="item-val">${escapeHTML(doc.matricula || s.matricula || doc.studentId)}</div></div>
-          <div><div class="item-lbl">Carrera Técnica:</div><div class="item-val">${escapeHTML(doc.carrera || s.carrera || 'Técnico')}</div></div>
-          <div><div class="item-lbl">Semestre / Grupo:</div><div class="item-val">${doc.semestre || s.semestre || '—'} · ${doc.grupo || s.grupo || '—'}</div></div>
-          <div><div class="item-lbl">Fecha de Emisión:</div><div class="item-val">${doc.fecha || 'Reciente'}</div></div>
-          <div><div class="item-lbl">Nivel de Riesgo Evaluado:</div><div class="item-val" style="color:#7E1C3E;">${PSICO_RISK_LABELS[doc.riesgo] || doc.riesgo || 'Bajo'}</div></div>
-        </div>
-
-        <div class="sec-title">2. Motivo de Evaluación</div>
-        <div class="p-block">${escapeHTML(doc.motivo || 'Evaluación psicopedagógica y seguimiento oportuno')}</div>
-
-        <div class="sec-title">3. Instrumentos Aplicados</div>
-        <div class="p-block">${escapeHTML(doc.instrumentos || 'Entrevista clínica y cuestionario PIOE')}</div>
-
-        <div class="sec-title">4. Evaluación de Áreas del Desarrollo</div>
-        <div class="grid2">
-          <div>
-            <div class="item-lbl">Área Personal y Emocional:</div>
-            <div class="p-block">${escapeHTML(doc.areaPersonal || 'Adecuada regulación afectiva y disposición al acompañamiento.')}</div>
-          </div>
-          <div>
-            <div class="item-lbl">Área Familiar y Contextual:</div>
-            <div class="p-block">${escapeHTML(doc.areaFamiliar || 'Red de apoyo familiar presente.')}</div>
+        <div>
+          <div class="sec-title">1. Datos del Estudiante</div>
+          <div class="grid2">
+            <div><div class="item-lbl">Nombre del Alumno:</div><div class="item-val">${escapeHTML(doc.studentName || s.nombre || '—')}</div></div>
+            <div><div class="item-lbl">Matrícula Escolar:</div><div class="item-val">${escapeHTML(doc.matricula || s.matricula || doc.studentId)}</div></div>
+            <div><div class="item-lbl">Carrera Técnica:</div><div class="item-val">${escapeHTML(doc.carrera || s.carrera || 'Técnico')}</div></div>
+            <div><div class="item-lbl">Semestre / Grupo:</div><div class="item-val">${doc.semestre || s.semestre || '—'} · ${doc.grupo || s.grupo || '—'}</div></div>
+            <div><div class="item-lbl">Fecha de Emisión:</div><div class="item-val">${doc.fecha || 'Reciente'}</div></div>
+            <div><div class="item-lbl">Nivel de Riesgo Evaluado:</div><div class="item-val" style="color:#7E1C3E;">${PSICO_RISL_LABELS[doc.riesgo] || PSICO_RISK_LABELS[doc.riesgo] || doc.riesgo || 'Bajo'}</div></div>
           </div>
         </div>
 
-        <div class="sec-title">5. Impresión Diagnóstica</div>
-        <div class="p-block"><strong>Diagnóstico (CIE-11):</strong> ${escapeHTML(doc.diagnostico || 'En proceso de seguimiento')}</div>
+        <div>
+          <div class="sec-title">2. Motivo de Evaluación</div>
+          <div class="p-block">${escapeHTML(doc.motivo || 'Evaluación psicopedagógica y seguimiento oportuno')}</div>
+        </div>
 
-        <div class="sec-title">6. Recomendaciones y Plan de Acompañamiento</div>
-        <div class="p-block">${escapeHTML(doc.recomendaciones || 'Seguimiento psicopedagógico en el cubículo de orientación institucional.')}</div>
+        <div>
+          <div class="sec-title">3. Instrumentos Aplicados</div>
+          <div class="p-block">${escapeHTML(doc.instrumentos || 'Entrevista clínica y cuestionario PIOE')}</div>
+        </div>
+
+        <div>
+          <div class="sec-title">4. Evaluación de Áreas del Desarrollo</div>
+          <div class="grid2">
+            <div>
+              <div class="item-lbl">Área Personal y Emocional:</div>
+              <div style="font-size:11px;margin-top:2px;">${escapeHTML(doc.areaPersonal || 'Adecuada regulación afectiva y disposición al acompañamiento.')}</div>
+            </div>
+            <div>
+              <div class="item-lbl">Área Familiar y Contextual:</div>
+              <div style="font-size:11px;margin-top:2px;">${escapeHTML(doc.areaFamiliar || 'Red de apoyo familiar presente.')}</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="sec-title">5. Impresión Diagnóstica</div>
+          <div class="p-block"><strong>Diagnóstico (CIE-11):</strong> ${escapeHTML(doc.diagnostico || 'En proceso de seguimiento')}</div>
+        </div>
+
+        <div>
+          <div class="sec-title">6. Recomendaciones y Plan de Acompañamiento</div>
+          <div class="p-block">${escapeHTML(doc.recomendaciones || 'Seguimiento psicopedagógico en el cubículo de orientación institucional.')}</div>
+        </div>
 
         <div class="sigs">
           <div>
             <div class="sig-line">${escapeHTML(doc.orientador || 'Orientador Educativo')}</div>
-            <div>Orientador(a) Institucional</div>
-            <div style="font-size:9px;color:#777;">Cédula: ${escapeHTML(doc.cedula || 'En trámite')} · Sello PIOE</div>
+            <div class="sig-role">Orientador(a) Institucional</div>
+            <div class="sig-sub">Cédula: ${escapeHTML(doc.cedula || 'En trámite')} · Sello Oficial PIOE Mérida 1</div>
           </div>
           <div>
             <div class="sig-line">${escapeHTML(doc.studentName || s.nombre || 'Estudiante')}</div>
-            <div>Firma del Estudiante / Tutor Legal</div>
-            <div style="font-size:9px;color:#777;">Enterado y de Conformidad · CONALEP Mérida 1</div>
+            <div class="sig-role">Firma del Estudiante / Tutor Legal</div>
+            <div class="sig-sub">Enterado y de Conformidad · CONALEP Mérida 1</div>
           </div>
+        </div>
+
+        <div class="doc-footer">
+          <span>Sistema Integral de Orientación Educativa y Tutorías (PIOE) · Plantel Mérida 1</span>
+          <span>Expediente clínico-psicopedagógico institucional confidencial</span>
         </div>
       </div>
     </body>

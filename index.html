@@ -1,191 +1,202 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="NAIMA OS · CONALEP — Inicio de Sesión Oficial">
-<meta name="theme-color" content="#F4F1EA">
-<title>Iniciar Sesión · NAIMA OS — CONALEP</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="NAIMA OS · CONALEP — Inicio de Sesión Oficial">
+  <meta name="theme-color" content="#F4F1EA">
+  <title>Iniciar Sesión · NAIMA OS — CONALEP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
+
 <body class="login-body">
 
-<div class="login-wrapper">
-  <!-- Cabecera Institucional -->
-  <header class="login-header">
-    <div class="brand-logos" style="justify-content:center;">
-      <span class="brand-edu"><span class="gov"></span>Educación</span>
-      <span class="brand-sep">|</span>
-      <span class="brand-conalep">conalep</span>
-    </div>
-    <h1 class="login-title">Orientación Educativa</h1>
-    <p class="login-sub">NAIMA OS · Plataforma Institucional de Acompañamiento Socioemocional</p>
-    <div class="login-chip-inst">Plantel Mérida I · Acceso Seguro</div>
-  </header>
+  <div class="login-wrapper">
+    <!-- Cabecera Institucional -->
+    <header class="login-header">
+      <div class="brand-logos" style="justify-content:center;">
+        <span class="brand-edu"><span class="gov"></span>Educación</span>
+        <span class="brand-sep">|</span>
+        <span class="brand-conalep">conalep</span>
+      </div>
+      <h1 class="login-title">Orientación Educativa</h1>
+      <p class="login-sub">NAIMA OS · Plataforma Institucional de Acompañamiento Socioemocional</p>
+      <div class="login-chip-inst">Plantel Mérida I · Acceso Seguro</div>
+    </header>
 
-  <!-- Tarjeta de Autenticación Unificada -->
-  <main class="login-auth-card">
-    <!-- Pestañas de Login / Registro -->
-    <div class="login-tabs-nav">
-      <button type="button" class="login-tab-btn active" id="tabBtnLogin" onclick="switchLoginTab('login')">
-        Iniciar Sesión
-      </button>
-      <button type="button" class="login-tab-btn" id="tabBtnRegister" onclick="switchLoginTab('register')">
-        Registrarse
-      </button>
-    </div>
-
-    <!-- Alerta de Error -->
-    <div class="login-error-alert" id="loginAlertBox"></div>
-
-    <!-- Formulario 1: Iniciar Sesión -->
-    <form id="formLogin" onsubmit="handleLoginSubmit(event)">
-      <div class="login-form-group">
-        <label for="loginUser">Correo institucional o Matrícula</label>
-        <input type="text" id="loginUser" placeholder="ej. usuario@conalep.edu.mx o 221K0049" required autocomplete="username">
+    <!-- Tarjeta de Autenticación Unificada -->
+    <main class="login-auth-card">
+      <!-- Pestañas de Login / Registro -->
+      <div class="login-tabs-nav">
+        <button type="button" class="login-tab-btn active" id="tabBtnLogin" onclick="switchLoginTab('login')">
+          Iniciar Sesión
+        </button>
+        <button type="button" class="login-tab-btn" id="tabBtnRegister" onclick="switchLoginTab('register')">
+          Registrarse
+        </button>
       </div>
 
-      <div class="login-form-group">
-        <label for="loginPass">Contraseña</label>
-        <input type="password" id="loginPass" placeholder="Ingresa tu contraseña" required autocomplete="current-password">
-      </div>
+      <!-- Alerta de Error -->
+      <div class="login-error-alert" id="loginAlertBox"></div>
 
-      <button type="submit" class="btn-maroon login-submit-btn">
-        Ingresar al Sistema →
-      </button>
-    </form>
-
-    <!-- Formulario 2: Registro Exclusivo para Estudiantes -->
-    <form id="formRegister" onsubmit="handleRegisterSubmit(event)" style="display:none;">
-      
-      <div class="login-reg-notice">
-        <div style="font-weight:700;font-size:13px;color:var(--maroon);display:flex;align-items:center;gap:6px;">
-          <span>🎓</span> Registro Oficial de Estudiantes
-        </div>
-        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:3px;line-height:1.4;">
-          Crea tu cuenta institucional para acceder a tu acompañamiento socioemocional y check-in diario en CONALEP Mérida I.
-        </div>
-      </div>
-
-      <div class="login-form-group">
-        <label for="regNombre">Nombre completo *</label>
-        <input type="text" id="regNombre" placeholder="ej. Daniel Pech Rodríguez" required maxlength="80">
-      </div>
-
-      <div class="login-form-group">
-        <label for="regEmail">Correo electrónico institucional *</label>
-        <input type="email" id="regEmail" placeholder="ej. daniel.pech@conalep.edu.mx" required>
-      </div>
-
-      <div class="login-form-group">
-        <label for="regPass">Contraseña de acceso *</label>
-        <input type="password" id="regPass" placeholder="Mínimo 6 caracteres" minlength="6" required value="conalep123">
-        <div style="font-size:11px;color:var(--ink-muted);margin-top:3px;">Mínimo 6 caracteres (requerido por Supabase Auth)</div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <!-- Formulario 1: Iniciar Sesión -->
+      <form id="formLogin" onsubmit="handleLoginSubmit(event)">
         <div class="login-form-group">
-          <label for="regMatricula">Matrícula *</label>
-          <input type="text" id="regMatricula" placeholder="ej. 221K0049" required>
+          <label for="loginUser">Correo institucional o Matrícula</label>
+          <input type="text" id="loginUser" placeholder="ej. usuario@conalep.edu.mx o 221K0049" required
+            autocomplete="username">
         </div>
+
         <div class="login-form-group">
-          <label for="regGrupo">Grupo *</label>
-          <input type="text" id="regGrupo" placeholder="4B" required>
+          <label for="loginPass">Contraseña</label>
+          <input type="password" id="loginPass" placeholder="Ingresa tu contraseña" required
+            autocomplete="current-password">
         </div>
-      </div>
 
-      <div class="login-form-group">
-        <label for="regCarrera">Carrera técnica *</label>
-        <select id="regCarrera" required>
-          <option>Informática</option>
-          <option>Enfermería General</option>
-          <option>Mecatrónica</option>
-          <option>Electromecánica</option>
-          <option>Administración</option>
-          <option>Contabilidad</option>
-        </select>
-      </div>
+        <button type="submit" class="btn-maroon login-submit-btn">
+          Ingresar al Sistema →
+        </button>
+      </form>
 
-      <!-- Sección: Desplegable de Psicólogos / Orientadores de la Base de Datos -->
-      <div class="login-form-group">
-        <label for="regGuardian" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-          <span>🩺 Psicólogo / Orientador asignado *</span>
-          <span class="login-active-badge"><span class="badge-dot"></span>En Base de Datos</span>
-        </label>
-        <select id="regGuardian" required>
-          <option value="" disabled selected>— Selecciona a tu orientador(a) —</option>
-          <!-- Llenado dinámicamente con los orientadores de la base de datos -->
-        </select>
-        <div style="font-size:11px;color:var(--ink-muted);margin-top:4px;">
-          Atenderá tus reportes y acompañamiento socioemocional confidencial.
+      <!-- Formulario 2: Registro Exclusivo para Estudiantes -->
+      <form id="formRegister" onsubmit="handleRegisterSubmit(event)" style="display:none;">
+
+        <div class="login-reg-notice">
+          <div style="font-weight:700;font-size:13px;color:var(--maroon);display:flex;align-items:center;gap:6px;">
+            <span>🎓</span> Registro Oficial de Estudiantes
+          </div>
+          <div style="font-size:11.5px;color:var(--ink-soft);margin-top:3px;line-height:1.4;">
+            Crea tu cuenta institucional para acceder a tu acompañamiento socioemocional y check-in diario en CONALEP
+            Mérida I.
+          </div>
         </div>
-      </div>
 
-      <button type="submit" class="btn-maroon login-submit-btn">
-        Crear Cuenta de Estudiante e Ingresar →
-      </button>
-
-      <div class="login-coord-security-note">
-        <span style="font-size:16px;">🛡️</span>
-        <div>
-          <strong style="color:var(--ink);">¿Eres personal u orientador educativo?</strong><br>
-          Por seguridad institucional, las cuentas de acceso para coordinadores y psicólogos son gestionadas internamente por la coordinación del plantel.
+        <div class="login-form-group">
+          <label for="regNombre">Nombre completo *</label>
+          <input type="text" id="regNombre" placeholder="ej. Daniel Pech Rodríguez" required maxlength="80">
         </div>
-      </div>
-    </form>
 
-  </main>
-</div>
+        <div class="login-form-group">
+          <label for="regEmail">Correo electrónico institucional *</label>
+          <input type="email" id="regEmail" placeholder="ej. daniel.pech@conalep.edu.mx" required>
+        </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase.js"></script>
-<script src="db.js"></script>
-<script>
-function switchLoginTab(tab){
-  const btnLogin = document.getElementById('tabBtnLogin');
-  const btnReg = document.getElementById('tabBtnRegister');
-  const formLogin = document.getElementById('formLogin');
-  const formReg = document.getElementById('formRegister');
-  const alertBox = document.getElementById('loginAlertBox');
-  if(alertBox) alertBox.style.display = 'none';
+        <div class="login-form-group">
+          <label for="regPass">Contraseña de acceso *</label>
+          <input type="password" id="regPass" placeholder="Mínimo 6 caracteres" minlength="6" required
+            value="conalep123">
+          <div style="font-size:11px;color:var(--ink-muted);margin-top:3px;">Mínimo 6 caracteres (requerido por Supabase
+            Auth)</div>
+        </div>
 
-  if(tab === 'login'){
-    btnLogin.classList.add('active');
-    btnReg.classList.remove('active');
-    formLogin.style.display = 'block';
-    formReg.style.display = 'none';
-  } else {
-    btnReg.classList.add('active');
-    btnLogin.classList.remove('active');
-    formLogin.style.display = 'none';
-    formReg.style.display = 'block';
-    initPsychologistSelector();
-  }
-}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="login-form-group">
+            <label for="regMatricula">Matrícula *</label>
+            <input type="text" id="regMatricula" placeholder="ej. 221K0049" required>
+          </div>
+          <div class="login-form-group">
+            <label for="regGrupo">Grupo *</label>
+            <input type="text" id="regGrupo" placeholder="4B" required>
+          </div>
+        </div>
 
-function showError(msg){
-  const box = document.getElementById('loginAlertBox');
-  if(box){
-    box.textContent = msg;
-    box.style.display = 'block';
-  }
-}
+        <div class="login-form-group">
+          <label for="regCarrera">Carrera técnica *</label>
+          <select id="regCarrera" required>
+            <option>Informática</option>
+            <option>Enfermería General</option>
+            <option>Mecatrónica</option>
+            <option>Electromecánica</option>
+            <option>Administración</option>
+            <option>Contabilidad</option>
+          </select>
+        </div>
 
-/* ---------- Cargar Psicólogos Reales de la Base de Datos en el Desplegable ---------- */
-async function initPsychologistSelector(){
-  const selectEl = document.getElementById('regGuardian');
-  if(!selectEl) return;
+        <!-- Sección: Desplegable de Psicólogos / Orientadores de la Base de Datos -->
+        <div class="login-form-group">
+          <label for="regGuardian"
+            style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+            <span>🩺 Psicólogo / Orientador asignado *</span>
+            <span class="login-active-badge"><span class="badge-dot"></span>En Base de Datos</span>
+          </label>
+          <select id="regGuardian" required>
+            <option value="" disabled selected>— Selecciona a tu orientador(a) —</option>
+            <!-- Llenado dinámicamente con los orientadores de la base de datos -->
+          </select>
+          <div style="font-size:11px;color:var(--ink-muted);margin-top:4px;">
+            Atenderá tus reportes y acompañamiento socioemocional confidencial.
+          </div>
+        </div>
 
-  const psychs = await getActivePsychologists();
-  if(!psychs || psychs.length === 0){
-    selectEl.innerHTML = `<option value="" disabled selected>No se encontraron orientadores en la base de datos</option>`;
-    return;
-  }
+        <button type="submit" class="btn-maroon login-submit-btn">
+          Crear Cuenta de Estudiante e Ingresar →
+        </button>
 
-  selectEl.innerHTML = `
+        <div class="login-coord-security-note">
+          <span style="font-size:16px;">🛡️</span>
+          <div>
+            <strong style="color:var(--ink);">¿Eres personal u orientador educativo?</strong><br>
+            Por seguridad institucional, las cuentas de acceso para coordinadores y psicólogos son gestionadas
+            internamente por la coordinación del plantel.
+          </div>
+        </div>
+      </form>
+
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="db.js"></script>
+  <script>
+    function switchLoginTab(tab) {
+      const btnLogin = document.getElementById('tabBtnLogin');
+      const btnReg = document.getElementById('tabBtnRegister');
+      const formLogin = document.getElementById('formLogin');
+      const formReg = document.getElementById('formRegister');
+      const alertBox = document.getElementById('loginAlertBox');
+      if (alertBox) alertBox.style.display = 'none';
+
+      if (tab === 'login') {
+        btnLogin.classList.add('active');
+        btnReg.classList.remove('active');
+        formLogin.style.display = 'block';
+        formReg.style.display = 'none';
+      } else {
+        btnReg.classList.add('active');
+        btnLogin.classList.remove('active');
+        formLogin.style.display = 'none';
+        formReg.style.display = 'block';
+        initPsychologistSelector();
+      }
+    }
+
+    function showError(msg) {
+      const box = document.getElementById('loginAlertBox');
+      if (box) {
+        box.textContent = msg;
+        box.style.display = 'block';
+      }
+    }
+
+    /* ---------- Cargar Psicólogos Reales de la Base de Datos en el Desplegable ---------- */
+    async function initPsychologistSelector() {
+      const selectEl = document.getElementById('regGuardian');
+      if (!selectEl) return;
+
+      const psychs = await getActivePsychologists();
+      if (!psychs || psychs.length === 0) {
+        selectEl.innerHTML = `<option value="" disabled selected>No se encontraron orientadores en la base de datos</option>`;
+        return;
+      }
+
+      selectEl.innerHTML = `
     <option value="" disabled selected>— Selecciona a tu orientador(a) —</option>
     ${psychs.map(p => `
       <option value="${escapeHTML(p.nombre)}" data-email="${escapeHTML(p.email || '')}">
@@ -193,109 +204,110 @@ async function initPsychologistSelector(){
       </option>
     `).join('')}
   `;
-}
+    }
 
-async function handleLoginSubmit(e){
-  e.preventDefault();
-  const alertBox = document.getElementById('loginAlertBox');
-  if(alertBox) alertBox.style.display = 'none';
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const alertBox = document.getElementById('loginAlertBox');
+      if (alertBox) alertBox.style.display = 'none';
 
-  const userVal = document.getElementById('loginUser').value.trim();
-  const passVal = document.getElementById('loginPass').value.trim();
-  const submitBtn = e.target.querySelector('button[type="submit"]');
+      const userVal = document.getElementById('loginUser').value.trim();
+      const passVal = document.getElementById('loginPass').value.trim();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
 
-  if(submitBtn){
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Iniciando sesión...';
-  }
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Iniciando sesión...';
+      }
 
-  try{
-    const res = await loginUser(userVal, passVal);
-    if(res.success){
-      window.location.href = res.redirectUrl;
-    } else {
-      showError(res.error);
-      if(submitBtn){
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Entrar a NAIMA OS →';
+      try {
+        const res = await loginUser(userVal, passVal);
+        if (res.success) {
+          window.location.href = res.redirectUrl;
+        } else {
+          showError(res.error);
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Entrar a NAIMA OS →';
+          }
+        }
+      } catch (err) {
+        showError(err.message || 'Error al iniciar sesión.');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Entrar a NAIMA OS →';
+        }
       }
     }
-  }catch(err){
-    showError(err.message || 'Error al iniciar sesión.');
-    if(submitBtn){
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Entrar a NAIMA OS →';
+
+    async function handleRegisterSubmit(e) {
+      e.preventDefault();
+      const alertBox = document.getElementById('loginAlertBox');
+      if (alertBox) alertBox.style.display = 'none';
+
+      const nombre = document.getElementById('regNombre').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPass').value.trim();
+      const matricula = document.getElementById('regMatricula') ? document.getElementById('regMatricula').value.trim() : null;
+      const grupo = document.getElementById('regGrupo') ? document.getElementById('regGrupo').value.trim() : null;
+      const carrera = document.getElementById('regCarrera') ? document.getElementById('regCarrera').value : null;
+      const guardianEl = document.getElementById('regGuardian');
+      const guardian = guardianEl ? guardianEl.value.trim() : '';
+      const selectedOpt = guardianEl && guardianEl.selectedIndex >= 0 ? guardianEl.options[guardianEl.selectedIndex] : null;
+      const guardianEmail = selectedOpt ? (selectedOpt.getAttribute('data-email') || '') : '';
+
+      if (!guardian) {
+        showError('Por favor selecciona a un psicólogo u orientador de la lista.');
+        if (guardianEl) guardianEl.focus();
+        return;
+      }
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creando cuenta de estudiante...';
+      }
+
+      try {
+        const res = await registerUser({
+          rol: 'estudiante',
+          nombre,
+          email,
+          password,
+          matricula,
+          grupo,
+          carrera,
+          guardian: guardian || 'Por asignar',
+          guardianEmail: guardianEmail || ''
+        });
+
+        if (res.success) {
+          window.location.href = res.redirectUrl;
+        } else {
+          showError(res.error || 'Error al registrar.');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Crear Cuenta de Estudiante e Ingresar →';
+          }
+        }
+      } catch (err) {
+        showError(err.message || 'Error de conexión.');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Crear Cuenta de Estudiante e Ingresar →';
+        }
+      }
     }
-  }
-}
 
-async function handleRegisterSubmit(e){
-  e.preventDefault();
-  const alertBox = document.getElementById('loginAlertBox');
-  if(alertBox) alertBox.style.display = 'none';
-
-  const nombre = document.getElementById('regNombre').value.trim();
-  const email = document.getElementById('regEmail').value.trim();
-  const password = document.getElementById('regPass').value.trim();
-  const matricula = document.getElementById('regMatricula') ? document.getElementById('regMatricula').value.trim() : null;
-  const grupo = document.getElementById('regGrupo') ? document.getElementById('regGrupo').value.trim() : null;
-  const carrera = document.getElementById('regCarrera') ? document.getElementById('regCarrera').value : null;
-  const guardianEl = document.getElementById('regGuardian');
-  const guardian = guardianEl ? guardianEl.value.trim() : '';
-  const selectedOpt = guardianEl && guardianEl.selectedIndex >= 0 ? guardianEl.options[guardianEl.selectedIndex] : null;
-  const guardianEmail = selectedOpt ? (selectedOpt.getAttribute('data-email') || '') : '';
-
-  if(!guardian){
-    showError('Por favor selecciona a un psicólogo u orientador de la lista.');
-    if(guardianEl) guardianEl.focus();
-    return;
-  }
-
-  const submitBtn = e.target.querySelector('button[type="submit"]');
-  if(submitBtn){
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Creando cuenta de estudiante...';
-  }
-
-  try{
-    const res = await registerUser({
-      rol: 'estudiante',
-      nombre,
-      email,
-      password,
-      matricula,
-      grupo,
-      carrera,
-      guardian: guardian || 'Por asignar',
-      guardianEmail: guardianEmail || ''
+    // Inicializar selector si se entra directamente
+    document.addEventListener('DOMContentLoaded', () => {
+      // Limpiar cualquier sesión residual en esta ventana al visitar la pantalla de login
+      if (typeof clearSession === 'function') {
+        clearSession();
+      }
+      initPsychologistSelector();
     });
-
-    if(res.success){
-      window.location.href = res.redirectUrl;
-    } else {
-      showError(res.error || 'Error al registrar.');
-      if(submitBtn){
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Crear Cuenta de Estudiante e Ingresar →';
-      }
-    }
-  }catch(err){
-    showError(err.message || 'Error de conexión.');
-    if(submitBtn){
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Crear Cuenta de Estudiante e Ingresar →';
-    }
-  }
-}
-
-// Inicializar selector si se entra directamente
-document.addEventListener('DOMContentLoaded', () => {
-  // Limpiar cualquier sesión residual en esta ventana al visitar la pantalla de login
-  if(typeof clearSession === 'function'){
-    clearSession();
-  }
-  initPsychologistSelector();
-});
-</script>
+  </script>
 </body>
+
 </html>
