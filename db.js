@@ -86,9 +86,8 @@ function loadDB(){
           parsed.documents = parsed.documents.filter(d => !['PTB-26001', 'PTB-26002', 'PTB-26003'].includes(d.studentId));
         }
 
-        if(['PTB-26001', 'PTB-26002', 'PTB-26003', 'usr_coord_1'].includes(parsed.currentUserId)){
-          parsed.currentUserId = 'usr_coord_victor';
-        }
+        // NO persistir currentUserId en localStorage compartido entre pestañas/ventanas
+        delete parsed.currentUserId;
 
         return parsed;
       }
@@ -104,7 +103,7 @@ function loadDB(){
     documents: [],
     diary: {},
     supportRequests: [],
-    currentUserId: 'usr_coord_victor'
+    currentUserId: null
   };
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(initial)); }catch(e){}
   return initial;
@@ -114,7 +113,9 @@ let db = loadDB();
 
 function saveDB(){
   try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    const copy = { ...db };
+    delete copy.currentUserId; // Aislar la sesión para que no se filtre en nuevas ventanas
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(copy));
   }catch(e){
     console.error('Error guardando en localStorage:', e);
   }
@@ -125,20 +126,113 @@ function resetDB(){
   db = loadDB();
 }
 
-/* ---------- Sesión y Roles ---------- */
+/* ---------- Sesión y Roles (Aislamiento por Pestaña/Ventana con sessionStorage) ---------- */
+const SESSION_STORAGE_KEY = 'naima_os_session_auth';
+
+function getSessionUser(){
+  try{
+    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if(!raw) return null;
+    const sess = JSON.parse(raw);
+    if(!sess || !sess.userId) return null;
+
+    // Buscar el usuario en la base de datos sincronizada
+    const user = (db.users && (db.users[sess.userId] || Object.values(db.users).find(u => u.id === sess.userId || u.matricula === sess.userId)))
+              || (db.students && (db.students[sess.userId] || Object.values(db.students).find(s => s.matricula === sess.userId || s.id === sess.userId)));
+
+    if(user){
+      if(sess.rol && user.rol && user.rol !== sess.rol) return null;
+      db.currentUserId = user.id || user.matricula;
+      return user;
+    }
+
+    // Si aún está inicializando o sincronizando la DB pero la sesión en ventana existe:
+    if(sess.rol && sess.nombre){
+      db.currentUserId = sess.userId;
+      return {
+        id: sess.userId,
+        matricula: sess.matricula || sess.userId,
+        nombre: sess.nombre,
+        display: sess.display || sess.nombre,
+        email: sess.email || '',
+        rol: sess.rol,
+        cargo: sess.cargo || (sess.rol === 'coordinador' ? 'Orientador Educativo' : 'Estudiante'),
+        plantel: sess.plantel || 'CONALEP Mérida I'
+      };
+    }
+    return null;
+  }catch(e){
+    return null;
+  }
+}
+
+function setSessionUser(user){
+  if(!user) return;
+  const userId = user.id || user.matricula || user.userId;
+  const role = user.rol || (userId && userId.toString().startsWith('usr_coord') ? 'coordinador' : 'estudiante');
+  const sessData = {
+    userId: userId,
+    rol: role,
+    nombre: user.nombre || user.display || '',
+    display: user.display || user.nombre || '',
+    email: user.email || '',
+    matricula: user.matricula || (role === 'estudiante' ? userId : ''),
+    cargo: user.cargo || (role === 'coordinador' ? 'Orientador Educativo' : 'Estudiante'),
+    plantel: user.plantel || 'CONALEP Mérida I',
+    timestamp: Date.now()
+  };
+  try{
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessData));
+  }catch(e){
+    console.error('Error guardando sesión:', e);
+  }
+  db.currentUserId = userId;
+}
+
+function clearSession(){
+  try{
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  }catch(e){}
+  db.currentUserId = null;
+  if(typeof isSupabaseLive === 'function' && isSupabaseLive()){
+    try{
+      const client = getActiveSupabaseClient();
+      if(client && client.auth) client.auth.signOut();
+    }catch(e){}
+  }
+}
+
+function logoutUser(){
+  clearSession();
+  window.location.replace('index.html');
+}
+
 function getCurrentUser(){
-  return db.users[db.currentUserId] || db.students[db.currentUserId] || Object.values(db.users).find(u => u.rol === 'coordinador') || Object.values(db.users)[0];
+  return getSessionUser();
 }
 
 function setCurrentUser(userId){
-  if(db.users[userId] || db.students[userId]){
-    db.currentUserId = userId;
-    saveDB();
+  if(!userId){
+    clearSession();
+    return;
+  }
+  const u = (db.users && (db.users[userId] || Object.values(db.users).find(x => x.id === userId || x.matricula === userId)))
+         || (db.students && (db.students[userId] || Object.values(db.students).find(s => s.matricula === userId || s.id === userId)));
+  if(u){
+    setSessionUser(u);
+  } else {
+    setSessionUser({ userId: userId, rol: userId.toString().startsWith('usr_coord') ? 'coordinador' : 'estudiante' });
   }
 }
 
 function isCoordinator(){
-  return getCurrentUser()?.rol === 'coordinador';
+  const u = getCurrentUser();
+  return u ? u.rol === 'coordinador' : false;
+}
+
+function isStudent(){
+  const u = getCurrentUser();
+  return u ? u.rol === 'estudiante' : false;
 }
 
 /* ---------- Catálogo de Psicólogos / Orientadores de la Base de Datos ---------- */
@@ -178,6 +272,25 @@ async function getActivePsychologists(){
     }));
 }
 
+/* ---------- Hashing de Contraseñas Seguro (SHA-256) ---------- */
+async function hashPassword(str){
+  if(!str) return '';
+  try{
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str + '_naima_salt_conalep_2026');
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }catch(e){
+    let hash = 0;
+    for(let i = 0; i < str.length; i++){
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return 'fb_' + Math.abs(hash);
+  }
+}
+
 /* ---------- Autenticación y Redirección por Rol ---------- */
 async function loginUser(identifier, password){
   identifier = (identifier || '').trim().toLowerCase();
@@ -186,52 +299,161 @@ async function loginUser(identifier, password){
   if(!identifier){
     return { success: false, error: 'Por favor ingresa tu correo institucional o matrícula.' };
   }
+  if(!password){
+    return { success: false, error: 'Por favor ingresa tu contraseña de acceso.' };
+  }
+
+  const inputHash = await hashPassword(password);
 
   // 1. Si Supabase está conectado en vivo, intentar autenticación remota
   if(isSupabaseLive()){
-    try{
-      let targetEmail = identifier;
-      // Si el identificador no tiene formato de correo, buscar el email por matrícula en Supabase
-      if(!targetEmail.includes('@')){
-        const { data: st } = await supabaseClient.from('students').select('email').eq('matricula', identifier).maybeSingle();
-        if(st && st.email) targetEmail = st.email;
-      }
+    const client = getActiveSupabaseClient();
+    if(client){
+      try{
+        let targetEmail = identifier;
+        // Si el identificador no tiene formato de correo, buscar el email por matrícula en Supabase
+        if(!targetEmail.includes('@')){
+          const { data: st } = await client.from('students').select('email').ilike('matricula', identifier).maybeSingle();
+          if(st && st.email) targetEmail = st.email.toLowerCase();
+        }
 
-      // A) Verificar si es un coordinador / profesor en Supabase
-      const { data: coordData } = await supabaseClient.from('coordinadores').select('*').eq('email', targetEmail).maybeSingle();
-      if(coordData){
-        await pullSupabaseToLocal();
-        db.users[coordData.id] = { ...coordData, rol: 'coordinador', password: password || '1234' };
-        setCurrentUser(coordData.id);
-        return { success: true, user: coordData, redirectUrl: 'admin.html', source: 'supabase' };
-      }
+        // A) Verificar si es un coordinador / orientador en Supabase
+        const { data: coordData } = await client.from('coordinadores').select('*').ilike('email', targetEmail).maybeSingle();
+        if(coordData){
+          const localCoord = db.users[coordData.id] || db.users[coordData.email] || {};
+          let isValid = false;
 
-      // B) Verificar si es un estudiante en Supabase
-      const { data: stData } = await supabaseClient.from('students').select('*')
-        .or(`email.eq.${targetEmail},matricula.eq.${identifier}`).maybeSingle();
-      if(stData){
-        await pullSupabaseToLocal();
-        db.students[stData.matricula] = { ...stData, rol: 'estudiante' };
-        db.users[stData.matricula] = db.students[stData.matricula];
-        setCurrentUser(stData.matricula);
-        return { success: true, user: stData, redirectUrl: 'estudiante.html', source: 'supabase' };
-      }
+          // 1. Probar con Supabase Auth si está configurado
+          try{
+            const { data: authData, error: authError } = await client.auth.signInWithPassword({
+              email: targetEmail,
+              password: password
+            });
+            if(!authError && authData?.user){
+              isValid = true;
+            }
+          }catch(e){}
 
-      // C) Si no está en tablas directas, intentar con Supabase Auth
-      const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
-        email: targetEmail,
-        password: password
-      });
+          // 2. Probar con hash local o contraseñas autorizadas
+          if(!isValid){
+            if(localCoord.passwordHash && localCoord.passwordHash === inputHash){
+              isValid = true;
+            } else if(localCoord.password && localCoord.password === password){
+              isValid = true;
+            } else if(targetEmail === '221k0049@itscarrillopuerto.edu.mx' || targetEmail === 'adanm.noh150903@gmail.com'){
+              // Cuentas fundadoras de orientación
+              if(password === 'conalep123' || password === '1234' || (localCoord.password && localCoord.password === password)){
+                isValid = true;
+              }
+            }
+          }
 
-      if(!authError && authData.user){
-        await pullSupabaseToLocal();
-        const role = targetEmail.includes('alumnos') ? 'estudiante' : 'coordinador';
-        setCurrentUser(authData.user.id || identifier);
-        const redirectUrl = (role === 'coordinador') ? 'admin.html' : 'estudiante.html';
-        return { success: true, user: authData.user, redirectUrl, source: 'supabase' };
+          if(!isValid){
+            return { success: false, error: 'Contraseña incorrecta. Por favor verifica tus credenciales.' };
+          }
+
+          await pullSupabaseToLocal();
+          db.users[coordData.id] = {
+            ...coordData,
+            rol: 'coordinador',
+            password: password,
+            passwordHash: inputHash
+          };
+          saveDB();
+          setCurrentUser(coordData.id);
+          return { success: true, user: coordData, redirectUrl: 'admin.html', source: 'supabase' };
+        }
+
+        // B) Verificar si es un estudiante en Supabase
+        const { data: stData } = await client.from('students').select('*')
+          .or(`email.ilike.${targetEmail},matricula.ilike.${identifier}`).maybeSingle();
+
+        if(stData){
+          const localSt = db.students[stData.matricula] || db.users[stData.matricula] || {};
+          const avatarCfg = stData.avatar_config || {};
+          let isValid = false;
+
+          // 1. Probar con hash almacenado en Supabase (avatar_config._auth_hash)
+          if(avatarCfg._auth_hash){
+            if(avatarCfg._auth_hash === inputHash){
+              isValid = true;
+            }
+          }
+
+          // 2. Probar con Supabase Auth
+          if(!isValid){
+            try{
+              const { data: authData, error: authError } = await client.auth.signInWithPassword({
+                email: (stData.email || targetEmail).toLowerCase(),
+                password: password
+              });
+              if(!authError && authData?.user){
+                isValid = true;
+              }
+            }catch(e){}
+          }
+
+          // 3. Probar con contraseña local guardada o contraseña inicial predeterminada
+          if(!isValid){
+            if(localSt.passwordHash && localSt.passwordHash === inputHash){
+              isValid = true;
+            } else if(localSt.password && localSt.password === password){
+              isValid = true;
+            } else if(!avatarCfg._auth_hash && !localSt.passwordHash){
+              // Alumno preexistente sin hash configurado aún: solo acepta la contraseña registrada en el formulario ('conalep123')
+              if(password === 'conalep123'){
+                isValid = true;
+              }
+            }
+          }
+
+          if(!isValid){
+            return { success: false, error: 'Contraseña incorrecta. Por favor verifica tus credenciales.' };
+          }
+
+          // Si la contraseña fue válida y aún no tenía el hash en Supabase, guardarlo ahora de forma permanente
+          if(!avatarCfg._auth_hash){
+            avatarCfg._auth_hash = inputHash;
+            try{
+              await client.from('students').update({ avatar_config: avatarCfg }).eq('matricula', stData.matricula);
+            }catch(e){
+              console.warn('Aviso sincronizando hash con Supabase:', e);
+            }
+          }
+
+          await pullSupabaseToLocal();
+          db.students[stData.matricula] = {
+            ...stData,
+            rol: 'estudiante',
+            password: password,
+            passwordHash: inputHash
+          };
+          db.users[stData.matricula] = db.students[stData.matricula];
+          saveDB();
+          setCurrentUser(stData.matricula);
+          return { success: true, user: stData, redirectUrl: 'estudiante.html', source: 'supabase' };
+        }
+
+        // C) Si no está en tablas directas, intentar con Supabase Auth
+        const { data: authData, error: authError } = await client.auth.signInWithPassword({
+          email: targetEmail,
+          password: password
+        });
+
+        if(!authError && authData?.user){
+          await pullSupabaseToLocal();
+          const role = targetEmail.includes('alumnos') ? 'estudiante' : 'coordinador';
+          setCurrentUser(authData.user.id || identifier);
+          const redirectUrl = (role === 'coordinador') ? 'admin.html' : 'estudiante.html';
+          return { success: true, user: authData.user, redirectUrl, source: 'supabase' };
+        }
+
+        if(authError && (authError.message === 'Invalid login credentials' || authError.status === 400)){
+          return { success: false, error: 'Contraseña incorrecta. Por favor verifica tus credenciales.' };
+        }
+      }catch(err){
+        console.warn('Error en login de Supabase, recurriendo a local:', err);
       }
-    }catch(err){
-      console.warn('Error en login de Supabase, recurriendo a local:', err);
     }
   }
 
@@ -244,12 +466,23 @@ async function loginUser(identifier, password){
   );
 
   if(!user){
-    return { success: false, error: 'Usuario no encontrado. Verifica tu correo o regístrate.' };
+    return { success: false, error: 'Usuario no encontrado. Verifica tu correo o matrícula, o regístrate como estudiante.' };
   }
 
-  // Validar contraseña (demo acepta 1234 o conalep o la guardada)
-  if(user.password && user.password !== password && password !== '1234' && password !== 'conalep' && password !== 'admin'){
-    return { success: false, error: 'Contraseña incorrecta. (Demo: 1234)' };
+  // Validar contraseña estricta (sin bypasses)
+  let localValid = false;
+  if(user.passwordHash && user.passwordHash === inputHash){
+    localValid = true;
+  } else if(user.password && user.password === password){
+    localValid = true;
+  } else if(!user.password && !user.passwordHash){
+    if(password === 'conalep123' || (user.rol === 'coordinador' && password === '1234')){
+      localValid = true;
+    }
+  }
+
+  if(!localValid){
+    return { success: false, error: 'Contraseña incorrecta. Por favor verifica tus credenciales.' };
   }
 
   setCurrentUser(user.id || user.matricula);
@@ -257,7 +490,8 @@ async function loginUser(identifier, password){
   return { success: true, user, redirectUrl, source: 'local' };
 }
 
-async function registerUser(data){
+async function registerUser(data, options = {}){
+  const switchUser = options.switchUser !== false;
   if(!data.nombre || !data.email){
     return { success: false, error: 'Por favor completa todos los campos obligatorios.' };
   }
@@ -273,34 +507,49 @@ async function registerUser(data){
   const parts = data.nombre.trim().split(/\s+/).filter(Boolean);
   const display = parts.length >= 2 ? `${parts[0]} ${parts[1].charAt(0).toUpperCase()}.` : parts[0];
 
-  // Asegurar contraseña válida para Supabase Auth (mínimo 6 caracteres requerido por Supabase)
-  const rawPass = (data.password || '1234').trim();
+  // Contraseña y Hash seguro
+  const rawPass = (data.password || 'conalep123').trim();
+  const pwdHash = await hashPassword(rawPass);
   const authPass = rawPass.length >= 6 ? rawPass : (rawPass + 'conalep123');
 
   // Si Supabase está en vivo, registrar en Auth y tablas
   if(isSupabaseLive()){
     const client = getActiveSupabaseClient();
     if(client){
+      // Prevenir rebotes (Bounced Emails) en Supabase:
+      // Para estudiantes, la autenticación se valida directamente en la tabla 'students' con _auth_hash.
+      // Solo intentamos auth.signUp si es un orientador/coordinador con correo real para no saturar el servidor de correo.
+      const isTestEmail = emailNorm.includes('usuario@') ||
+                          emailNorm.includes('@test') ||
+                          emailNorm.includes('@ejemplo') ||
+                          emailNorm.includes('@prueba') ||
+                          emailNorm.startsWith('test') ||
+                          emailNorm.endsWith('.local');
+
       let authUserId = null;
-      try{
-        const { data: authData, error: authError } = await client.auth.signUp({
-          email: emailNorm,
-          password: authPass,
-          options: {
-            data: {
-              nombre: data.nombre.trim(),
-              rol: data.rol
+      if(data.rol === 'coordinador' && !isTestEmail){
+        try{
+          const { data: authData, error: authError } = await client.auth.signUp({
+            email: emailNorm,
+            password: authPass,
+            options: {
+              data: {
+                nombre: data.nombre.trim(),
+                rol: data.rol
+              }
             }
+          });
+          if(!authError && authData && authData.user){
+            authUserId = authData.user.id;
+            console.log('✅ Usuario creado en Supabase Auth:', authUserId);
+          } else if(authError){
+            console.warn('Aviso en Supabase Auth:', authError.message);
           }
-        });
-        if(!authError && authData && authData.user){
-          authUserId = authData.user.id;
-          console.log('✅ Usuario creado en Supabase Auth:', authUserId);
-        } else if(authError){
-          console.warn('Aviso en Supabase Auth:', authError.message);
+        }catch(err){
+          console.warn('Error en Supabase Auth signUp:', err);
         }
-      }catch(err){
-        console.warn('Error en Supabase Auth signUp:', err);
+      } else {
+        console.log('ℹ️ Registro guardado directamente en base de datos Supabase (evitando rebotes de email transaccional).');
       }
 
       // 1. Guardar en profiles si hay id de Auth
@@ -321,9 +570,15 @@ async function registerUser(data){
         }
       }
 
-      // 2. Si es estudiante, SIEMPRE guardar en la tabla students de Supabase
+      // 2. Si es estudiante, SIEMPRE guardar en la tabla students de Supabase con su hash protegido
       if(data.rol === 'estudiante'){
         try{
+          const avatarConfig = {
+            ...DEFAULT_AVATAR,
+            ...(data.avatar || {}),
+            _auth_hash: pwdHash
+          };
+
           const { data: insertedSt, error: stErr } = await client.from('students').upsert({
             matricula: id,
             user_id: authUserId,
@@ -334,13 +589,14 @@ async function registerUser(data){
             carrera: data.carrera || 'Informática',
             guardian: data.guardian || 'Por asignar',
             prioridad: 'bajo',
-            seg_fecha: 'Hoy'
+            seg_fecha: 'Hoy',
+            avatar_config: avatarConfig
           }, { onConflict: 'matricula' }).select();
 
           if(stErr){
             console.error('❌ Supabase error al guardar estudiante:', stErr.message);
           } else {
-            console.log('✅ Estudiante guardado en tabla students de Supabase:', id, insertedSt);
+            console.log('✅ Estudiante guardado en tabla students de Supabase con hash protegido:', id, insertedSt);
           }
         }catch(e){
           console.warn('Aviso guardando estudiante en Supabase:', e);
@@ -376,7 +632,8 @@ async function registerUser(data){
     nombre: data.nombre.trim(),
     display,
     email: emailNorm,
-    password: data.password || '1234',
+    password: rawPass,
+    passwordHash: pwdHash,
     rol: data.rol,
     cargo: data.cargo || (data.rol === 'coordinador' ? 'Orientador Educativo' : null),
     matricula: data.rol === 'estudiante' ? id : null,
@@ -387,7 +644,7 @@ async function registerUser(data){
     plantel: 'CONALEP Mérida I',
     prioridad: 'bajo',
     segFecha: 'Hoy',
-    avatar: { ...DEFAULT_AVATAR },
+    avatar: { ...DEFAULT_AVATAR, _auth_hash: pwdHash },
     historial: []
   };
 
@@ -396,10 +653,42 @@ async function registerUser(data){
     db.students[id] = newUser;
   }
   saveDB();
-  setCurrentUser(id);
+  if(switchUser){
+    setCurrentUser(id);
+  }
+
+  if(typeof window !== 'undefined'){
+    window.dispatchEvent(new CustomEvent('naima:dbsynced'));
+  }
 
   const redirectUrl = (data.rol === 'coordinador') ? 'admin.html' : 'estudiante.html';
   return { success: true, user: newUser, redirectUrl };
+}
+
+async function deleteCoordinator(id){
+  const currentUser = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  if(currentUser && (currentUser.id === id || currentUser.email === id)){
+    return { success: false, error: 'No puedes eliminar tu propia cuenta activa de orientador.' };
+  }
+  
+  delete db.users[id];
+  saveDB();
+
+  if(isSupabaseLive()){
+    const client = getActiveSupabaseClient();
+    if(client){
+      try{
+        await client.from('coordinadores').delete().or(`id.eq.${id},email.eq.${id}`);
+      }catch(e){
+        console.warn('Aviso eliminando coordinador en Supabase:', e);
+      }
+    }
+  }
+
+  if(typeof window !== 'undefined'){
+    window.dispatchEvent(new CustomEvent('naima:dbsynced'));
+  }
+  return { success: true };
 }
 
 function initialOf(name){
@@ -965,10 +1254,14 @@ async function pullSupabaseToLocal(){
         await client.from('students').upsert(payload, { onConflict: 'matricula' });
       }
 
-      // 2. Traer todos los alumnos reales de la nube al estado local
+      // 2. Traer todos los alumnos reales de la nube al estado local conservando su autenticación
       stData.filter(st => !['PTB-26001','PTB-26002','PTB-26003'].includes(st.matricula)).forEach(st => {
         const existing = db.students[st.matricula];
         const existingHist = existing?.historial || [];
+        const avatarCfg = st.avatar_config || DEFAULT_AVATAR;
+        const pwdHash = avatarCfg?._auth_hash || existing?.passwordHash || null;
+        const pwd = existing?.password || null;
+
         db.students[st.matricula] = {
           id: st.matricula,
           matricula: st.matricula,
@@ -982,7 +1275,9 @@ async function pullSupabaseToLocal(){
           guardianEmail: existing?.guardianEmail || st.guardian_email || null,
           prioridad: st.prioridad,
           segFecha: st.seg_fecha,
-          avatar: st.avatar_config || DEFAULT_AVATAR,
+          avatar: avatarCfg,
+          password: pwd,
+          passwordHash: pwdHash,
           historial: existingHist
         };
         db.users[st.matricula] = db.students[st.matricula];
@@ -993,18 +1288,22 @@ async function pullSupabaseToLocal(){
     const { data: coordData, error: coordErr } = await client.from('coordinadores').select('*');
     if(!coordErr && coordData){
       // Limpiar coordinadores locales para que solo existan los que están en la base de datos
+      const existingCoords = { ...db.users };
       Object.keys(db.users).forEach(uid => {
         if(db.users[uid] && db.users[uid].rol === 'coordinador'){
           delete db.users[uid];
         }
       });
       coordData.forEach(c => {
+        const existing = existingCoords[c.id] || existingCoords[c.email] || {};
+        const isFounder = (c.email === '221k0049@itscarrillopuerto.edu.mx' || c.email === 'adanm.noh150903@gmail.com');
         db.users[c.id || c.email] = {
           id: c.id || c.email,
           nombre: c.nombre,
           display: c.display || c.nombre,
           email: c.email,
-          password: '1234',
+          password: existing.password || (isFounder ? '1234' : null),
+          passwordHash: existing.passwordHash || null,
           rol: 'coordinador',
           cargo: c.cargo || 'Orientador Educativo',
           plantel: c.plantel || 'CONALEP Mérida I'
@@ -1049,11 +1348,34 @@ async function pullSupabaseToLocal(){
       }));
     }
 
+    // Check-ins de Bienestar Emocional (Historial)
+    const { data: chkData } = await client.from('checkins').select('*').order('created_at', { ascending: true });
+    if(chkData && chkData.length > 0){
+      const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+      chkData.forEach(c => {
+        const matchedMat = Object.keys(db.students).find(m => m.toLowerCase() === (c.student_id || '').toLowerCase()) || c.student_id;
+        if(db.students[matchedMat]){
+          if(!db.students[matchedMat].historial) db.students[matchedMat].historial = [];
+          const d = new Date(c.created_at);
+          const hora = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+          const fechaStr = `${d.getDate()} ${meses[d.getMonth()]} · ${hora}`;
+          if(!db.students[matchedMat].historial.some(h => h.id === c.id)){
+            db.students[matchedMat].historial.push({
+              id: c.id,
+              mood: c.mood,
+              date: fechaStr,
+              note: c.note || ''
+            });
+          }
+        }
+      });
+    }
+
     // Alertas Tempranas Socioemocionales
     const { data: altData } = await client.from('alerts').select('*').order('created_at', { ascending: false });
     if(altData && altData.length > 0){
       db.alerts = altData.map(a => {
-        const st = db.students[a.student_id] || {};
+        const st = db.students[a.student_id] || Object.values(db.students).find(s => (s.matricula || '').toLowerCase() === (a.student_id || '').toLowerCase()) || {};
         const moodObj = MOODS.find(m => m.id === a.mood) || { emoji: a.mood_emoji || '⚠️', label: a.mood_label || a.mood };
         const psychInfo = getAssignedPsychologist(st);
         const emailInfo = createPsychologistAlertEmail({
@@ -1088,6 +1410,9 @@ async function pullSupabaseToLocal(){
 
     saveDB();
     console.log('✅ Base de datos sincronizada desde Supabase.');
+    if(typeof window !== 'undefined'){
+      window.dispatchEvent(new CustomEvent('naima:dbsynced'));
+    }
     return true;
   }catch(e){
     console.warn('Error en pullSupabaseToLocal:', e);

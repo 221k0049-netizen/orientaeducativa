@@ -3,12 +3,11 @@
    Lógica del Alumno, Check-in Emocional y Red de Apoyo IA
    ============================================================ */
 
-// Asegurar que el usuario activo sea un estudiante al entrar a estudiante.html
-if(isCoordinator() || !getCurrentUser() || getCurrentUser().rol !== 'estudiante'){
-  const realStudents = Object.values(db.students || {}).filter(s => s && s.rol === 'estudiante' && !['PTB-26001','PTB-26002','PTB-26003'].includes(s.matricula));
-  if(realStudents.length > 0){
-    setCurrentUser(realStudents[0].matricula || realStudents[0].id);
-  }
+// Validación estricta de sesión de estudiante en estudiante.js
+const currentStudentUser = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+if (!currentStudentUser || currentStudentUser.rol !== 'estudiante') {
+  window.location.replace('index.html');
+  throw new Error('Sesión no autorizada. Redirigiendo al inicio de sesión institucional.');
 }
 
 const SECTIONS_STUDENT = [
@@ -133,6 +132,7 @@ function renderStudentInicio(){
         <span class="sh-meta-item">Grupo: <strong>${s.grupo || '4B'}</strong></span>
         <span class="sh-meta-item">Carrera: <strong>${s.carrera || 'Informática'}</strong></span>
         <span class="sh-meta-item">Orientador(a): <strong>${s.guardian || 'Por asignar'}</strong></span>
+        <button type="button" class="btn-ghost" style="padding:4px 10px;font-size:12px;border:1px solid #D1D5DB;border-radius:6px;cursor:pointer;background:white;" onclick="openStudentCambiarPasswordModal()">🔑 Cambiar mi contraseña</button>
       </div>
     </div>
   </div>
@@ -1222,6 +1222,115 @@ function closeModal(){
   if(m) m.classList.remove('active');
   document.body.style.overflow = '';
 }
+
+/* ---------- Modal y Lógica para que el Estudiante cambie su contraseña ---------- */
+function openStudentCambiarPasswordModal(){
+  const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : {};
+  const s = db.students[user.matricula || user.id] || user;
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <span class="section-label">Seguridad de tu Cuenta</span>
+    <h3 style="font-size:18px;margin-bottom:6px;">Cambiar Mi Contraseña de Acceso</h3>
+    <p style="font-size:13px;color:var(--ink-soft);line-height:1.55;margin-bottom:18px;">
+      Estudiante: <strong>${escapeHTML(s.nombre || '')}</strong> (Matrícula: <strong>${escapeHTML(s.matricula || '')}</strong>)
+    </p>
+
+    <form id="formStudentChangePass" onsubmit="handleStudentCambiarPasswordSubmit(event)" autocomplete="off">
+      <div class="proto-form-field">
+        <label for="scpNewPass">Nueva Contraseña *</label>
+        <input type="password" id="scpNewPass" placeholder="Mínimo 6 caracteres" minlength="6" required>
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:2px;">Usa una contraseña que puedas recordar para tus próximos inicios de sesión.</div>
+      </div>
+
+      <div class="proto-form-field" style="margin-top:12px;">
+        <label for="scpConfirmPass">Confirmar Nueva Contraseña *</label>
+        <input type="password" id="scpConfirmPass" placeholder="Repite tu contraseña" minlength="6" required>
+      </div>
+
+      <div class="proto-form-error" id="scpError" style="margin-top:12px;"></div>
+
+      <div class="proto-form-actions" style="margin-top:20px;">
+        <button type="button" class="btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn-maroon">Guardar Contraseña →</button>
+      </div>
+    </form>
+  `);
+}
+
+async function handleStudentCambiarPasswordSubmit(e){
+  e.preventDefault();
+  const newPass = document.getElementById('scpNewPass').value.trim();
+  const confirmPass = document.getElementById('scpConfirmPass').value.trim();
+  const errEl = document.getElementById('scpError');
+
+  if(newPass.length < 6){
+    if(errEl){ errEl.textContent = 'La contraseña debe tener mínimo 6 caracteres.'; errEl.style.display = 'block'; }
+    return;
+  }
+  if(newPass !== confirmPass){
+    if(errEl){ errEl.textContent = 'Las contraseñas no coinciden.'; errEl.style.display = 'block'; }
+    return;
+  }
+
+  const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  const s = user ? (db.students[user.matricula || user.id] || user) : null;
+  if(!s){
+    if(errEl){ errEl.textContent = 'No se encontró la sesión del alumno.'; errEl.style.display = 'block'; }
+    return;
+  }
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if(submitBtn){
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Guardando contraseña...';
+  }
+
+  try{
+    const pwdHash = (typeof hashPassword === 'function') ? await hashPassword(newPass) : newPass;
+    s.password = newPass;
+    s.passwordHash = pwdHash;
+    s.avatar = s.avatar || {};
+    s.avatar._auth_hash = pwdHash;
+
+    if(db.students[s.matricula]){
+      db.students[s.matricula] = { ...db.students[s.matricula], password: newPass, passwordHash: pwdHash, avatar: s.avatar };
+    }
+    if(db.users[s.matricula]){
+      db.users[s.matricula] = { ...db.users[s.matricula], password: newPass, passwordHash: pwdHash, avatar: s.avatar };
+    }
+    saveDB();
+
+    // Guardar hash en Supabase cloud en avatar_config
+    if(typeof isSupabaseLive === 'function' && isSupabaseLive()){
+      const client = (typeof getActiveSupabaseClient === 'function') ? getActiveSupabaseClient() : null;
+      if(client){
+        try{
+          await client.from('students').update({ avatar_config: s.avatar }).eq('matricula', s.matricula);
+        }catch(e){
+          console.warn('Aviso sincronizando avatar_config en Supabase:', e);
+        }
+        if(client.auth){
+          try{
+            await client.auth.updateUser({ password: newPass });
+          }catch(e){}
+        }
+      }
+    }
+
+    closeModal();
+    alert('✅ Tu contraseña ha sido cambiada exitosamente. Úsala en tu próximo inicio de sesión.');
+  }catch(err){
+    if(errEl){
+      errEl.textContent = err.message || 'Error al actualizar contraseña.';
+      errEl.style.display = 'block';
+    }
+    if(submitBtn){
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Guardar Contraseña →';
+    }
+  }
+}
 function toggleSidebarMobile(){
   const sb = document.getElementById('sidebar');
   const ov = document.getElementById('sidebarOverlay');
@@ -1254,4 +1363,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if(e.key === 'Escape'){ closeModal(); closeSidebarMobile(); }
   });
   window.addEventListener('resize', function(){ if(window.innerWidth > 992) closeSidebarMobile(); });
+});
+
+// Re-renderizar automáticamente cuando Supabase termine de sincronizar datos
+window.addEventListener('naima:dbsynced', function(){
+  renderStudentUserProfile();
+  renderStudentSidebar();
+  nav(currentStudentSection);
 });

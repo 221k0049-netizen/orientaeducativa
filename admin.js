@@ -3,21 +3,24 @@
    Lógica del Coordinador y Orientador Educativo
    ============================================================ */
 
-// Asegurar que el usuario activo sea coordinador al entrar a admin.html
-if(!isCoordinator()){
-  setCurrentUser('usr_coord_1');
+// Validación estricta de sesión de orientador/coordinador en admin.js
+const currentAdminUser = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+if (!currentAdminUser || currentAdminUser.rol !== 'coordinador') {
+  window.location.replace('index.html');
+  throw new Error('Sesión no autorizada. Redirigiendo al inicio de sesión institucional.');
 }
 
 const SECTIONS_ADMIN = [
   { id:'inicio',        label:'Inicio',           icon:'◆' },
-  { id:'alumnos',       label:'Protoestrellas',   icon:'⊕' },
+  { id:'alumnos',       label:'Estudiantes',      icon:'🎓' },
   { id:'pioe',          label:'PIOE Digital',     icon:'◎', sep:'MÓDULOS' },
   { id:'eirene',        label:'EIRÉNÉ',           icon:'◌' },
   { id:'orion',         label:'ORION Asistente',  icon:'✧' },
   { id:'catalogo',      label:'Documentos',       icon:'▤' },
   { id:'nova',          label:'NOVA Analítica',   icon:'◇' },
   { id:'campus3d',      label:'Campus 3D',        icon:'△' },
-  { id:'config',        label:'Configuración',    icon:'⚙', sep:'SISTEMA' },
+  { id:'equipo',        label:'Orientadores',     icon:'🛡️', sep:'SISTEMA' },
+  { id:'config',        label:'Configuración',    icon:'⚙' },
 ];
 
 let currentSection = 'inicio';
@@ -87,6 +90,8 @@ function nav(sec){
   else if(sec === 'catalogo') el.innerHTML = renderDocumentos();
   else if(sec === 'nova')     el.innerHTML = renderNova();
   else if(sec === 'campus3d') el.innerHTML = renderCampus3DCoordinador();
+  else if(sec === 'equipo')   el.innerHTML = renderEquipoCoordinadores();
+  else if(sec === 'config')   el.innerHTML = renderConfiguracion();
   else el.innerHTML = renderAdminStub(sec);
 }
 
@@ -312,7 +317,7 @@ function renderAdminInicio(){
       <div class="b-title">${myStudents.length ? `${rev} ${rev === 1 ? 'estudiante asignado requiere' : 'estudiantes asignados requieren'} revisión activa` : 'Sin casos asignados actualmente'}</div>
       <div class="b-desc">${myStudents.length ? 'Consulta los casos priorizados de tu alumnado y registra las bitácoras institucionales.' : 'En cuanto tengas estudiantes asignados, aquí se calcularán sus casos prioritarios.'}</div>
     </div>
-    <button class="btn-maroon" onclick="nav('alumnos')">Ver Protoestrellas →</button>
+    <button class="btn-maroon" onclick="nav('alumnos')">Ver Estudiantes →</button>
   </div>
 
   <span class="section-label">Panorama institucional</span>
@@ -340,7 +345,7 @@ function renderAdminInicio(){
   <div class="quick-grid">
     <button class="quick-card" onclick="quickNuevaProtoestrella()">
       <div class="q-icon">＋</div>
-      <div class="q-body"><span class="q-title">Nueva Protoestrella</span><span class="q-sub">Registrar expediente</span></div>
+      <div class="q-body"><span class="q-title">Nuevo Estudiante</span><span class="q-sub">Registrar expediente</span></div>
       <span class="q-chev">›</span>
     </button>
     <button class="quick-card" onclick="nav('pioe')">
@@ -379,7 +384,7 @@ function renderAdminInicio(){
       <div class="follow-empty">
         <div class="fe-icon">✧</div>
         <h4>Sin seguimientos pendientes</h4>
-        <p>Aún no hay Protoestrellas registradas. Cuando existan expedientes, sus seguimientos aparecerán aquí.</p>
+        <p>Aún no hay estudiantes registrados. Cuando existan expedientes, sus seguimientos aparecerán aquí.</p>
       </div>`}
   </div>
 
@@ -400,7 +405,7 @@ function setProtoTab(tab){
   if(el) el.innerHTML = renderProtoestrellas();
 }
 
-/* ---------- VISTA: PROTOESTRELLAS ---------- */
+/* ---------- VISTA: ESTUDIANTES ---------- */
 function renderProtoestrellas(){
   const user = getCurrentUser();
   const allStudents = studentsList();
@@ -414,7 +419,7 @@ function renderProtoestrellas(){
     <tr>
       <td class="pt-name">
         ${s.nombre}
-        ${isAssignedToCurrent ? '<span style="color:var(--green);font-size:11px;font-weight:700;margin-left:6px;">(Tu alumno)</span>' : ''}
+        ${isAssignedToCurrent ? '<span style="color:var(--green);font-size:11px;font-weight:700;margin-left:6px;">(Tu estudiante)</span>' : ''}
       </td>
       <td class="pt-mat mono">${s.matricula}</td>
       <td>${s.grupo} · ${s.carrera || 'Sin carrera'}</td>
@@ -435,11 +440,11 @@ function renderProtoestrellas(){
         <div class="proto-empty" style="padding:36px 20px;text-align:center;">
           <div class="pe-icon" style="font-size:28px;margin-bottom:8px;">✦</div>
           <h3 style="margin:0 0 6px 0;font-size:16px;">
-            ${isMine ? 'No tienes alumnos asignados todavía' : 'Aún no hay Protoestrellas registradas'}
+            ${isMine ? 'No tienes estudiantes asignados todavía' : 'Aún no hay estudiantes registrados'}
           </h3>
           <p style="color:var(--ink-soft);max-width:500px;margin:0 auto 16px auto;font-size:13px;line-height:1.5;">
             ${isMine 
-              ? `En cuanto los alumnos se registren y seleccionen a <strong>${escapeHTML(user.nombre)}</strong> como su orientador, aparecerán aquí para gestionar sus expedientes.` 
+              ? `En cuanto los estudiantes se registren y seleccionen a <strong>${escapeHTML(user.nombre)}</strong> como su orientador, aparecerán aquí para gestionar sus expedientes.` 
               : 'Puedes registrar un nuevo expediente para comenzar a darle seguimiento.'}
           </p>
           <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
@@ -448,7 +453,7 @@ function renderProtoestrellas(){
                 Ver los ${allStudents.length} estudiantes del plantel →
               </button>
             ` : ''}
-            <button class="btn-maroon" onclick="quickNuevaProtoestrella()">+ Nueva Protoestrella</button>
+            <button class="btn-maroon" onclick="quickNuevaProtoestrella()">+ Nuevo Estudiante</button>
           </div>
         </div>
       </td>
@@ -457,7 +462,7 @@ function renderProtoestrellas(){
   return `
   <div class="page-head">
     <div>
-      <h1>Protoestrellas</h1>
+      <h1>Estudiantes</h1>
       <p>Una persona, un expediente, una historia acompañada en CONALEP.</p>
     </div>
   </div>
@@ -467,17 +472,17 @@ function renderProtoestrellas(){
       <span class="pb-tag">Expediente Único Digital</span>
       <p class="pb-desc">Los datos se capturan una sola vez y alimentan todos los flujos autorizados.</p>
     </div>
-    <button class="btn-maroon" onclick="quickNuevaProtoestrella()">+ Nueva Protoestrella</button>
+    <button class="btn-maroon" onclick="quickNuevaProtoestrella()">+ Nuevo Estudiante</button>
   </div>
 
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:20px 0 14px;">
     <h2 class="proto-community-title" style="margin:0;">Comunidad Estudiantil</h2>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn-outline-maroon" style="padding:6px 14px;border-radius:100px;font-size:12.5px;font-weight:600;background:${isMine ? 'var(--maroon)' : '#FFF'};color:${isMine ? '#FFF' : 'var(--maroon)'};border-color:var(--maroon);" onclick="setProtoTab('mis_alumnos')">
-        📌 Mis Alumnos Asignados (${myStudents.length})
+        📌 Mis Estudiantes Asignados (${myStudents.length})
       </button>
       <button class="btn-outline-maroon" style="padding:6px 14px;border-radius:100px;font-size:12.5px;font-weight:600;background:${!isMine ? 'var(--maroon)' : '#FFF'};color:${!isMine ? '#FFF' : 'var(--maroon)'};border-color:var(--maroon);" onclick="setProtoTab('todos')">
-        🌐 Todos los Alumnos del Plantel (${allStudents.length})
+        🌐 Todos los Estudiantes del Plantel (${allStudents.length})
       </button>
     </div>
   </div>
@@ -504,7 +509,7 @@ function quickNuevaProtoestrella(){
   openModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <span class="section-label">Expediente Único Digital</span>
-    <h3 style="font-size:18px;margin-bottom:8px;">Nueva Protoestrella</h3>
+    <h3 style="font-size:18px;margin-bottom:8px;">Nuevo Estudiante</h3>
     <p style="font-size:13px;color:var(--ink-soft);line-height:1.55;margin-bottom:18px;">
       Registra un nuevo estudiante en el sistema institucional CONALEP.
     </p>
@@ -550,7 +555,7 @@ function quickNuevaProtoestrella(){
 
       <div class="proto-form-actions">
         <button type="button" class="btn-ghost" onclick="closeModal()">Cancelar</button>
-        <button type="submit" class="btn-maroon">Guardar Protoestrella</button>
+        <button type="submit" class="btn-maroon">Guardar Estudiante</button>
       </div>
     </form>
   `);
@@ -570,7 +575,7 @@ function saveProtoestrella(){
     return;
   }
   if(db.students[matricula]){
-    err.textContent = 'Ya existe una Protoestrella con esa matrícula.';
+    err.textContent = 'Ya existe un estudiante con esa matrícula.';
     err.style.display = 'block';
     return;
   }
@@ -612,13 +617,14 @@ function saveProtoestrella(){
 
 /* ---------- MODAL DEL EXPEDIENTE DEL ESTUDIANTE (MULTI-PESTAÑA) ---------- */
 function openStudentModal(matricula, activeTab = 'checkins'){
-  const s = db.students[matricula];
+  const s = db.students[matricula] || Object.values(db.students).find(st => (st.matricula || '').toLowerCase() === (matricula || '').toLowerCase());
   if(!s) return;
+  matricula = s.matricula;
 
   const tasks = getStudentTasks(matricula);
   const docs = getStudentDocuments(matricula);
   const hist = s.historial || [];
-  const pendingAlert = (db.alerts || []).find(a => a.studentId === matricula && a.status === 'pendiente');
+  const pendingAlert = (db.alerts || []).find(a => (a.studentId || '').toLowerCase() === matricula.toLowerCase() && a.status === 'pendiente');
 
   // --- HTML de Pestaña: Check-ins y Bienestar ---
   const alertBoxHTML = pendingAlert ? `
@@ -1439,7 +1445,7 @@ function orionQuick(tipo){
     resumen: `
       <h3>Resumen del día</h3>
       <ul>
-        <li><strong>${total}</strong> Protoestrellas registradas en CONALEP Mérida I.</li>
+        <li><strong>${total}</strong> Estudiantes registrados en CONALEP Mérida I.</li>
         <li><strong>${seg}</strong> caso(s) con seguimiento pendiente o alerta activa.</li>
         <li>Bienestar promedio del grupo: <strong>${bien}%</strong>.</li>
       </ul>`,
@@ -1851,7 +1857,7 @@ function submitUploadDocument(){
     author: getCurrentUser()?.display || 'Orientador Educativo'
   });
 
-  alert('¡Documento adjuntado exitosamente al expediente de la Protoestrella!');
+  alert('¡Documento adjuntado exitosamente al expediente del estudiante!');
   closeModal();
 
   if(currentSection === 'catalogo') nav('catalogo');
@@ -1883,7 +1889,7 @@ function renderNova(){
   </div>
 
   <div class="stat-grid">
-    <div class="stat-card"><div class="s-icon teal">◇</div><div class="s-num">${list.length}</div><div class="s-lbl">Protoestrellas activas</div></div>
+    <div class="stat-card"><div class="s-icon teal">◇</div><div class="s-num">${list.length}</div><div class="s-lbl">Estudiantes activos</div></div>
     <div class="stat-card"><div class="s-icon maroon">◎</div><div class="s-num">${porRevisar()}</div><div class="s-lbl">Casos por revisar</div></div>
     <div class="stat-card"><div class="s-icon green">◔</div><div class="s-num">${bienestarPromedio()}%</div><div class="s-lbl">Bienestar promedio</div></div>
   </div>
@@ -1950,6 +1956,413 @@ function open3dDemo(nombre){
   `);
 }
 
+/* ---------- VISTA: EQUIPO DE ORIENTADORES Y COORDINACIÓN ---------- */
+function renderEquipoCoordinadores(){
+  const currentUser = getCurrentUser() || {};
+  const coords = Object.values(db.users || {}).filter(u => u && u.rol === 'coordinador');
+
+  const rows = coords.map(c => {
+    const isMe = (c.id === currentUser.id || c.email === currentUser.email);
+    return `
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="up-avatar" style="width:38px;height:38px;font-size:14px;background:var(--maroon);color:#FFF;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;">
+              ${initialOf(c.display || c.nombre)}
+            </div>
+            <div>
+              <strong style="color:var(--ink);font-size:14px;">${escapeHTML(c.nombre)}</strong>
+              ${isMe ? '<span style="color:var(--green);font-size:11px;font-weight:700;margin-left:6px;background:var(--green-soft);padding:2px 7px;border-radius:100px;">(Tu cuenta activa)</span>' : ''}
+              <div style="font-size:12px;color:var(--ink-soft);">${escapeHTML(c.cargo || 'Orientador Educativo')}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <span class="mono" style="font-size:12.5px;color:var(--ink);">${escapeHTML(c.email)}</span>
+        </td>
+        <td>
+          <span style="font-size:12.5px;color:var(--ink-soft);">${escapeHTML(c.plantel || 'CONALEP Mérida I')}</span>
+        </td>
+        <td>
+          <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--green);background:var(--green-soft);padding:3px 10px;border-radius:100px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;"></span>
+            Activo
+          </span>
+        </td>
+        <td style="text-align:right;">
+          ${!isMe ? `
+            <button class="btn-delete-task" onclick="handleEliminarCoordinador('${c.id}', '${escapeHTML(c.nombre)}')" title="Dar de baja orientador">
+              ✕
+            </button>
+          ` : '<span style="font-size:11.5px;color:var(--ink-muted);font-weight:500;">Sesión actual</span>'}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">DIRECCIÓN GENERAL · SERVICIOS ESTUDIANTILES</span>
+      <h1>Equipo de Orientación y Tutorías</h1>
+      <p>Gestión institucional de orientadores, psicólogos escolares y tutores autorizados con acceso al portal de administración.</p>
+    </div>
+    <span class="demo-chip">CONALEP Mérida I</span>
+  </div>
+
+  <div class="pioe-banner">
+    <div class="pioe-banner-body">
+      <span class="pioe-banner-tag">Acceso Seguro & Confidencial</span>
+      <p class="pioe-banner-desc">
+        Por seguridad institucional, los orientadores y psicólogos no se registran públicamente. Da de alta a nuevos integrantes de tu equipo aquí para habilitar su acceso oficial.
+      </p>
+    </div>
+    <button class="btn-maroon" onclick="openNuevoCoordinadorModal()">＋ Dar de alta orientador(a)</button>
+  </div>
+
+  <div class="stat-grid" style="margin-bottom:24px;">
+    <div class="stat-card">
+      <div class="s-icon teal">🛡️</div>
+      <div class="s-num">${coords.length}</div>
+      <div class="s-lbl">Orientadores activos en el sistema</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon green">🏫</div>
+      <div class="s-num">Mérida I</div>
+      <div class="s-lbl">Plantel institucional</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon maroon">🔒</div>
+      <div class="s-num">Cerrado</div>
+      <div class="s-lbl">Registro público restringido</div>
+    </div>
+  </div>
+
+  <div class="section-head-row">
+    <div>
+      <span class="section-label">Personal Acreditado</span>
+      <h2 class="section-title" style="margin-bottom:0;">Orientadores y Coordinadores</h2>
+    </div>
+    <button class="btn-outline-maroon" style="padding:6px 14px;font-size:12.5px;" onclick="openNuevoCoordinadorModal()">
+      ＋ Nuevo Integrante
+    </button>
+  </div>
+
+  <div class="proto-table-wrap">
+    <table class="proto-table">
+      <thead>
+        <tr>
+          <th>Orientador(a) / Especialista</th>
+          <th>Correo Institucional</th>
+          <th>Plantel</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  </div>
+  `;
+}
+
+function openNuevoCoordinadorModal(){
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <span class="section-label">Control de Acceso Institucional</span>
+    <h3 style="font-size:18px;margin-bottom:6px;">Dar de Alta a Nuevo Orientador / Coordinador</h3>
+    <p style="font-size:13px;color:var(--ink-soft);line-height:1.55;margin-bottom:18px;">
+      Registra a un nuevo psicólogo, orientador(a) o tutor(a). Su cuenta tendrá acceso al Portal Administrador y aparecerá disponible para los estudiantes al registrarse.
+    </p>
+
+    <form id="formNuevoCoord" onsubmit="handleNuevoCoordinadorSubmit(event)" autocomplete="off">
+      <div class="proto-form-field">
+        <label for="ncNombre">Nombre completo con título *</label>
+        <input type="text" id="ncNombre" placeholder="Ej. Lic. Claudia Pech Rodríguez" required maxlength="80">
+      </div>
+
+      <div class="proto-form-field">
+        <label for="ncEmail">Correo electrónico institucional *</label>
+        <input type="email" id="ncEmail" placeholder="usuario@conalep.edu.mx" required>
+      </div>
+
+      <div class="proto-form-field">
+        <label for="ncCargo">Cargo o función técnica *</label>
+        <select id="ncCargo" required>
+          <option value="Orientador Educativo">Orientador Educativo</option>
+          <option value="Psicólogo(a) Escolar">Psicólogo(a) Escolar</option>
+          <option value="Coordinador(a) de Orientación">Coordinador(a) de Orientación</option>
+          <option value="Tutor(a) Institucional (PIOE)">Tutor(a) Institucional (PIOE)</option>
+          <option value="Trabajo Social">Trabajo Social</option>
+        </select>
+      </div>
+
+      <div class="proto-form-field">
+        <label for="ncPass">Contraseña inicial de acceso *</label>
+        <input type="password" id="ncPass" value="conalep123" minlength="6" required>
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:2px;">Mínimo 6 caracteres. El orientador podrá usarla para ingresar a NAIMA OS.</div>
+      </div>
+
+      <div class="proto-form-error" id="ncError"></div>
+
+      <div style="background:#FAF6EE;border:1px solid #E6D8BA;border-left:3px solid var(--maroon);padding:10px 12px;border-radius:6px;font-size:12px;color:var(--ink);line-height:1.45;margin-bottom:16px;">
+        ✦ <strong>Integración automática:</strong> Este orientador quedará sincronizado en Supabase y aparecerá inmediatamente en el menú de asignación de los alumnos.
+      </div>
+
+      <div class="proto-form-actions">
+        <button type="button" class="btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn-maroon">Guardar y Habilitar Acceso →</button>
+      </div>
+    </form>
+  `);
+}
+
+async function handleNuevoCoordinadorSubmit(e){
+  e.preventDefault();
+  const nombre = document.getElementById('ncNombre').value.trim();
+  const email = document.getElementById('ncEmail').value.trim();
+  const cargo = document.getElementById('ncCargo').value;
+  const password = document.getElementById('ncPass').value.trim();
+  const errEl = document.getElementById('ncError');
+
+  if(!nombre || !email || !password){
+    if(errEl){
+      errEl.textContent = 'Por favor completa todos los campos requeridos.';
+      errEl.style.display = 'block';
+    }
+    return;
+  }
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if(submitBtn){
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Registrando en base de datos...';
+  }
+
+  try{
+    const res = await registerUser({
+      rol: 'coordinador',
+      nombre,
+      email,
+      cargo,
+      password,
+      plantel: 'CONALEP Mérida I'
+    }, { switchUser: false });
+
+    if(res.success){
+      closeModal();
+      if(currentSection === 'equipo') nav('equipo');
+      alert(`¡${nombre} ha sido dado de alta exitosamente como ${cargo}!`);
+    } else {
+      if(errEl){
+        errEl.textContent = res.error || 'Error al guardar el orientador.';
+        errEl.style.display = 'block';
+      }
+      if(submitBtn){
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Guardar y Habilitar Acceso →';
+      }
+    }
+  }catch(err){
+    if(errEl){
+      errEl.textContent = err.message || 'Error de conexión.';
+      errEl.style.display = 'block';
+    }
+    if(submitBtn){
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Guardar y Habilitar Acceso →';
+    }
+  }
+}
+
+async function handleEliminarCoordinador(id, nombre){
+  if(!confirm(`¿Estás seguro de que deseas dar de baja a ${nombre} del equipo de orientación? Ya no podrá acceder al portal administrativo.`)){
+    return;
+  }
+
+  const res = await deleteCoordinator(id);
+  if(res.success){
+    if(currentSection === 'equipo') nav('equipo');
+  } else {
+    alert(res.error || 'No se pudo eliminar al orientador.');
+  }
+}
+
+/* ---------- VISTA: CONFIGURACIÓN ---------- */
+function renderConfiguracion(){
+  const user = getCurrentUser() || {};
+  const isSb = typeof isSupabaseLive === 'function' && isSupabaseLive();
+
+  return `
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">SISTEMA INSTITUCIONAL</span>
+      <h1>Configuración de la Plataforma</h1>
+      <p>Ajustes operativos, conexión con la base de datos y control de accesos de NAIMA OS.</p>
+    </div>
+    <span class="demo-chip">CONALEP Mérida I</span>
+  </div>
+
+  <div class="duo-grid" style="grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;margin-bottom:24px;">
+    <div class="duo-card">
+      <span class="section-label">🛡️ GESTIÓN DE ACCESOS</span>
+      <h3>Equipo de Orientadores y Coordinación</h3>
+      <p>Administra las cuentas de psicólogos y tutores autorizados. Ningún personal puede registrarse públicamente por seguridad.</p>
+      <button class="btn-maroon" style="margin-top:8px;" onclick="nav('equipo')">Gestionar Orientadores →</button>
+    </div>
+
+    <div class="duo-card">
+      <span class="section-label">🔑 SEGURIDAD DE ACCESO</span>
+      <h3>Cambiar Mi Contraseña</h3>
+      <p>Personaliza tu clave de acceso institucional. Protege tu portal y actualiza tus credenciales cuando lo requieras.</p>
+      <button class="btn-outline-maroon" style="margin-top:8px;" onclick="openCambiarPasswordModal()">Cambiar Mi Contraseña →</button>
+    </div>
+
+    <div class="duo-card">
+      <span class="section-label">☁️ BASE DE DATOS SUPABASE</span>
+      <h3>Conexión y Sincronización</h3>
+      <p style="margin-bottom:12px;">Estado: <strong>${isSb ? '🟢 Conectado en vivo (Supabase Cloud)' : '🟡 Modo Local (Persistencia en navegador)'}</strong></p>
+      <button class="btn-outline-maroon" onclick="forzarSincronizacionSupabase()">🔄 Forzar Sincronización Ahora</button>
+    </div>
+  </div>
+
+  <div class="panel" style="padding:24px;">
+    <h3 style="font-size:16px;margin:0 0 12px 0;">Ficha Técnica del Sistema</h3>
+    <table class="sheet-info-table" style="margin:0;">
+      <tr>
+        <td class="sit-lbl" style="width:25%;">Institución:</td>
+        <td class="sit-val">Colegio Nacional de Educación Profesional Técnica (CONALEP)</td>
+      </tr>
+      <tr>
+        <td class="sit-lbl">Plantel:</td>
+        <td class="sit-val">Plantel Mérida I · Clave CCT: 31DPT0001E</td>
+      </tr>
+      <tr>
+        <td class="sit-lbl">Programa:</td>
+        <td class="sit-val">Programa Institucional de Orientación Educativa y Tutorías (PIOE)</td>
+      </tr>
+      <tr>
+        <td class="sit-lbl">Usuario en sesión:</td>
+        <td class="sit-val"><strong>${escapeHTML(user.nombre || 'Orientador')}</strong> (${escapeHTML(user.cargo || 'Orientador Educativo')}) · ${escapeHTML(user.email || '')}</td>
+      </tr>
+      <tr>
+        <td class="sit-lbl">Control de Registro:</td>
+        <td class="sit-val"><span style="color:var(--green);font-weight:700;">✓ Registro público restringido únicamente a estudiantes</span></td>
+      </tr>
+    </table>
+  </div>
+  `;
+}
+
+async function forzarSincronizacionSupabase(){
+  if(typeof pullSupabaseToLocal === 'function'){
+    alert('Sincronizando con Supabase...');
+    const ok = await pullSupabaseToLocal();
+    if(ok){
+      alert('✅ Base de datos sincronizada correctamente con la nube.');
+      nav(currentSection);
+    } else {
+      alert('Aviso: No se pudo conectar con Supabase en este momento.');
+    }
+  }
+}
+
+/* ---------- Modal y Lógica para Cambiar Contraseña ---------- */
+function openCambiarPasswordModal(){
+  const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : {};
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <span class="section-label">Seguridad de la Cuenta</span>
+    <h3 style="font-size:18px;margin-bottom:6px;">Actualizar Contraseña de Acceso</h3>
+    <p style="font-size:13px;color:var(--ink-soft);line-height:1.55;margin-bottom:18px;">
+      Usuario: <strong>${escapeHTML(user.nombre || 'Orientador')}</strong> (${escapeHTML(user.email || '')})
+    </p>
+
+    <form id="formChangePass" onsubmit="handleCambiarPasswordSubmit(event)" autocomplete="off">
+      <div class="proto-form-field">
+        <label for="cpNewPass">Nueva Contraseña de Acceso *</label>
+        <input type="password" id="cpNewPass" placeholder="Mínimo 6 caracteres" minlength="6" required>
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:2px;">Elige una contraseña segura que puedas recordar.</div>
+      </div>
+
+      <div class="proto-form-field" style="margin-top:12px;">
+        <label for="cpConfirmPass">Confirmar Nueva Contraseña *</label>
+        <input type="password" id="cpConfirmPass" placeholder="Repite tu nueva contraseña" minlength="6" required>
+      </div>
+
+      <div class="proto-form-error" id="cpError" style="margin-top:12px;"></div>
+
+      <div class="proto-form-actions" style="margin-top:20px;">
+        <button type="button" class="btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn-maroon">Guardar Nueva Contraseña →</button>
+      </div>
+    </form>
+  `);
+}
+
+async function handleCambiarPasswordSubmit(e){
+  e.preventDefault();
+  const newPass = document.getElementById('cpNewPass').value.trim();
+  const confirmPass = document.getElementById('cpConfirmPass').value.trim();
+  const errEl = document.getElementById('cpError');
+
+  if(newPass.length < 6){
+    if(errEl){ errEl.textContent = 'La contraseña debe tener mínimo 6 caracteres.'; errEl.style.display = 'block'; }
+    return;
+  }
+  if(newPass !== confirmPass){
+    if(errEl){ errEl.textContent = 'Las contraseñas no coinciden.'; errEl.style.display = 'block'; }
+    return;
+  }
+
+  const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  if(!user){
+    if(errEl){ errEl.textContent = 'No se encontró la sesión activa.'; errEl.style.display = 'block'; }
+    return;
+  }
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if(submitBtn){
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Guardando contraseña...';
+  }
+
+  try{
+    const pwdHash = (typeof hashPassword === 'function') ? await hashPassword(newPass) : newPass;
+    user.password = newPass;
+    user.passwordHash = pwdHash;
+
+    if(db.users[user.id]) db.users[user.id] = { ...db.users[user.id], password: newPass, passwordHash: pwdHash };
+    if(user.email && db.users[user.email]) db.users[user.email] = { ...db.users[user.email], password: newPass, passwordHash: pwdHash };
+    saveDB();
+
+    // Actualizar en Supabase Auth si es posible
+    if(typeof isSupabaseLive === 'function' && isSupabaseLive()){
+      const client = (typeof getActiveSupabaseClient === 'function') ? getActiveSupabaseClient() : null;
+      if(client && client.auth){
+        try{
+          await client.auth.updateUser({ password: newPass });
+        }catch(e){
+          console.warn('Aviso actualizando auth en Supabase:', e);
+        }
+      }
+    }
+
+    closeModal();
+    alert('✅ Tu contraseña ha sido actualizada con éxito. Úsala en tu próximo inicio de sesión.');
+  }catch(err){
+    if(errEl){
+      errEl.textContent = err.message || 'Error al actualizar contraseña.';
+      errEl.style.display = 'block';
+    }
+    if(submitBtn){
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Guardar Nueva Contraseña →';
+    }
+  }
+}
+
 /* ---------- Modales y Menú Móvil ---------- */
 function openModal(html){
   const b = document.getElementById('appModalBody');
@@ -1997,4 +2410,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if(e.key === 'Escape'){ closeModal(); closeSidebarMobile(); }
   });
   window.addEventListener('resize', function(){ if(window.innerWidth > 992) closeSidebarMobile(); });
+});
+
+// Re-renderizar automáticamente cuando Supabase termine de sincronizar datos
+window.addEventListener('naima:dbsynced', function(){
+  renderAdminUserProfile();
+  renderAdminSidebar();
+  nav(currentSection);
 });

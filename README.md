@@ -17,7 +17,7 @@ La solución integra dos portales especializados:
    - Campus 3D, ejercicios de respiración diafragmática y diario personal confidencial.
 
 2. **Portal del Coordinador / Orientador (`admin.html`):**
-   - Monitoreo en tiempo real de Protoestrellas (alumnos en seguimiento).
+   - Monitoreo en tiempo real de estudiantes (alumnos en seguimiento).
    - Semáforo de riesgo y gestión de alertas urgentes por estado de ánimo negativo.
    - Gestión y asignación de compromisos de tutoría y acuerdos formativos.
    - Carga de expedientes y anexos documentales oficiales.

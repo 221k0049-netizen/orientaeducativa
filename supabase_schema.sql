@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS public.coordinadores (
 );
 
 -- ------------------------------------------------------------
--- 3. TABLA: students (Expediente Único Digital de la Protoestrella)
+-- 3. TABLA: students (Expediente Único Digital del Estudiante)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.students (
   matricula TEXT PRIMARY KEY,

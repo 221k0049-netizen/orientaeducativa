@@ -50,7 +50,7 @@
 
       <div class="login-form-group">
         <label for="loginPass">Contraseña</label>
-        <input type="password" id="loginPass" placeholder="••••••••" required autocomplete="current-password" value="1234">
+        <input type="password" id="loginPass" placeholder="Ingresa tu contraseña" required autocomplete="current-password">
       </div>
 
       <button type="submit" class="btn-maroon login-submit-btn">
@@ -58,81 +58,83 @@
       </button>
     </form>
 
-    <!-- Formulario 2: Registro -->
+    <!-- Formulario 2: Registro Exclusivo para Estudiantes -->
     <form id="formRegister" onsubmit="handleRegisterSubmit(event)" style="display:none;">
-      <div class="login-form-group">
-        <label for="regRol">¿Cuál es tu rol institucional?</label>
-        <select id="regRol" onchange="toggleRegRoleFields(this.value)">
-          <option value="estudiante">🎓 Alumno (Estudiante)</option>
-          <option value="coordinador">🛡️ Personal / Coordinador</option>
-        </select>
+      
+      <div class="login-reg-notice">
+        <div style="font-weight:700;font-size:13px;color:var(--maroon);display:flex;align-items:center;gap:6px;">
+          <span>🎓</span> Registro Oficial de Estudiantes
+        </div>
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:3px;line-height:1.4;">
+          Crea tu cuenta institucional para acceder a tu acompañamiento socioemocional y check-in diario en CONALEP Mérida I.
+        </div>
       </div>
 
       <div class="login-form-group">
-        <label for="regNombre">Nombre completo</label>
+        <label for="regNombre">Nombre completo *</label>
         <input type="text" id="regNombre" placeholder="ej. Daniel Pech Rodríguez" required maxlength="80">
       </div>
 
       <div class="login-form-group">
-        <label for="regEmail">Correo electrónico institucional</label>
-        <input type="email" id="regEmail" placeholder="usuario@conalep.edu.mx" required>
+        <label for="regEmail">Correo electrónico institucional *</label>
+        <input type="email" id="regEmail" placeholder="ej. daniel.pech@conalep.edu.mx" required>
       </div>
 
       <div class="login-form-group">
-        <label for="regPass">Contraseña de acceso</label>
+        <label for="regPass">Contraseña de acceso *</label>
         <input type="password" id="regPass" placeholder="Mínimo 6 caracteres" minlength="6" required value="conalep123">
         <div style="font-size:11px;color:var(--ink-muted);margin-top:3px;">Mínimo 6 caracteres (requerido por Supabase Auth)</div>
       </div>
 
-      <div id="regStudentFields">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div class="login-form-group">
-            <label for="regMatricula">Matrícula</label>
-            <input type="text" id="regMatricula" placeholder="ej. 221K0049">
-          </div>
-          <div class="login-form-group">
-            <label for="regGrupo">Grupo</label>
-            <input type="text" id="regGrupo" placeholder="4B">
-          </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="login-form-group">
+          <label for="regMatricula">Matrícula *</label>
+          <input type="text" id="regMatricula" placeholder="ej. 221K0049" required>
         </div>
         <div class="login-form-group">
-          <label for="regCarrera">Carrera técnica</label>
-          <select id="regCarrera">
-            <option>Informática</option>
-            <option>Enfermería General</option>
-            <option>Mecatrónica</option>
-            <option>Electromecánica</option>
-            <option>Administración</option>
-            <option>Contabilidad</option>
-          </select>
-        </div>
-
-        <!-- Sección: Desplegable de Psicólogos de la Base de Datos -->
-        <div class="login-form-group">
-          <label for="regGuardian" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-            <span>🩺 Psicólogo / Orientador asignado</span>
-            <span class="login-active-badge"><span class="badge-dot"></span>En Base de Datos</span>
-          </label>
-          <select id="regGuardian">
-            <option value="" disabled selected>— Selecciona a tu orientador(a) —</option>
-            <!-- Llenado dinámicamente con los orientadores de la base de datos -->
-          </select>
-          <div style="font-size:11px;color:var(--ink-muted);margin-top:4px;">
-            Atenderá tus reportes y acompañamiento socioemocional confidencial.
-          </div>
+          <label for="regGrupo">Grupo *</label>
+          <input type="text" id="regGrupo" placeholder="4B" required>
         </div>
       </div>
 
-      <div id="regCoordFields" style="display:none;">
-        <div class="login-form-group">
-          <label for="regCargo">Cargo o puesto</label>
-          <input type="text" id="regCargo" value="Orientador Educativo">
+      <div class="login-form-group">
+        <label for="regCarrera">Carrera técnica *</label>
+        <select id="regCarrera" required>
+          <option>Informática</option>
+          <option>Enfermería General</option>
+          <option>Mecatrónica</option>
+          <option>Electromecánica</option>
+          <option>Administración</option>
+          <option>Contabilidad</option>
+        </select>
+      </div>
+
+      <!-- Sección: Desplegable de Psicólogos / Orientadores de la Base de Datos -->
+      <div class="login-form-group">
+        <label for="regGuardian" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+          <span>🩺 Psicólogo / Orientador asignado *</span>
+          <span class="login-active-badge"><span class="badge-dot"></span>En Base de Datos</span>
+        </label>
+        <select id="regGuardian" required>
+          <option value="" disabled selected>— Selecciona a tu orientador(a) —</option>
+          <!-- Llenado dinámicamente con los orientadores de la base de datos -->
+        </select>
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:4px;">
+          Atenderá tus reportes y acompañamiento socioemocional confidencial.
         </div>
       </div>
 
       <button type="submit" class="btn-maroon login-submit-btn">
-        Crear Cuenta e Ingresar →
+        Crear Cuenta de Estudiante e Ingresar →
       </button>
+
+      <div class="login-coord-security-note">
+        <span style="font-size:16px;">🛡️</span>
+        <div>
+          <strong style="color:var(--ink);">¿Eres personal u orientador educativo?</strong><br>
+          Por seguridad institucional, las cuentas de acceso para coordinadores y psicólogos son gestionadas internamente por la coordinación del plantel.
+        </div>
+      </div>
     </form>
 
   </main>
@@ -160,21 +162,6 @@ function switchLoginTab(tab){
     btnLogin.classList.remove('active');
     formLogin.style.display = 'none';
     formReg.style.display = 'block';
-    initPsychologistSelector();
-  }
-}
-
-function toggleRegRoleFields(rol){
-  const sF = document.getElementById('regStudentFields');
-  const cF = document.getElementById('regCoordFields');
-  const guardianEl = document.getElementById('regGuardian');
-  if(rol === 'coordinador'){
-    if(sF) sF.style.display = 'none';
-    if(cF) cF.style.display = 'block';
-    if(guardianEl) guardianEl.required = false;
-  } else {
-    if(sF) sF.style.display = 'block';
-    if(cF) cF.style.display = 'none';
     initPsychologistSelector();
   }
 }
@@ -247,20 +234,18 @@ async function handleRegisterSubmit(e){
   const alertBox = document.getElementById('loginAlertBox');
   if(alertBox) alertBox.style.display = 'none';
 
-  const rol = document.getElementById('regRol').value;
   const nombre = document.getElementById('regNombre').value.trim();
   const email = document.getElementById('regEmail').value.trim();
   const password = document.getElementById('regPass').value.trim();
   const matricula = document.getElementById('regMatricula') ? document.getElementById('regMatricula').value.trim() : null;
   const grupo = document.getElementById('regGrupo') ? document.getElementById('regGrupo').value.trim() : null;
   const carrera = document.getElementById('regCarrera') ? document.getElementById('regCarrera').value : null;
-  const cargo = document.getElementById('regCargo') ? document.getElementById('regCargo').value.trim() : null;
   const guardianEl = document.getElementById('regGuardian');
   const guardian = guardianEl ? guardianEl.value.trim() : '';
   const selectedOpt = guardianEl && guardianEl.selectedIndex >= 0 ? guardianEl.options[guardianEl.selectedIndex] : null;
   const guardianEmail = selectedOpt ? (selectedOpt.getAttribute('data-email') || '') : '';
 
-  if(rol === 'estudiante' && !guardian){
+  if(!guardian){
     showError('Por favor selecciona a un psicólogo u orientador de la lista.');
     if(guardianEl) guardianEl.focus();
     return;
@@ -269,19 +254,18 @@ async function handleRegisterSubmit(e){
   const submitBtn = e.target.querySelector('button[type="submit"]');
   if(submitBtn){
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Creando cuenta e ingresando...';
+    submitBtn.textContent = 'Creando cuenta de estudiante...';
   }
 
   try{
     const res = await registerUser({
-      rol,
+      rol: 'estudiante',
       nombre,
       email,
       password,
       matricula,
       grupo,
       carrera,
-      cargo,
       guardian: guardian || 'Por asignar',
       guardianEmail: guardianEmail || ''
     });
@@ -292,20 +276,24 @@ async function handleRegisterSubmit(e){
       showError(res.error || 'Error al registrar.');
       if(submitBtn){
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Crear Cuenta e Ingresar →';
+        submitBtn.textContent = 'Crear Cuenta de Estudiante e Ingresar →';
       }
     }
   }catch(err){
     showError(err.message || 'Error de conexión.');
     if(submitBtn){
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Crear Cuenta e Ingresar →';
+      submitBtn.textContent = 'Crear Cuenta de Estudiante e Ingresar →';
     }
   }
 }
 
 // Inicializar selector si se entra directamente
 document.addEventListener('DOMContentLoaded', () => {
+  // Limpiar cualquier sesión residual en esta ventana al visitar la pantalla de login
+  if(typeof clearSession === 'function'){
+    clearSession();
+  }
   initPsychologistSelector();
 });
 </script>
