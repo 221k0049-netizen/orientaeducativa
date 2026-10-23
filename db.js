@@ -36,6 +36,17 @@ const SEED_USERS = {
     nombre: 'Victor Tuz',
     display: 'Victor T.',
     email: '221k0049@itscarrillopuerto.edu.mx',
+    aliasEmail: 'tuzdzidzv@gmail.com',
+    password: '1234',
+    rol: 'coordinador',
+    cargo: 'Orientador Educativo',
+    plantel: 'CONALEP Mérida I'
+  },
+  'usr_coord_victor_gmail': {
+    id: 'usr_coord_victor_gmail',
+    nombre: 'Victor Tuz',
+    display: 'Victor T.',
+    email: 'tuzdzidzv@gmail.com',
     password: '1234',
     rol: 'coordinador',
     cargo: 'Orientador Educativo',
@@ -156,14 +167,21 @@ function getSessionUser(){
     const sess = JSON.parse(raw);
     if(!sess || !sess.userId) return null;
 
-    // Buscar el usuario en la base de datos sincronizada
-    const user = (db.users && (db.users[sess.userId] || Object.values(db.users).find(u => u.id === sess.userId || u.matricula === sess.userId)))
-              || (db.students && (db.students[sess.userId] || Object.values(db.students).find(s => s.matricula === sess.userId || s.id === sess.userId)));
+    // Buscar el usuario en la base de datos sincronizada respetando el rol de la sesión activa
+    let user = null;
+    if(sess.rol === 'coordinador'){
+      user = (db.users && (db.users[sess.userId] || Object.values(db.users).find(u => u.id === sess.userId || (u.email && sess.email && u.email.toLowerCase() === sess.email.toLowerCase()))));
+    } else {
+      user = (db.students && (db.students[sess.userId] || Object.values(db.students).find(s => s.matricula === sess.userId || s.id === sess.userId || (s.email && sess.email && s.email.toLowerCase() === sess.email.toLowerCase()))))
+          || (db.users && (db.users[sess.userId] || Object.values(db.users).find(u => u.matricula === sess.userId || u.id === sess.userId)));
+    }
 
     if(user){
-      if(sess.rol && user.rol && user.rol !== sess.rol) return null;
       db.currentUserId = user.id || user.matricula;
-      return user;
+      return {
+        ...user,
+        rol: sess.rol || user.rol
+      };
     }
 
     // Si aún está inicializando o sincronizando la DB pero la sesión en ventana existe:
@@ -389,11 +407,14 @@ async function loginUser(identifier, password){
             } else if(password === 'conalep123' || password === '1234'){
               // Contraseña predeterminada institucional de orientación y PIN rápido para personal activo
               isValid = true;
+            } else if(!profConfig._auth_hash && !localCoord.passwordHash && password.length >= 4){
+              // Si no tiene contraseña guardada, aceptar la ingresada
+              isValid = true;
             }
           }
 
           if(!isValid){
-            return { success: false, error: 'Contraseña incorrecta. Por favor verifica tus credenciales.' };
+            return { success: false, error: 'Contraseña incorrecta. Por favor verifica tus credenciales o accede con el PIN de orientación (1234).' };
           }
 
           // Si el acceso fue válido y no tenía el hash en Supabase profiles, sincronizarlo para futuros accesos
@@ -409,17 +430,20 @@ async function loginUser(identifier, password){
           const syncedUser = db.users[coordData.id] || db.users[targetEmail] || coordData;
           db.users[coordData.id] = {
             ...syncedUser,
+            id: coordData.id,
+            nombre: coordData.nombre || 'Victor Tuz',
+            display: coordData.display || 'Victor T.',
+            email: coordData.email || targetEmail,
             photo: (db.users[coordData.id] && db.users[coordData.id].photo) || existingPhoto,
             avatar_url: (db.users[coordData.id] && db.users[coordData.id].avatar_url) || existingPhoto,
             rol: 'coordinador',
+            cargo: coordData.cargo || 'Orientador Educativo',
+            plantel: coordData.plantel || 'CONALEP Mérida I',
             password: password,
             passwordHash: inputHash
           };
-          if(coordData.email && coordData.email.toLowerCase() !== coordData.id && db.users[coordData.email.toLowerCase()]){
-            delete db.users[coordData.email.toLowerCase()];
-          }
           saveDB();
-          setCurrentUser(coordData.id);
+          setSessionUser(db.users[coordData.id]);
           return { success: true, user: db.users[coordData.id], redirectUrl: 'admin.html', source: 'supabase' };
         }
 
