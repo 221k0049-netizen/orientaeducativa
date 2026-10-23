@@ -69,7 +69,9 @@ function loadDB(){
         if(!parsed.students) parsed.students = {};
         if(!parsed.users) parsed.users = {};
         if(!parsed.appointments) parsed.appointments = [];
-        if(!parsed.settings) parsed.settings = { alertEmail: '', alertMode: 'both' };
+        if(!parsed.settings) parsed.settings = { alertEmail: '221k0049@itscarrillopuerto.edu.mx', alertMode: 'both' };
+        if(!parsed.settings.alertEmail) parsed.settings.alertEmail = '221k0049@itscarrillopuerto.edu.mx';
+        if(!parsed.settings.alertMode) parsed.settings.alertMode = 'both';
 
         // Eliminar completamente cualquier dato o rastro de alumnos simulados y coordinadores viejos
         ['PTB-26001', 'PTB-26002', 'PTB-26003'].forEach(mat => {
@@ -1165,32 +1167,38 @@ function getAssignedPsychologist(student){
 /* Helper para determinar los destinatarios finales de la alerta de Check-in */
 function getAlertDestinationInfo(student){
   const psych = getAssignedPsychologist(student);
-  const prefEmail = (db.settings && db.settings.alertEmail) ? db.settings.alertEmail.trim() : '';
+  const prefEmail = (db.settings && db.settings.alertEmail && db.settings.alertEmail.trim()) ? db.settings.alertEmail.trim() : '221k0049@itscarrillopuerto.edu.mx';
   const mode = (db.settings && db.settings.alertMode) ? db.settings.alertMode : 'both';
 
-  let primaryEmail = psych.email;
-  let ccEmail = null;
+  const recipientSet = new Set();
   let primaryName = psych.nombre;
 
   if(mode === 'preferred' && prefEmail){
-    primaryEmail = prefEmail;
+    recipientSet.add(prefEmail);
     primaryName = 'Coordinación de Orientación Educativa';
-  } else if(mode === 'both' && prefEmail){
-    primaryEmail = psych.email || prefEmail;
-    if(prefEmail.toLowerCase() !== (psych.email || '').toLowerCase()){
-      ccEmail = prefEmail;
-    }
+  } else if(mode === 'orientador' && psych.email){
+    recipientSet.add(psych.email);
   } else {
-    primaryEmail = psych.email || prefEmail || '221k0049@itscarrillopuerto.edu.mx';
+    // Modo 'both' (ambos) o predeterminado: notificar tanto al orientador como al correo de coordinación
+    if(psych.email) recipientSet.add(psych.email);
+    if(prefEmail) recipientSet.add(prefEmail);
   }
 
+  // Garantizar que siempre haya al menos un correo receptor institucional
+  if(recipientSet.size === 0){
+    recipientSet.add('221k0049@itscarrillopuerto.edu.mx');
+  }
+
+  const recipients = Array.from(recipientSet);
+
   return {
-    primaryEmail,
-    ccEmail,
-    primaryName,
+    primaryEmail: recipients.join(', '),
+    recipients: recipients,
+    ccEmail: null,
+    primaryName: primaryName || 'Orientador(a) Institucional',
     psychologist: psych,
     preferredEmail: prefEmail,
-    mode
+    mode: mode
   };
 }
 

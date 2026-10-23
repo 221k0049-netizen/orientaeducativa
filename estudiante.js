@@ -591,29 +591,46 @@ function selectStudentMood(moodId){
 
 /* ---------- Servicio de Envío de Correo Real vía API Serverless ---------- */
 async function dispatchApiEmailNotification(payload){
-  try{
-    const res = await fetch('/api/send-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json().catch(() => ({}));
-    if(!res.ok){
-      console.warn('Aviso en /api/send-email:', data);
-      return { success: false, ...data };
+  // Detectar automáticamente los endpoints según el entorno (Vercel, Live Server port 5500, o Local Node port 3000)
+  const isPort3000 = window.location.port === '3000';
+  const isProduction = window.location.hostname.includes('vercel.app') || window.location.protocol.startsWith('http') && !window.location.port;
+  const endpoints = (isPort3000 || isProduction)
+    ? ['/api/send-email', 'http://localhost:3000/api/send-email']
+    : ['http://localhost:3000/api/send-email', '/api/send-email'];
+
+  let lastError = null;
+  for(const ep of endpoints){
+    try{
+      const res = await fetch(ep, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if(res.ok && (data.success || data.messageId)){
+        console.log(`✅ Correo de alerta entregado exitosamente mediante ${ep}:`, data);
+        return { success: true, ...data };
+      }
+      lastError = data.error || data.message || `HTTP ${res.status}`;
+    }catch(err){
+      lastError = err.message;
     }
-    console.log('✅ Correo entregado al orientador vía /api/send-email:', data);
-    return data;
-  }catch(err){
-    console.warn('Aviso: /api/send-email no está disponible en servidor local sin Node/Vercel:', err.message);
-    return { success: false, error: err.message };
   }
+  console.warn('Aviso: El endpoint de correo no respondió en local. Verifica que "node server.js" o "npm start" esté activo:', lastError);
+  return { success: false, error: lastError };
 }
 
-function submitStudentCheckin(){
+async function submitStudentCheckin(){
   if(!selectedStudentMood){
     alert('Por favor selecciona una emoción antes de guardar.');
     return;
+  }
+
+  const submitBtn = event?.target || document.querySelector('.student-note-field + div button');
+  const originalBtnText = submitBtn ? submitBtn.textContent : '';
+  if(submitBtn){
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Registrando y notificando...';
   }
 
   const noteInput = document.getElementById('scNote');
@@ -645,6 +662,7 @@ function submitStudentCheckin(){
     ? getAlertDestinationInfo(s)
     : { primaryEmail: psychInfo.email, ccEmail: null, primaryName: psychInfo.nombre, psychologist: psychInfo };
   let newAlert = null;
+  let emailDeliveryResult = null;
 
   if(requiresSupport){
     s.prioridad = isNeg ? 'alto' : 'medio';
@@ -696,8 +714,8 @@ function submitStudentCheckin(){
       status: 'Entregado'
     });
 
-    // Despachar el correo real hacia la bandeja de entrada del orientador / correo preferencial
-    dispatchApiEmailNotification({
+    // Despachar el correo real hacia la bandeja de entrada del orientador y coordinación
+    emailDeliveryResult = await dispatchApiEmailNotification({
       to: targetAlert.primaryEmail,
       cc: targetAlert.ccEmail,
       toName: targetAlert.primaryName,
@@ -758,11 +776,16 @@ function submitStudentCheckin(){
     }
   }
 
+  if(submitBtn){
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalBtnText || 'Registrar mi estado de ánimo →';
+  }
+
   const resContainer = document.getElementById('studentCheckinResult');
   if(!resContainer) return;
 
   if(requiresSupport){
-    resContainer.innerHTML = renderAiSupportContainer(s, moodObj, note, psychInfo, newAlert);
+    resContainer.innerHTML = renderAiSupportContainer(s, moodObj, note, psychInfo, newAlert, targetAlert, emailDeliveryResult);
   } else {
     resContainer.innerHTML = renderPositiveAiSupport(s, moodObj, note);
   }
@@ -771,9 +794,11 @@ function submitStudentCheckin(){
 }
 
 /* --- Apoyo Emocional Inmediato (Eirén & Orión) --- */
-function renderAiSupportContainer(student, mood, note, psychInfo, alertObj){
+function renderAiSupportContainer(student, mood, note, psychInfo, alertObj, targetAlert, emailResult){
   const firstName = (student.display || student.nombre).split(' ')[0];
   const psych = psychInfo || getAssignedPsychologist(student);
+  const destEmail = (targetAlert && targetAlert.primaryEmail) ? targetAlert.primaryEmail : psych.email;
+  const destName = (targetAlert && targetAlert.primaryName) ? targetAlert.primaryName : psych.nombre;
 
   const eireneMsgs = {
     neutral: `Hola ${firstName}, los días neutros son completamente naturales y muy valiosos. A veces indican que llevas una carga pesada de tareas o que necesitas un momento de desconexión sin juzgarte. Tu orientador(a) ${psych.nombre} y yo estamos aquí para escucharte y acompañarte siempre. 🌿`,
@@ -830,9 +855,13 @@ function renderAiSupportContainer(student, mood, note, psychInfo, alertObj){
           Notificación institucional y correo electrónico enviados con éxito
         </div>
         <div style="font-size:12.8px;color:var(--ink);line-height:1.55;">
-          Se notificó a tu orientador(a) asignado(a) <strong>${psych.nombre}</strong> (<code>${psych.email}</code>). 
-          La plataforma le ha generado una alerta y un correo institucional para <strong>ponerse en contacto contigo a la brevedad</strong>.
+          Se notificó de inmediato a: <strong>${destName}</strong> (<code>${destEmail}</code>). 
+          La plataforma ha enviado la alerta prioritaria para <strong>ponerse en contacto contigo a la brevedad</strong>.
         </div>
+        ${(emailDeliveryResult && emailDeliveryResult.success) ? `
+        <div style="display:inline-flex;align-items:center;gap:6px;background:#DCFCE7;color:#166534;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:100px;margin-top:6px;">
+          <span>✓</span> Correo entregado exitosamente al orientador escolar (${destEmail})
+        </div>` : ''}
         ${alertObj ? `
         <div style="margin-top:8px;">
           <button class="btn-outline-maroon" style="padding:4px 12px;font-size:11.5px;background:#fff;" onclick="openStudentEmailPreviewModal('${alertObj.id}')">

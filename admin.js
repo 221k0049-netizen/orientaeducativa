@@ -3303,35 +3303,53 @@ async function sendTestAlertEmail(){
     btn.textContent = 'Enviando prueba...';
   }
 
-  try{
-    const res = await fetch('/api/send-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        to: targetEmail,
-        toName: getCurrentUser()?.nombre || 'Coordinador(a) Institucional',
-        studentName: 'Estudiante de Demostración (CONALEP)',
-        matricula: 'PTB-TEST-2026',
-        grupo: '6B',
-        carrera: 'Técnico en Informática',
-        studentEmail: 'alumno.prueba@alumnos.conalep.edu.mx',
-        mood: 'estresado',
-        moodEmoji: '😣',
-        moodLabel: 'Estresado',
-        note: 'Esta es una prueba de verificación del sistema de alertas automáticas por Check-in de NAIMA OS.',
-        level: 'urgente',
-        subject: '🧪 [VERIFICACIÓN] Prueba de Alerta por Check-in de NAIMA OS'
-      })
-    });
+  const isPort3000 = window.location.port === '3000';
+  const isProduction = window.location.hostname.includes('vercel.app') || (window.location.protocol.startsWith('http') && !window.location.port);
+  const endpoints = (isPort3000 || isProduction)
+    ? ['/api/send-email', 'http://localhost:3000/api/send-email']
+    : ['http://localhost:3000/api/send-email', '/api/send-email'];
 
-    const data = await res.json().catch(() => ({}));
-    if(res.ok && data.success){
-      alert(`✅ ¡Correo de prueba enviado con éxito!\n\nRevisa la bandeja de entrada de: ${targetEmail}`);
-    } else {
-      alert(`Aviso al enviar correo: ${data.error || data.message || 'Verifica la configuración del servidor.'}`);
+  let lastData = null;
+  let lastError = null;
+  let sentOk = false;
+
+  for(const ep of endpoints){
+    try{
+      const res = await fetch(ep, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: targetEmail,
+          toName: getCurrentUser()?.nombre || 'Coordinador(a) Institucional',
+          studentName: 'Estudiante de Demostración (CONALEP)',
+          matricula: 'PTB-TEST-2026',
+          grupo: '6B',
+          carrera: 'Técnico en Informática',
+          studentEmail: 'alumno.prueba@alumnos.conalep.edu.mx',
+          mood: 'estresado',
+          moodEmoji: '😣',
+          moodLabel: 'Estresado',
+          note: 'Esta es una prueba de verificación del sistema de alertas automáticas por Check-in de NAIMA OS.',
+          level: 'urgente',
+          subject: '🧪 [VERIFICACIÓN] Prueba de Alerta por Check-in de NAIMA OS'
+        })
+      });
+
+      lastData = await res.json().catch(() => ({}));
+      if(res.ok && (lastData.success || lastData.messageId)){
+        sentOk = true;
+        break;
+      }
+      lastError = lastData.error || lastData.message || `HTTP ${res.status}`;
+    }catch(err){
+      lastError = err.message;
     }
-  }catch(err){
-    alert(`Aviso: No se pudo conectar con el servicio de correo: ${err.message}.\nSi estás en local, asegúrate de iniciar el servidor con "npm start".`);
+  }
+
+  if(sentOk){
+    alert(`✅ ¡Correo de prueba enviado con éxito!\n\nRevisa la bandeja de entrada de: ${targetEmail}\n(El correo suele tardar entre 5 y 30 segundos en reflejarse)`);
+  } else {
+    alert(`Aviso al enviar correo: ${lastError || 'No se pudo conectar con el servidor local.'}\n\nAsegúrate de que el servidor esté activo con "npm start" en la terminal.`);
   }finally{
     if(btn){
       btn.disabled = false;

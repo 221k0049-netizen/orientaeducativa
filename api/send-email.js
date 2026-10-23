@@ -179,16 +179,37 @@ module.exports = async function handler(req, res) {
 </html>
 `;
 
+    // Normalizar lista completa de destinatarios (para que ambos reciban entrega directa en Recibidos)
+    const recipientList = [];
+    const addEmails = (input) => {
+      if (!input) return;
+      if (Array.isArray(input)) {
+        input.forEach(addEmails);
+      } else if (typeof input === 'string') {
+        input.split(',').forEach(s => {
+          const trimmed = s.trim();
+          if (trimmed && trimmed.includes('@') && !recipientList.some(r => r.toLowerCase() === trimmed.toLowerCase())) {
+            recipientList.push(trimmed);
+          }
+        });
+      }
+    };
+    addEmails(to);
+    if (cc) addEmails(cc);
+
+    if (recipientList.length === 0) {
+      recipientList.push(process.env.SMTP_USER || '221k0049@itscarrillopuerto.edu.mx');
+    }
+
     // 1. MÉTODO 1: RESEND API (Si existe RESEND_API_KEY)
     if (process.env.RESEND_API_KEY) {
-      console.log('📨 Enviando correo a través de Resend API hacia:', to, cc ? `(CC: ${cc})` : '');
+      console.log('📨 Enviando correo a través de Resend API hacia:', recipientList.join(', '));
       const resendPayload = {
         from: process.env.RESEND_FROM || 'NAIMA OS Alertas <onboarding@resend.dev>',
-        to: Array.isArray(to) ? to : [to],
+        to: recipientList,
         subject: emailSubject,
         html: htmlBody
       };
-      if (cc) resendPayload.cc = Array.isArray(cc) ? cc : [cc];
 
       const resendRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -207,6 +228,7 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({
         success: true,
         service: 'resend',
+        recipients: recipientList,
         message: 'Correo entregado exitosamente a la bandeja de entrada.',
         details: resendData
       });
@@ -214,7 +236,7 @@ module.exports = async function handler(req, res) {
 
     // 2. MÉTODO 2: GMAIL / SMTP (Si existen SMTP_USER y SMTP_PASS)
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-      console.log('📨 Enviando correo a través de Nodemailer SMTP hacia:', to, cc ? `(CC: ${cc})` : '');
+      console.log('📨 Enviando correo a través de Nodemailer SMTP hacia:', recipientList.join(', '));
       const transporter = nodemailer.createTransport({
         service: process.env.SMTP_SERVICE || (process.env.SMTP_HOST ? undefined : 'gmail'),
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -228,17 +250,17 @@ module.exports = async function handler(req, res) {
 
       const mailOptions = {
         from: `"${process.env.SMTP_FROM_NAME || 'NAIMA OS Orientación'}" <${process.env.SMTP_USER}>`,
-        to: to,
+        to: recipientList.join(', '),
         subject: emailSubject,
         html: htmlBody
       };
-      if (cc) mailOptions.cc = cc;
 
       const info = await transporter.sendMail(mailOptions);
 
       return res.status(200).json({
         success: true,
         service: 'smtp',
+        recipients: recipientList,
         messageId: info.messageId,
         message: 'Correo enviado a la bandeja de entrada del psicólogo vía SMTP.'
       });
