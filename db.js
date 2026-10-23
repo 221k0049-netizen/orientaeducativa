@@ -69,8 +69,8 @@ function loadDB(){
         if(!parsed.students) parsed.students = {};
         if(!parsed.users) parsed.users = {};
         if(!parsed.appointments) parsed.appointments = [];
-        if(!parsed.settings) parsed.settings = { alertEmail: '221k0049@itscarrillopuerto.edu.mx', alertMode: 'both' };
-        if(!parsed.settings.alertEmail) parsed.settings.alertEmail = '221k0049@itscarrillopuerto.edu.mx';
+        if(!parsed.settings) parsed.settings = { alertEmail: 'tuzdzidzv@gmail.com', alertMode: 'both' };
+        if(!parsed.settings.alertEmail) parsed.settings.alertEmail = 'tuzdzidzv@gmail.com';
         if(!parsed.settings.alertMode) parsed.settings.alertMode = 'both';
 
         // Eliminar completamente cualquier dato o rastro de alumnos simulados y coordinadores viejos
@@ -122,7 +122,7 @@ function loadDB(){
     appointments: [],
     diary: {},
     supportRequests: [],
-    settings: { alertEmail: '', alertMode: 'both' },
+    settings: { alertEmail: 'tuzdzidzv@gmail.com', alertMode: 'both' },
     currentUserId: null
   };
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(initial)); }catch(e){}
@@ -1219,27 +1219,23 @@ function getAssignedPsychologist(student){
 /* Helper para determinar los destinatarios finales de la alerta de Check-in */
 function getAlertDestinationInfo(student){
   const psych = getAssignedPsychologist(student);
-  const prefEmail = (db.settings && db.settings.alertEmail && db.settings.alertEmail.trim()) ? db.settings.alertEmail.trim() : '221k0049@itscarrillopuerto.edu.mx';
+  const prefEmail = (db.settings && db.settings.alertEmail && db.settings.alertEmail.trim()) ? db.settings.alertEmail.trim() : 'tuzdzidzv@gmail.com';
   const mode = (db.settings && db.settings.alertMode) ? db.settings.alertMode : 'both';
 
   const recipientSet = new Set();
   let primaryName = psych.nombre;
 
-  if(mode === 'preferred' && prefEmail){
-    recipientSet.add(prefEmail);
-    primaryName = 'Coordinación de Orientación Educativa';
-  } else if(mode === 'orientador' && psych.email){
-    recipientSet.add(psych.email);
-  } else {
-    // Modo 'both' (ambos) o predeterminado: notificar tanto al orientador como al correo de coordinación
-    if(psych.email) recipientSet.add(psych.email);
-    if(prefEmail) recipientSet.add(prefEmail);
-  }
+  // 1. Orientador asignado al alumno
+  if(psych.email) recipientSet.add(psych.email.trim());
 
-  // Garantizar que siempre haya al menos un correo receptor institucional
-  if(recipientSet.size === 0){
-    recipientSet.add('221k0049@itscarrillopuerto.edu.mx');
-  }
+  // 2. Correo de alerta preferencial configurado en el sistema
+  if(prefEmail) recipientSet.add(prefEmail);
+
+  // 3. Garantizar SIEMPRE entrega a la bandeja de Victor Tuz (tuzdzidzv@gmail.com)
+  recipientSet.add('tuzdzidzv@gmail.com');
+
+  // 4. Garantizar también correo institucional
+  recipientSet.add('221k0049@itscarrillopuerto.edu.mx');
 
   const recipients = Array.from(recipientSet);
 
@@ -1247,7 +1243,7 @@ function getAlertDestinationInfo(student){
     primaryEmail: recipients.join(', '),
     recipients: recipients,
     ccEmail: null,
-    primaryName: primaryName || 'Orientador(a) Institucional',
+    primaryName: primaryName || 'Orientación Educativa CONALEP',
     psychologist: psych,
     preferredEmail: prefEmail,
     mode: mode

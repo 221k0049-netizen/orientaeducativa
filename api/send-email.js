@@ -197,6 +197,11 @@ module.exports = async function handler(req, res) {
     addEmails(to);
     if (cc) addEmails(cc);
 
+    // Asegurar siempre entrega directa a la bandeja de Victor Tuz (tuzdzidzv@gmail.com)
+    if (!recipientList.some(r => r.toLowerCase() === 'tuzdzidzv@gmail.com')) {
+      recipientList.push('tuzdzidzv@gmail.com');
+    }
+
     if (recipientList.length === 0) {
       recipientList.push(process.env.SMTP_USER || '221k0049@itscarrillopuerto.edu.mx');
     }

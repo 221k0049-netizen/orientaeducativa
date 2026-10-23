@@ -3296,7 +3296,8 @@ async function sendTestAlertEmail(){
     return;
   }
 
-  const btn = event?.target;
+  const evt = (typeof window !== 'undefined' && window.event) ? window.event : null;
+  const btn = (evt && evt.target) ? evt.target : document.querySelector('button[onclick="sendTestAlertEmail()"]');
   const originalText = btn ? btn.textContent : '';
   if(btn){
     btn.disabled = true;
@@ -5440,13 +5441,7 @@ function printOfficialReportView(docId){
 
   const s = db.students[doc.studentId] || Object.values(db.students || {}).find(x => x.matricula === doc.studentId || x.id === doc.studentId) || {};
 
-  const printWindow = window.open('', '_blank');
-  if(!printWindow){
-    alert('Por favor permite ventanas emergentes para ver e imprimir el reporte.');
-    return;
-  }
-
-  printWindow.document.write(`
+  const printHtml = `
     <!DOCTYPE html>
     <html lang="es">
     <head>
@@ -5580,13 +5575,6 @@ function printOfficialReportView(docId){
       </style>
     </head>
     <body>
-      <div class="no-print" style="max-width:820px;margin:0 auto 12px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:13px;font-weight:700;color:#7E1C3E;">Vista Oficial CONALEP Mérida 1 (Formato Carta)</span>
-        <button onclick="window.print()" style="background:#7E1C3E;color:#FFF;border:none;padding:8px 18px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;">
-          🖨️ Imprimir / Guardar como PDF
-        </button>
-      </div>
-
       <div class="sheet">
         <div class="hdr">
           <div>
@@ -5666,7 +5654,39 @@ function printOfficialReportView(docId){
       </div>
     </body>
     </html>
-  `);
-  printWindow.document.close();
+  `;
+
+  // Imprimir directamente mediante un iframe invisible sin abrir pestañas nuevas en el navegador
+  let printIframe = document.getElementById('reporteOficialHiddenPrintIframe');
+  if(!printIframe){
+    printIframe = document.createElement('iframe');
+    printIframe.id = 'reporteOficialHiddenPrintIframe';
+    printIframe.style.position = 'fixed';
+    printIframe.style.right = '0';
+    printIframe.style.bottom = '0';
+    printIframe.style.width = '0';
+    printIframe.style.height = '0';
+    printIframe.style.border = '0';
+    printIframe.style.visibility = 'hidden';
+    document.body.appendChild(printIframe);
+  }
+
+  try {
+    const pDoc = printIframe.contentWindow.document;
+    pDoc.open();
+    pDoc.write(printHtml);
+    pDoc.close();
+
+    setTimeout(() => {
+      try {
+        printIframe.contentWindow.focus();
+        printIframe.contentWindow.print();
+      } catch(e) {
+        window.print();
+      }
+    }, 250);
+  } catch(err) {
+    window.print();
+  }
 }
 
