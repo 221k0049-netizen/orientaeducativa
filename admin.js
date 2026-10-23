@@ -3499,21 +3499,31 @@ function closeSidebarMobile(){
   }
 }
 
-/* ---------- Inicialización ---------- */
-document.addEventListener('DOMContentLoaded', function(){
+/* ---------- Inicialización Robusta ---------- */
+function initAdminApp(){
   renderAdminUserProfile();
   renderAdminSidebar();
   nav('inicio');
 
   const overlay = document.getElementById('appModal');
-  if(overlay){
+  if(overlay && !overlay._hasOverlayListener){
+    overlay._hasOverlayListener = true;
     overlay.addEventListener('click', function(e){ if(e.target === this) closeModal(); });
   }
-  document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape'){ closeModal(); closeSidebarMobile(); }
-  });
-  window.addEventListener('resize', function(){ if(window.innerWidth > 992) closeSidebarMobile(); });
-});
+  if(!window._hasAdminGlobalKeyListeners){
+    window._hasAdminGlobalKeyListeners = true;
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape'){ closeModal(); closeSidebarMobile(); }
+    });
+    window.addEventListener('resize', function(){ if(window.innerWidth > 992) closeSidebarMobile(); });
+  }
+}
+
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', initAdminApp);
+} else {
+  initAdminApp();
+}
 
 // Re-renderizar automáticamente cuando Supabase termine de sincronizar datos
 window.addEventListener('naima:dbsynced', function(){
