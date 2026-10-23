@@ -626,7 +626,8 @@ async function submitStudentCheckin(){
     return;
   }
 
-  const submitBtn = event?.target || document.querySelector('.student-note-field + div button');
+  const evt = (typeof window !== 'undefined' && window.event) ? window.event : null;
+  const submitBtn = (evt && evt.target) ? evt.target : document.querySelector('.student-note-field + div button');
   const originalBtnText = submitBtn ? submitBtn.textContent : '';
   if(submitBtn){
     submitBtn.disabled = true;
@@ -790,7 +791,9 @@ async function submitStudentCheckin(){
     resContainer.innerHTML = renderPositiveAiSupport(s, moodObj, note);
   }
 
-  resContainer.scrollIntoView({ behavior:'smooth', block:'start' });
+  if(typeof resContainer.scrollIntoView === 'function'){
+    resContainer.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
 }
 
 /* --- Apoyo Emocional Inmediato (Eirén & Orión) --- */
@@ -858,7 +861,7 @@ function renderAiSupportContainer(student, mood, note, psychInfo, alertObj, targ
           Se notificó de inmediato a: <strong>${destName}</strong> (<code>${destEmail}</code>). 
           La plataforma ha enviado la alerta prioritaria para <strong>ponerse en contacto contigo a la brevedad</strong>.
         </div>
-        ${(emailDeliveryResult && emailDeliveryResult.success) ? `
+        ${(emailResult && emailResult.success) ? `
         <div style="display:inline-flex;align-items:center;gap:6px;background:#DCFCE7;color:#166534;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:100px;margin-top:6px;">
           <span>✓</span> Correo entregado exitosamente al orientador escolar (${destEmail})
         </div>` : ''}

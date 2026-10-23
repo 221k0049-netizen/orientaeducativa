@@ -36,17 +36,6 @@ const SEED_USERS = {
     nombre: 'Victor Tuz',
     display: 'Victor T.',
     email: '221k0049@itscarrillopuerto.edu.mx',
-    aliasEmail: 'tuzdzidzv@gmail.com',
-    password: '1234',
-    rol: 'coordinador',
-    cargo: 'Orientador Educativo',
-    plantel: 'CONALEP Mérida I'
-  },
-  'usr_coord_victor_gmail': {
-    id: 'usr_coord_victor_gmail',
-    nombre: 'Victor Tuz',
-    display: 'Victor T.',
-    email: 'tuzdzidzv@gmail.com',
     password: '1234',
     rol: 'coordinador',
     cargo: 'Orientador Educativo',
@@ -357,20 +346,20 @@ async function loginUser(identifier, password){
     const client = getActiveSupabaseClient();
     if(client){
       try{
-        let targetEmail = identifier;
-        // Si el identificador no tiene formato de correo, buscar el email por matrícula en Supabase
-        if(!targetEmail.includes('@')){
-          const { data: stLookup } = await client.from('students').select('email').ilike('matricula', identifier).limit(1);
-          if(stLookup && stLookup.length > 0 && stLookup[0].email){
-            targetEmail = stLookup[0].email.toLowerCase();
-          }
+        const isEmail = identifier.includes('@');
+        const isCoordQuery = isEmail || identifier.startsWith('usr_coord_');
+
+        // A) Si parece credencial de orientador / personal, verificar en coordinadores de Supabase
+        let coordData = null;
+        if(isCoordQuery){
+          const { data: coordList } = await client.from('coordinadores').select('*')
+            .or(`email.ilike.${identifier},id.ilike.${identifier}`).limit(1);
+          coordData = coordList && coordList.length > 0 ? coordList[0] : null;
         }
 
-        // A) Verificar si es un coordinador / orientador en Supabase
-        const { data: coordList } = await client.from('coordinadores').select('*').ilike('email', targetEmail).limit(1);
-        const coordData = coordList && coordList.length > 0 ? coordList[0] : null;
         if(coordData){
-          const localCoord = db.users[coordData.id] || db.users[coordData.email] || db.users[targetEmail] || {};
+          const targetEmail = (coordData.email || identifier).toLowerCase();
+          const localCoord = db.users[coordData.id] || db.users[targetEmail] || {};
           let isValid = false;
 
           // 1. Probar con Supabase Auth si está configurado
@@ -443,20 +432,33 @@ async function loginUser(identifier, password){
             passwordHash: inputHash
           };
           saveDB();
-          setSessionUser(db.users[coordData.id]);
+          setCurrentUser(coordData.id);
           return { success: true, user: db.users[coordData.id], redirectUrl: 'admin.html', source: 'supabase' };
         }
 
-        // B) Verificar si es un estudiante en Supabase (soporta múltiples filas por correo sin error PGRST116)
-        const { data: stList } = await client.from('students').select('*')
-          .or(`email.ilike.${targetEmail},matricula.ilike.${identifier}`);
+        // B) Verificar si es un estudiante en Supabase (soporta matrícula directa o correo)
+        let stList = null;
+        if(isEmail){
+          const { data } = await client.from('students').select('*').ilike('email', identifier);
+          stList = data;
+        } else {
+          const { data } = await client.from('students').select('*').ilike('matricula', identifier);
+          stList = data;
+        }
 
         if(stList && stList.length > 0){
           let stData = null;
           let isValid = false;
 
+          // Si hay varias filas por correo, priorizar la fila con matrícula exacta o 221k0049
+          const sortedList = [...stList].sort((a, b) => {
+            if(a.matricula && a.matricula.toLowerCase() === identifier.toLowerCase()) return -1;
+            if(b.matricula && b.matricula.toLowerCase() === identifier.toLowerCase()) return 1;
+            return (b.matricula === '221k0049' ? 1 : 0) - (a.matricula === '221k0049' ? 1 : 0);
+          });
+
           // Iterar por los estudiantes encontrados para validar credenciales
-          for(const cand of stList){
+          for(const cand of sortedList){
             const candCfg = cand.avatar_config || {};
             const localCand = (db.students && db.students[cand.matricula]) || (db.users && db.users[cand.matricula]) || {};
             let candValid = false;
@@ -470,7 +472,7 @@ async function loginUser(identifier, password){
             if(!candValid && cand.user_id){
               try{
                 const { data: authData, error: authError } = await client.auth.signInWithPassword({
-                  email: (cand.email || targetEmail).toLowerCase(),
+                  email: (cand.email || identifier).toLowerCase(),
                   password: password
                 });
                 if(!authError && authData?.user){
@@ -504,7 +506,7 @@ async function loginUser(identifier, password){
 
           // Si ninguno validó pero la matrícula fue ingresada exactamente, usar ese registro para el reporte de error
           if(!stData){
-            stData = stList.find(s => s.matricula && s.matricula.toLowerCase() === identifier) || stList[0];
+            stData = sortedList[0];
           }
 
           if(!isValid){
@@ -552,7 +554,7 @@ async function loginUser(identifier, password){
 
         // C) Si no está en tablas directas, intentar con Supabase Auth
         const { data: authData, error: authError } = await client.auth.signInWithPassword({
-          email: targetEmail,
+          email: identifier,
           password: password
         });
 
