@@ -3350,11 +3350,11 @@ async function sendTestAlertEmail(){
     alert(`✅ ¡Correo de prueba enviado con éxito!\n\nRevisa la bandeja de entrada de: ${targetEmail}\n(El correo suele tardar entre 5 y 30 segundos en reflejarse)`);
   } else {
     alert(`Aviso al enviar correo: ${lastError || 'No se pudo conectar con el servidor local.'}\n\nAsegúrate de que el servidor esté activo con "npm start" en la terminal.`);
-  }finally{
-    if(btn){
-      btn.disabled = false;
-      btn.textContent = originalText;
-    }
+  }
+
+  if(btn){
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
 }
 
