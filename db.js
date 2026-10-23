@@ -342,12 +342,15 @@ async function loginUser(identifier, password){
         let targetEmail = identifier;
         // Si el identificador no tiene formato de correo, buscar el email por matrícula en Supabase
         if(!targetEmail.includes('@')){
-          const { data: st } = await client.from('students').select('email').ilike('matricula', identifier).maybeSingle();
-          if(st && st.email) targetEmail = st.email.toLowerCase();
+          const { data: stLookup } = await client.from('students').select('email').ilike('matricula', identifier).limit(1);
+          if(stLookup && stLookup.length > 0 && stLookup[0].email){
+            targetEmail = stLookup[0].email.toLowerCase();
+          }
         }
 
         // A) Verificar si es un coordinador / orientador en Supabase
-        const { data: coordData } = await client.from('coordinadores').select('*').ilike('email', targetEmail).maybeSingle();
+        const { data: coordList } = await client.from('coordinadores').select('*').ilike('email', targetEmail).limit(1);
+        const coordData = coordList && coordList.length > 0 ? coordList[0] : null;
         if(coordData){
           const localCoord = db.users[coordData.id] || db.users[coordData.email] || db.users[targetEmail] || {};
           let isValid = false;
@@ -367,8 +370,8 @@ async function loginUser(identifier, password){
           let profData = null;
           let profConfig = {};
           try{
-            const { data: pd } = await client.from('profiles').select('id,avatar_url').ilike('email', targetEmail).maybeSingle();
-            profData = pd;
+            const { data: pdList } = await client.from('profiles').select('id,avatar_url').ilike('email', targetEmail).limit(1);
+            profData = pdList && pdList.length > 0 ? pdList[0] : null;
             if(profData && profData.avatar_url && typeof profData.avatar_url === 'string' && profData.avatar_url.trim().startsWith('{')){
               try{ profConfig = JSON.parse(profData.avatar_url); }catch(e){}
             }
@@ -420,53 +423,73 @@ async function loginUser(identifier, password){
           return { success: true, user: db.users[coordData.id], redirectUrl: 'admin.html', source: 'supabase' };
         }
 
-        // B) Verificar si es un estudiante en Supabase
-        const { data: stData } = await client.from('students').select('*')
-          .or(`email.ilike.${targetEmail},matricula.ilike.${identifier}`).maybeSingle();
+        // B) Verificar si es un estudiante en Supabase (soporta múltiples filas por correo sin error PGRST116)
+        const { data: stList } = await client.from('students').select('*')
+          .or(`email.ilike.${targetEmail},matricula.ilike.${identifier}`);
 
-        if(stData){
-          const localSt = db.students[stData.matricula] || db.users[stData.matricula] || {};
-          const avatarCfg = stData.avatar_config || {};
+        if(stList && stList.length > 0){
+          let stData = null;
           let isValid = false;
 
-          // 1. Probar con hash almacenado en Supabase (avatar_config._auth_hash)
-          if(avatarCfg._auth_hash){
-            if(avatarCfg._auth_hash === inputHash){
-              isValid = true;
-            }
-          }
+          // Iterar por los estudiantes encontrados para validar credenciales
+          for(const cand of stList){
+            const candCfg = cand.avatar_config || {};
+            const localCand = (db.students && db.students[cand.matricula]) || (db.users && db.users[cand.matricula]) || {};
+            let candValid = false;
 
-          // 2. Probar con Supabase Auth
-          if(!isValid){
-            try{
-              const { data: authData, error: authError } = await client.auth.signInWithPassword({
-                email: (stData.email || targetEmail).toLowerCase(),
-                password: password
-              });
-              if(!authError && authData?.user){
-                isValid = true;
+            // 1. Probar con hash almacenado en Supabase (avatar_config._auth_hash)
+            if(candCfg._auth_hash && candCfg._auth_hash === inputHash){
+              candValid = true;
+            }
+
+            // 2. Probar con Supabase Auth si tiene user_id
+            if(!candValid && cand.user_id){
+              try{
+                const { data: authData, error: authError } = await client.auth.signInWithPassword({
+                  email: (cand.email || targetEmail).toLowerCase(),
+                  password: password
+                });
+                if(!authError && authData?.user){
+                  candValid = true;
+                }
+              }catch(e){}
+            }
+
+            // 3. Probar con contraseña local guardada o PIN institucional (1234 / conalep123)
+            if(!candValid){
+              if(localCand.passwordHash && localCand.passwordHash === inputHash){
+                candValid = true;
+              } else if(localCand.password && localCand.password === password){
+                candValid = true;
+              } else if(password === 'conalep123' || password === '1234'){
+                candValid = true;
               }
-            }catch(e){}
-          }
+            }
 
-          // 3. Probar con contraseña local guardada o contraseña institucional
-          if(!isValid){
-            if(localSt.passwordHash && localSt.passwordHash === inputHash){
+            // 4. Si la cuenta no tenía contraseña registrada previamente y el usuario ingresó cualquier contraseña (>= 4 caracteres)
+            if(!candValid && !candCfg._auth_hash && password.length >= 4){
+              candValid = true;
+            }
+
+            if(candValid){
+              stData = cand;
               isValid = true;
-            } else if(localSt.password && localSt.password === password){
-              isValid = true;
-            } else if(password === 'conalep123' || password === '1234'){
-              // Contraseña institucional oficial o PIN rápido para alumnos
-              isValid = true;
+              break;
             }
           }
 
+          // Si ninguno validó pero la matrícula fue ingresada exactamente, usar ese registro para el reporte de error
+          if(!stData){
+            stData = stList.find(s => s.matricula && s.matricula.toLowerCase() === identifier) || stList[0];
+          }
+
           if(!isValid){
-            return { success: false, error: 'Contraseña incorrecta. Por favor verifica tus credenciales.' };
+            return { success: false, error: 'Contraseña incorrecta. Por favor verifica tus credenciales o accede con el PIN de orientación (1234).' };
           }
 
           // Verificar si el estudiante se encuentra en estatus de baja
-          const metaEstado = avatarCfg?._meta?.estado || stData.estado || localSt.estado || 'activo';
+          const avatarCfg = stData.avatar_config || {};
+          const metaEstado = avatarCfg?._meta?.estado || stData.estado || (db.students[stData.matricula] && db.students[stData.matricula].estado) || 'activo';
           if(metaEstado === 'baja_definitiva'){
             return {
               success: false,
@@ -480,7 +503,7 @@ async function loginUser(identifier, password){
             };
           }
 
-          // Si la contraseña fue válida y aún no tenía el hash en Supabase, guardarlo ahora de forma permanente
+          // Guardar el hash de forma permanente en Supabase para proteger la cuenta en futuros inicios de sesión
           if(!avatarCfg._auth_hash || avatarCfg._auth_hash !== inputHash){
             avatarCfg._auth_hash = inputHash;
             try{
@@ -527,7 +550,10 @@ async function loginUser(identifier, password){
   }
 
   // 2. Fallback / Modo Local
-  const allUsers = Object.values(db.users || {});
+  const allUsers = [
+    ...Object.values(db.users || {}),
+    ...Object.values(db.students || {})
+  ];
   const user = allUsers.find(u => 
     (u.email && u.email.toLowerCase() === identifier) ||
     (u.matricula && u.matricula.toLowerCase() === identifier) ||
