@@ -641,6 +641,9 @@ function submitStudentCheckin(){
   const requiresSupport = isNeg || isNeutral;
 
   const psychInfo = getAssignedPsychologist(s);
+  const targetAlert = (typeof getAlertDestinationInfo === 'function')
+    ? getAlertDestinationInfo(s)
+    : { primaryEmail: psychInfo.email, ccEmail: null, primaryName: psychInfo.nombre, psychologist: psychInfo };
   let newAlert = null;
 
   if(requiresSupport){
@@ -670,8 +673,8 @@ function submitStudentCheckin(){
       status: 'pendiente',
       date: fechaStr,
       note: note || (isNeutral ? 'Reportó estado Neutral en check-in (requiere seguimiento preventivo)' : 'Reportó estado negativo en check-in'),
-      psychologistName: psychInfo.nombre,
-      psychologistEmail: psychInfo.email,
+      psychologistName: targetAlert.primaryName || psychInfo.nombre,
+      psychologistEmail: targetAlert.primaryEmail || psychInfo.email,
       emailSubject: emailData.subject,
       emailBody: emailData.body,
       emailDate: fechaStr
@@ -684,8 +687,8 @@ function submitStudentCheckin(){
       alertId: newAlert.id,
       studentId: s.matricula,
       studentName: s.nombre,
-      to: psychInfo.email,
-      toName: psychInfo.nombre,
+      to: targetAlert.primaryEmail + (targetAlert.ccEmail ? ` (CC: ${targetAlert.ccEmail})` : ''),
+      toName: targetAlert.primaryName,
       subject: emailData.subject,
       body: emailData.body,
       date: fechaStr,
@@ -693,10 +696,11 @@ function submitStudentCheckin(){
       status: 'Entregado'
     });
 
-    // Despachar el correo real hacia la bandeja de entrada del psicólogo a través de la API Serverless
+    // Despachar el correo real hacia la bandeja de entrada del orientador / correo preferencial
     dispatchApiEmailNotification({
-      to: psychInfo.email,
-      toName: psychInfo.nombre,
+      to: targetAlert.primaryEmail,
+      cc: targetAlert.ccEmail,
+      toName: targetAlert.primaryName,
       studentName: s.nombre,
       matricula: s.matricula,
       grupo: s.grupo,

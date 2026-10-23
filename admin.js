@@ -3156,6 +3156,64 @@ function renderConfiguracion(){
     <span class="demo-chip">CONALEP Mérida I</span>
   </div>
 
+  <!-- Módulo de Notificaciones por Correo Electrónico -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--maroon);padding:24px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+      <div>
+        <span class="section-label" style="margin:0 0 4px 0;">📬 ALERTAS INMEDIATAS POR CORREO</span>
+        <h3 style="margin:0;font-size:17px;color:var(--ink);">Correo Institucional para Alertas de Check-in</h3>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-top:4px;max-width:650px;">
+          Cuando un alumno responde su Check-in con un estado de alerta o preventivo (Triste, Estresado, Enojado o Neutral), el sistema despacha automáticamente una notificación a la bandeja de entrada para brindar atención inmediata.
+        </p>
+      </div>
+      <span class="badge-student-status activo" style="font-size:11px;">
+        ● Sistema SMTP / Servidor Activo
+      </span>
+    </div>
+
+    <div style="background:#FAFBF9;border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:14px;">
+      <div class="proto-form-grid" style="margin-bottom:14px;">
+        <div class="proto-form-field">
+          <label for="cfgAlertEmail"><strong>Correo Preferencial para Alertas Socioemocionales</strong></label>
+          <input type="email" id="cfgAlertEmail" 
+                 placeholder="Ej. 221k0049@itscarrillopuerto.edu.mx o tu_correo@gmail.com" 
+                 value="${escapeHTML((db.settings && db.settings.alertEmail) ? db.settings.alertEmail : (user.email || ''))}">
+          <div style="font-size:11.5px;color:var(--ink-muted);margin-top:4px;">
+            Correo de tu cuenta actual: <strong>${escapeHTML(user.email || '221k0049@itscarrillopuerto.edu.mx')}</strong>
+          </div>
+        </div>
+
+        <div class="proto-form-field">
+          <label for="cfgAlertMode"><strong>Modo de Envío de Alertas</strong></label>
+          <select id="cfgAlertMode">
+            <option value="both" ${(db.settings?.alertMode==='both' || !db.settings?.alertMode) ? 'selected' : ''}>
+              📬 Enviar a Ambos (Orientador asignado al alumno + Correo preferencial)
+            </option>
+            <option value="preferred" ${db.settings?.alertMode==='preferred' ? 'selected' : ''}>
+              🎯 Enviar Únicamente al Correo Preferencial arriba indicado
+            </option>
+            <option value="orientador" ${db.settings?.alertMode==='orientador' ? 'selected' : ''}>
+              🩺 Enviar Únicamente al Orientador asignado a cada alumno
+            </option>
+          </select>
+          <div style="font-size:11.5px;color:var(--ink-muted);margin-top:4px;">
+            Garantiza que el orientador o la coordinación reciba la alerta al instante.
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <button class="btn-maroon" onclick="saveAlertEmailSettings()" style="padding:10px 20px;font-size:13px;">
+          💾 Guardar Preferencias de Correo
+        </button>
+        <button class="btn-outline-maroon" onclick="sendTestAlertEmail()" style="padding:10px 18px;font-size:13px;background:#FFF;">
+          🧪 Enviar Correo de Prueba a Mi Bandeja →
+        </button>
+        <span id="cfgEmailFeedback" style="display:none;font-size:12.5px;font-weight:600;color:var(--green);"></span>
+      </div>
+    </div>
+  </div>
+
   <div class="duo-grid" style="grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;margin-bottom:24px;">
     <div class="duo-card">
       <span class="section-label">🛡️ GESTIÓN DE ACCESOS</span>
@@ -3205,6 +3263,81 @@ function renderConfiguracion(){
     </table>
   </div>
   `;
+}
+
+function saveAlertEmailSettings(){
+  const emailInput = document.getElementById('cfgAlertEmail');
+  const modeSelect = document.getElementById('cfgAlertMode');
+  const feedback = document.getElementById('cfgEmailFeedback');
+  if(!emailInput) return;
+
+  const email = emailInput.value.trim();
+  const mode = modeSelect ? modeSelect.value : 'both';
+
+  if(!db.settings) db.settings = {};
+  db.settings.alertEmail = email;
+  db.settings.alertMode = mode;
+  saveDB();
+
+  if(feedback){
+    feedback.textContent = `✓ Guardado: Las alertas se enviarán a ${email || 'correo del orientador'}`;
+    feedback.style.display = 'inline';
+    setTimeout(() => { feedback.style.display = 'none'; }, 4000);
+  }
+  alert(`✅ Configuración de alertas guardada exitosamente.\nDestinatario preferencial: ${email || 'Orientador asignado'}`);
+}
+
+async function sendTestAlertEmail(){
+  const emailInput = document.getElementById('cfgAlertEmail');
+  const targetEmail = (emailInput ? emailInput.value.trim() : '') || getCurrentUser()?.email || '221k0049@itscarrillopuerto.edu.mx';
+
+  if(!targetEmail || !targetEmail.includes('@')){
+    alert('Por favor introduce un correo electrónico válido antes de enviar la prueba.');
+    return;
+  }
+
+  const btn = event?.target;
+  const originalText = btn ? btn.textContent : '';
+  if(btn){
+    btn.disabled = true;
+    btn.textContent = 'Enviando prueba...';
+  }
+
+  try{
+    const res = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: targetEmail,
+        toName: getCurrentUser()?.nombre || 'Coordinador(a) Institucional',
+        studentName: 'Estudiante de Demostración (CONALEP)',
+        matricula: 'PTB-TEST-2026',
+        grupo: '6B',
+        carrera: 'Técnico en Informática',
+        studentEmail: 'alumno.prueba@alumnos.conalep.edu.mx',
+        mood: 'estresado',
+        moodEmoji: '😣',
+        moodLabel: 'Estresado',
+        note: 'Esta es una prueba de verificación del sistema de alertas automáticas por Check-in de NAIMA OS.',
+        level: 'urgente',
+        subject: '🧪 [VERIFICACIÓN] Prueba de Alerta por Check-in de NAIMA OS'
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if(res.ok && data.success){
+      alert(`✅ ¡Correo de prueba enviado con éxito!\n\nRevisa la bandeja de entrada de: ${targetEmail}`);
+    } else {
+      alert(`Aviso al enviar correo: ${data.error || data.message || 'Verifica la configuración del servidor.'}`);
+    }
+  }catch(err){
+    alert(`Aviso: No se pudo conectar con el servicio de correo: ${err.message}.\nSi estás en local, asegúrate de iniciar el servidor con "npm start".`);
+  }finally{
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
 }
 
 async function forzarSincronizacionSupabase(){

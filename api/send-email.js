@@ -50,6 +50,7 @@ module.exports = async function handler(req, res) {
   try {
     const {
       to,
+      cc,
       toName,
       studentName,
       matricula,
@@ -180,19 +181,22 @@ module.exports = async function handler(req, res) {
 
     // 1. MÉTODO 1: RESEND API (Si existe RESEND_API_KEY)
     if (process.env.RESEND_API_KEY) {
-      console.log('📨 Enviando correo a través de Resend API hacia:', to);
+      console.log('📨 Enviando correo a través de Resend API hacia:', to, cc ? `(CC: ${cc})` : '');
+      const resendPayload = {
+        from: process.env.RESEND_FROM || 'NAIMA OS Alertas <onboarding@resend.dev>',
+        to: Array.isArray(to) ? to : [to],
+        subject: emailSubject,
+        html: htmlBody
+      };
+      if (cc) resendPayload.cc = Array.isArray(cc) ? cc : [cc];
+
       const resendRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          from: process.env.RESEND_FROM || 'NAIMA OS Alertas <onboarding@resend.dev>',
-          to: [to],
-          subject: emailSubject,
-          html: htmlBody
-        })
+        body: JSON.stringify(resendPayload)
       });
 
       const resendData = await resendRes.json();
@@ -210,7 +214,7 @@ module.exports = async function handler(req, res) {
 
     // 2. MÉTODO 2: GMAIL / SMTP (Si existen SMTP_USER y SMTP_PASS)
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-      console.log('📨 Enviando correo a través de Nodemailer SMTP hacia:', to);
+      console.log('📨 Enviando correo a través de Nodemailer SMTP hacia:', to, cc ? `(CC: ${cc})` : '');
       const transporter = nodemailer.createTransport({
         service: process.env.SMTP_SERVICE || (process.env.SMTP_HOST ? undefined : 'gmail'),
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -222,12 +226,15 @@ module.exports = async function handler(req, res) {
         }
       });
 
-      const info = await transporter.sendMail({
+      const mailOptions = {
         from: `"${process.env.SMTP_FROM_NAME || 'NAIMA OS Orientación'}" <${process.env.SMTP_USER}>`,
         to: to,
         subject: emailSubject,
         html: htmlBody
-      });
+      };
+      if (cc) mailOptions.cc = cc;
+
+      const info = await transporter.sendMail(mailOptions);
 
       return res.status(200).json({
         success: true,

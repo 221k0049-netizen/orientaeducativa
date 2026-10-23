@@ -69,6 +69,7 @@ function loadDB(){
         if(!parsed.students) parsed.students = {};
         if(!parsed.users) parsed.users = {};
         if(!parsed.appointments) parsed.appointments = [];
+        if(!parsed.settings) parsed.settings = { alertEmail: '', alertMode: 'both' };
 
         // Eliminar completamente cualquier dato o rastro de alumnos simulados y coordinadores viejos
         ['PTB-26001', 'PTB-26002', 'PTB-26003'].forEach(mat => {
@@ -119,6 +120,7 @@ function loadDB(){
     appointments: [],
     diary: {},
     supportRequests: [],
+    settings: { alertEmail: '', alertMode: 'both' },
     currentUserId: null
   };
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(initial)); }catch(e){}
@@ -1157,6 +1159,38 @@ function getAssignedPsychologist(student){
     email: '221k0049@itscarrillopuerto.edu.mx',
     cargo: 'Orientador Educativo',
     plantel: 'CONALEP Mérida I'
+  };
+}
+
+/* Helper para determinar los destinatarios finales de la alerta de Check-in */
+function getAlertDestinationInfo(student){
+  const psych = getAssignedPsychologist(student);
+  const prefEmail = (db.settings && db.settings.alertEmail) ? db.settings.alertEmail.trim() : '';
+  const mode = (db.settings && db.settings.alertMode) ? db.settings.alertMode : 'both';
+
+  let primaryEmail = psych.email;
+  let ccEmail = null;
+  let primaryName = psych.nombre;
+
+  if(mode === 'preferred' && prefEmail){
+    primaryEmail = prefEmail;
+    primaryName = 'Coordinación de Orientación Educativa';
+  } else if(mode === 'both' && prefEmail){
+    primaryEmail = psych.email || prefEmail;
+    if(prefEmail.toLowerCase() !== (psych.email || '').toLowerCase()){
+      ccEmail = prefEmail;
+    }
+  } else {
+    primaryEmail = psych.email || prefEmail || '221k0049@itscarrillopuerto.edu.mx';
+  }
+
+  return {
+    primaryEmail,
+    ccEmail,
+    primaryName,
+    psychologist: psych,
+    preferredEmail: prefEmail,
+    mode
   };
 }
 
