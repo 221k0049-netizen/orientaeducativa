@@ -3445,4 +3445,149 @@ a{color:inherit;text-decoration:none;}
     height: auto !important;
     page-break-inside: avoid !important;
   }
-}
+}
+
+/* ============================================================
+   ESTILOS CRUD ESTUDIANTES / ESTATUS ESCOLAR INSTITUCIONAL
+   ============================================================ */
+.badge-student-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 100px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.badge-student-status.activo {
+  background: #E8F8F1;
+  color: #1E8449;
+  border: 1px solid #A9DFBF;
+}
+.badge-student-status.baja-temporal {
+  background: #FEF9E7;
+  color: #B7950B;
+  border: 1px solid #F9E79F;
+}
+.badge-student-status.baja-definitiva {
+  background: #FDEDEC;
+  color: #C0392B;
+  border: 1px solid #F5B7B1;
+}
+.badge-student-status.egresado {
+  background: #EBF5FB;
+  color: #2471A3;
+  border: 1px solid #AED6F1;
+}
+
+.student-crud-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.btn-action-crud {
+  padding: 5px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: #FFFFFF;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+  font-family: inherit;
+}
+.btn-action-crud:hover {
+  background: #F4F1EA;
+  border-color: var(--maroon);
+  color: var(--maroon);
+}
+.btn-action-crud.btn-crud-edit:hover {
+  background: #EBF5FB;
+  border-color: #2980B9;
+  color: #2980B9;
+}
+.btn-action-crud.btn-crud-baja {
+  color: #C0392B;
+}
+.btn-action-crud.btn-crud-baja:hover {
+  background: #FDEDEC;
+  border-color: #E74C3C;
+}
+.btn-action-crud.btn-crud-reactivar {
+  color: #27AE60;
+}
+.btn-action-crud.btn-crud-reactivar:hover {
+  background: #E8F8F1;
+  border-color: #2ECC71;
+}
+.btn-action-crud.btn-crud-delete {
+  color: #888888;
+}
+.btn-action-crud.btn-crud-delete:hover {
+  background: #FDEDEC;
+  border-color: #C0392B;
+  color: #C0392B;
+}
+
+.student-filter-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #FFFFFF;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+.student-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 240px;
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  transition: border-color 0.2s ease;
+}
+.student-search-box:focus-within {
+  border-color: var(--maroon);
+  background: #FFF;
+}
+.student-search-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+  color: var(--ink);
+}
+.student-filter-select {
+  padding: 7px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-family: inherit;
+  background: #FFF;
+  color: var(--ink);
+  cursor: pointer;
+  outline: none;
+}
+.student-filter-select:focus {
+  border-color: var(--maroon);
+}
+

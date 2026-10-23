@@ -415,7 +415,40 @@ async function resolveAlert(alertId){
   nav('inicio');
 }
 
+/* ============================================================
+   SUBMÓDULO: CRUD COMPLETO DE ESTUDIANTES / ESTATUS ESCOLAR
+   ============================================================ */
 let protoestrellasTab = 'mis_alumnos';
+let protoStudentSearch = '';
+let protoStudentFilterStatus = '';
+let protoStudentFilterCareer = '';
+
+const CONALEP_CAREERS = [
+  'Informática',
+  'Enfermería General',
+  'Mecatrónica',
+  'Electromecánica',
+  'Administración',
+  'Contabilidad',
+  'Autotrónica',
+  'Alimentos y Bebidas',
+  'Hospitalidad Turística',
+  'Otro'
+];
+
+function getStudentStatusInfo(s){
+  const est = (s && s.estado) ? s.estado.toLowerCase() : 'activo';
+  if(est === 'baja_definitiva') {
+    return { id: 'baja_definitiva', label: 'Baja Definitiva', icon: '🔴', class: 'baja-definitiva', isBaja: true };
+  }
+  if(est === 'baja_temporal') {
+    return { id: 'baja_temporal', label: 'Baja Temporal', icon: '🟡', class: 'baja-temporal', isBaja: true };
+  }
+  if(est === 'egresado') {
+    return { id: 'egresado', label: 'Egresado', icon: '⚪', class: 'egresado', isBaja: false };
+  }
+  return { id: 'activo', label: 'Activo', icon: '🟢', class: 'activo', isBaja: false };
+}
 
 function setProtoTab(tab){
   protoestrellasTab = tab;
@@ -423,62 +456,152 @@ function setProtoTab(tab){
   if(el) el.innerHTML = renderProtoestrellas();
 }
 
+function setProtoStudentSearch(val){
+  protoStudentSearch = val || '';
+  const tbody = document.getElementById('protoStudentsTableBody');
+  if(tbody) tbody.innerHTML = renderProtoStudentsTableRows();
+}
+
+function setProtoStudentFilterStatus(val){
+  protoStudentFilterStatus = val || '';
+  const tbody = document.getElementById('protoStudentsTableBody');
+  if(tbody) tbody.innerHTML = renderProtoStudentsTableRows();
+}
+
+function setProtoStudentFilterCareer(val){
+  protoStudentFilterCareer = val || '';
+  const tbody = document.getElementById('protoStudentsTableBody');
+  if(tbody) tbody.innerHTML = renderProtoStudentsTableRows();
+}
+
+function getFilteredStudentsList(){
+  const user = getCurrentUser();
+  const all = studentsList();
+  const my = myStudentsList();
+
+  let base = all;
+  if(protoestrellasTab === 'mis_alumnos') base = my;
+  else if(protoestrellasTab === 'activos') base = all.filter(s => (s.estado || 'activo') === 'activo');
+  else if(protoestrellasTab === 'bajas') base = all.filter(s => s.estado === 'baja_temporal' || s.estado === 'baja_definitiva');
+
+  const q = (protoStudentSearch || '').toLowerCase().trim();
+  const fStatus = protoStudentFilterStatus;
+  const fCareer = protoStudentFilterCareer;
+
+  return base.filter(s => {
+    const stInfo = getStudentStatusInfo(s);
+    if(fStatus && stInfo.id !== fStatus) return false;
+    if(fCareer && (s.carrera || '').toLowerCase() !== fCareer.toLowerCase()) return false;
+    if(q){
+      const match = [
+        s.nombre,
+        s.matricula,
+        s.grupo,
+        s.carrera,
+        s.tutor,
+        s.email,
+        s.telefono,
+        s.guardian
+      ].some(field => field && field.toLowerCase().includes(q));
+      if(!match) return false;
+    }
+    return true;
+  });
+}
+
+function renderProtoStudentsTableRows(){
+  const user = getCurrentUser();
+  const list = getFilteredStudentsList();
+
+  if(!list.length){
+    return `
+      <tr class="proto-empty-row">
+        <td colspan="6">
+          <div class="proto-empty" style="padding:36px 20px;text-align:center;">
+            <div class="pe-icon" style="font-size:28px;margin-bottom:8px;">🔍</div>
+            <h3 style="margin:0 0 6px 0;font-size:16px;">No se encontraron estudiantes</h3>
+            <p style="color:var(--ink-soft);max-width:480px;margin:0 auto 14px;font-size:13px;">
+              Intenta cambiar los términos de búsqueda o los filtros aplicados.
+            </p>
+            <button class="btn-ghost" onclick="protoStudentSearch='';protoStudentFilterStatus='';protoStudentFilterCareer='';if(currentSection==='alumnos')document.getElementById('content').innerHTML=renderProtoestrellas();">
+              Limpiar filtros
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  return list.map(s => {
+    const isAssignedToCurrent = isStudentAssignedToMe(s, user);
+    const stInfo = getStudentStatusInfo(s);
+    const isBaja = stInfo.isBaja;
+
+    return `
+    <tr style="${isBaja ? 'background:rgba(253,237,236,0.3);' : ''}">
+      <td class="pt-name">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+          <strong style="${isBaja ? 'text-decoration:line-through;color:var(--ink-soft);' : 'color:var(--ink);'}">${escapeHTML(s.nombre)}</strong>
+          ${isAssignedToCurrent ? '<span style="color:var(--green);font-size:11px;font-weight:700;">(Tu estudiante)</span>' : ''}
+          ${s.tamizaje ? `<span class="badge-tamizaje ${(s.tamizaje.resultados && s.tamizaje.resultados.riesgoGlobal) || 'bajo'}" title="Tamizaje PIOE">🩺 ${(s.tamizaje.resultados && s.tamizaje.resultados.riesgoGlobal ? s.tamizaje.resultados.riesgoGlobal.toUpperCase() : 'PIOE')}</span>` : ''}
+        </div>
+      </td>
+      <td class="pt-mat mono" style="font-weight:600;">${escapeHTML(s.matricula)}</td>
+      <td>
+        <div><strong>${escapeHTML(s.grupo || '—')}</strong> · ${escapeHTML(s.carrera || 'Sin carrera')}</div>
+        <div style="font-size:11px;color:var(--ink-muted);">${escapeHTML(s.turno || 'Matutino')}</div>
+      </td>
+      <td>
+        <span style="font-weight:${isAssignedToCurrent ? '700' : '400'};color:${isAssignedToCurrent ? 'var(--green)' : 'var(--ink)'};">
+          ${escapeHTML(s.guardian || 'Por asignar')}
+        </span>
+      </td>
+      <td>
+        <span class="badge-student-status ${stInfo.class}" title="${s.motivo_baja ? escapeHTML(s.motivo_baja) : ''}">
+          ${stInfo.icon} ${stInfo.label}
+        </span>
+        ${s.motivo_baja ? `
+          <div style="font-size:10px;color:var(--ink-soft);margin-top:2px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHTML(s.motivo_baja)}">
+            ${escapeHTML(s.motivo_baja)}
+          </div>
+        ` : ''}
+      </td>
+      <td class="pt-action" style="white-space:nowrap;">
+        <div class="student-crud-actions">
+          <button class="btn-action-crud" onclick="openStudentModal('${escapeHTML(s.matricula)}')" title="Ver expediente integral">
+            Expediente
+          </button>
+          <button class="btn-action-crud btn-crud-edit" onclick="openEditStudentModal('${escapeHTML(s.matricula)}')" title="Modificar datos del estudiante">
+            ✏️ Editar
+          </button>
+          ${isBaja ? `
+            <button class="btn-action-crud btn-crud-reactivar" onclick="reactivateStudent('${escapeHTML(s.matricula)}')" title="Reactivar a este alumno como Activo">
+              🔄 Reactivar
+            </button>
+          ` : `
+            <button class="btn-action-crud btn-crud-baja" onclick="openBajaStudentModal('${escapeHTML(s.matricula)}')" title="Dar de baja temporal o definitiva">
+              ⚠️ Baja
+            </button>
+          `}
+          <a href="reporte-psicologico.html?matricula=${encodeURIComponent(s.matricula)}" target="_blank" class="btn-action-crud" title="Generar Reporte Psicológico Oficial">
+            📋 Reporte
+          </a>
+          <button class="btn-action-crud btn-crud-delete" onclick="deleteStudentPermanent('${escapeHTML(s.matricula)}')" title="Eliminar alumno definitivamente del sistema">
+            🗑️
+          </button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
 /* ---------- VISTA: ESTUDIANTES ---------- */
 function renderProtoestrellas(){
   const user = getCurrentUser();
   const allStudents = studentsList();
   const myStudents = myStudentsList();
-  const isMine = protoestrellasTab === 'mis_alumnos';
-  const list = isMine ? myStudents : allStudents;
-
-  const rows = list.map(s => {
-    const isAssignedToCurrent = isStudentAssignedToMe(s, user);
-    return `
-    <tr>
-      <td class="pt-name">
-        ${s.nombre}
-        ${isAssignedToCurrent ? '<span style="color:var(--green);font-size:11px;font-weight:700;margin-left:6px;">(Tu estudiante)</span>' : ''}
-        ${s.tamizaje ? `<span class="badge-tamizaje ${(s.tamizaje.resultados && s.tamizaje.resultados.riesgoGlobal) || 'bajo'}" style="margin-left:6px;" title="Tamizaje PIOE realizado">🩺 ${(s.tamizaje.resultados && s.tamizaje.resultados.riesgoGlobal ? s.tamizaje.resultados.riesgoGlobal.toUpperCase() : 'PIOE')}</span>` : ''}
-      </td>
-      <td class="pt-mat mono">${s.matricula}</td>
-      <td>${s.grupo} · ${s.carrera || 'Sin carrera'}</td>
-      <td>
-        <span style="font-weight:${isAssignedToCurrent ? '700' : '400'};">
-          ${s.guardian || 'Por asignar'}
-        </span>
-      </td>
-      <td class="pt-action" style="white-space:nowrap;">
-        <button class="btn-outline-maroon" onclick="openStudentModal('${s.matricula}')">Abrir expediente</button>
-        <a href="reporte-psicologico.html?matricula=${encodeURIComponent(s.matricula)}" target="_blank" class="btn-outline-maroon" style="padding:6px 10px;font-size:12px;margin-left:4px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;" title="Generar Reporte Psicológico Oficial">📋 Reporte</a>
-      </td>
-    </tr>`;
-  }).join('');
-
-  const emptyState = `
-    <tr class="proto-empty-row">
-      <td colspan="5">
-        <div class="proto-empty" style="padding:36px 20px;text-align:center;">
-          <div class="pe-icon" style="font-size:28px;margin-bottom:8px;">✦</div>
-          <h3 style="margin:0 0 6px 0;font-size:16px;">
-            ${isMine ? 'No tienes estudiantes asignados todavía' : 'Aún no hay estudiantes registrados'}
-          </h3>
-          <p style="color:var(--ink-soft);max-width:500px;margin:0 auto 16px auto;font-size:13px;line-height:1.5;">
-            ${isMine 
-              ? `En cuanto los estudiantes se registren y seleccionen a <strong>${escapeHTML(user.nombre)}</strong> como su orientador, aparecerán aquí para gestionar sus expedientes.` 
-              : 'Puedes registrar un nuevo expediente para comenzar a darle seguimiento.'}
-          </p>
-          <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
-            ${isMine && allStudents.length > 0 ? `
-              <button class="btn-outline-maroon" onclick="setProtoTab('todos')">
-                Ver los ${allStudents.length} estudiantes del plantel →
-              </button>
-            ` : ''}
-            <a href="psicologia-escolar.html#tab-importar" class="btn-outline-maroon" style="padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;background:#FFF;display:inline-flex;align-items:center;gap:6px;">📥 Importar Excel / CSV</a>
-            <button class="btn-maroon" onclick="quickNuevaProtoestrella()">+ Nuevo Estudiante</button>
-          </div>
-        </div>
-      </td>
-    </tr>`;
+  const activos = allStudents.filter(s => (s.estado || 'activo') === 'activo');
+  const bajas = allStudents.filter(s => s.estado === 'baja_temporal' || s.estado === 'baja_definitiva');
 
   return `
   <div class="page-head">
@@ -490,8 +613,8 @@ function renderProtoestrellas(){
 
   <div class="proto-banner">
     <div class="pb-body">
-      <span class="pb-tag">Expediente Único Digital</span>
-      <p class="pb-desc">Los datos se capturan una sola vez y alimentan todos los flujos autorizados.</p>
+      <span class="pb-tag">Expediente Único Digital · Control Institucional</span>
+      <p class="pb-desc">Gestión integral de expedientes, altas, modificaciones y estatus de alumnos en CONALEP Mérida I.</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <a href="psicologia-escolar.html#tab-importar" class="btn-outline-maroon" style="padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;background:#FFF;display:inline-flex;align-items:center;gap:6px;">📥 Importar Excel / CSV</a>
@@ -500,14 +623,48 @@ function renderProtoestrellas(){
     </div>
   </div>
 
+  <!-- Barra de Filtros y Búsqueda en Tiempo Real -->
+  <div class="student-filter-toolbar">
+    <div class="student-search-box">
+      <span>🔍</span>
+      <input type="text" placeholder="Buscar por nombre, matrícula, grupo, carrera, tutor..."
+             value="${escapeHTML(protoStudentSearch)}"
+             oninput="setProtoStudentSearch(this.value)">
+      ${protoStudentSearch ? `<button type="button" onclick="setProtoStudentSearch('');document.querySelector('.student-search-box input').value='';" style="background:transparent;border:none;cursor:pointer;color:var(--ink-muted);font-size:12px;">✕</button>` : ''}
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <select class="student-filter-select" onchange="setProtoStudentFilterStatus(this.value)">
+        <option value="" ${protoStudentFilterStatus===''?'selected':''}>Todos los estatus</option>
+        <option value="activo" ${protoStudentFilterStatus==='activo'?'selected':''}>🟢 Activos (${activos.length})</option>
+        <option value="baja_temporal" ${protoStudentFilterStatus==='baja_temporal'?'selected':''}>🟡 Baja Temporal</option>
+        <option value="baja_definitiva" ${protoStudentFilterStatus==='baja_definitiva'?'selected':''}>🔴 Baja Definitiva</option>
+        <option value="egresado" ${protoStudentFilterStatus==='egresado'?'selected':''}>⚪ Egresados</option>
+      </select>
+
+      <select class="student-filter-select" onchange="setProtoStudentFilterCareer(this.value)">
+        <option value="" ${protoStudentFilterCareer===''?'selected':''}>Todas las carreras</option>
+        ${CONALEP_CAREERS.map(c => `
+          <option value="${escapeHTML(c)}" ${protoStudentFilterCareer===c?'selected':''}>${escapeHTML(c)}</option>
+        `).join('')}
+      </select>
+    </div>
+  </div>
+
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:20px 0 14px;">
     <h2 class="proto-community-title" style="margin:0;">Comunidad Estudiantil</h2>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn-outline-maroon" style="padding:6px 14px;border-radius:100px;font-size:12.5px;font-weight:600;background:${isMine ? 'var(--maroon)' : '#FFF'};color:${isMine ? '#FFF' : 'var(--maroon)'};border-color:var(--maroon);" onclick="setProtoTab('mis_alumnos')">
+      <button class="btn-outline-maroon" style="padding:6px 14px;border-radius:100px;font-size:12.5px;font-weight:600;background:${protoestrellasTab==='mis_alumnos' ? 'var(--maroon)' : '#FFF'};color:${protoestrellasTab==='mis_alumnos' ? '#FFF' : 'var(--maroon)'};border-color:var(--maroon);" onclick="setProtoTab('mis_alumnos')">
         📌 Mis Estudiantes Asignados (${myStudents.length})
       </button>
-      <button class="btn-outline-maroon" style="padding:6px 14px;border-radius:100px;font-size:12.5px;font-weight:600;background:${!isMine ? 'var(--maroon)' : '#FFF'};color:${!isMine ? '#FFF' : 'var(--maroon)'};border-color:var(--maroon);" onclick="setProtoTab('todos')">
-        🌐 Todos los Estudiantes del Plantel (${allStudents.length})
+      <button class="btn-outline-maroon" style="padding:6px 14px;border-radius:100px;font-size:12.5px;font-weight:600;background:${protoestrellasTab==='todos' ? 'var(--maroon)' : '#FFF'};color:${protoestrellasTab==='todos' ? '#FFF' : 'var(--maroon)'};border-color:var(--maroon);" onclick="setProtoTab('todos')">
+        🌐 Todos (${allStudents.length})
+      </button>
+      <button class="btn-outline-maroon" style="padding:6px 14px;border-radius:100px;font-size:12.5px;font-weight:600;background:${protoestrellasTab==='activos' ? 'var(--maroon)' : '#FFF'};color:${protoestrellasTab==='activos' ? '#FFF' : 'var(--maroon)'};border-color:var(--maroon);" onclick="setProtoTab('activos')">
+        🟢 Activos (${activos.length})
+      </button>
+      <button class="btn-outline-maroon" style="padding:6px 14px;border-radius:100px;font-size:12.5px;font-weight:600;background:${protoestrellasTab==='bajas' ? 'var(--maroon)' : '#FFF'};color:${protoestrellasTab==='bajas' ? '#FFF' : 'var(--maroon)'};border-color:var(--maroon);" onclick="setProtoTab('bajas')">
+        ⚠️ En Baja (${bajas.length})
       </button>
     </div>
   </div>
@@ -520,60 +677,106 @@ function renderProtoestrellas(){
           <th>Matrícula</th>
           <th>Grupo / Carrera</th>
           <th>Orientador Asignado</th>
-          <th></th>
+          <th>Estatus Escolar</th>
+          <th>Acciones</th>
         </tr>
       </thead>
-      <tbody>
-        ${list.length ? rows : emptyState}
+      <tbody id="protoStudentsTableBody">
+        ${renderProtoStudentsTableRows()}
       </tbody>
     </table>
   </div>`;
 }
 
-function quickNuevaProtoestrella(){
+/* ---------- CREAR NUEVO ESTUDIANTE (MODAL COMPLETO) ---------- */
+async function quickNuevaProtoestrella(){
+  let psychs = [];
+  try{
+    if(typeof getActivePsychologists === 'function'){
+      psychs = await getActivePsychologists();
+    }
+  }catch(e){}
+  if(!psychs.length){
+    psychs = Object.values(db.users || {}).filter(u => u && u.rol === 'coordinador');
+  }
+
+  const currentUser = getCurrentUser();
+
   openModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <span class="section-label">Expediente Único Digital</span>
-    <h3 style="font-size:18px;margin-bottom:8px;">Nuevo Estudiante</h3>
-    <p style="font-size:13px;color:var(--ink-soft);line-height:1.55;margin-bottom:18px;">
-      Registra un nuevo estudiante en el sistema institucional CONALEP.
+    <h3 style="font-size:18px;margin-bottom:6px;color:var(--ink);">＋ Registrar Nuevo Estudiante</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.55;margin-bottom:16px;">
+      Registra un nuevo expediente en el sistema institucional CONALEP Mérida I.
     </p>
 
     <form id="protoForm" onsubmit="event.preventDefault();saveProtoestrella();" autocomplete="off">
-      <div class="proto-form-field">
-        <label for="pfNombre">Nombre completo *</label>
-        <input type="text" id="pfNombre" placeholder="Ej. Andrea Méndez López" required maxlength="80">
-      </div>
-
-      <div class="proto-form-grid">
+      <div class="proto-form-grid" style="margin-bottom:12px;">
         <div class="proto-form-field">
-          <label for="pfMatricula">Matrícula *</label>
-          <input type="text" id="pfMatricula" placeholder="Ej. PTB-26004" required maxlength="20">
+          <label for="pfNombre">Nombre Completo *</label>
+          <input type="text" id="pfNombre" placeholder="Ej. Andrea Méndez López" required maxlength="100">
         </div>
         <div class="proto-form-field">
-          <label for="pfGrupo">Grupo *</label>
-          <input type="text" id="pfGrupo" placeholder="Ej. 2A" required maxlength="10">
+          <label for="pfMatricula">Matrícula Institucional *</label>
+          <input type="text" id="pfMatricula" placeholder="Ej. PTB-26004" required maxlength="25">
         </div>
       </div>
 
-      <div class="proto-form-field">
-        <label for="pfCarrera">Carrera técnica *</label>
-        <select id="pfCarrera" required>
-          <option value="">Selecciona una carrera</option>
-          <option>Informática</option>
-          <option>Enfermería General</option>
-          <option>Mecatrónica</option>
-          <option>Electromecánica</option>
-          <option>Administración</option>
-          <option>Contabilidad</option>
-          <option>Autotrónica</option>
-          <option>Otro</option>
-        </select>
+      <div class="proto-form-grid" style="margin-bottom:12px;">
+        <div class="proto-form-field">
+          <label for="pfCarrera">Carrera Técnica *</label>
+          <select id="pfCarrera" required>
+            <option value="">Selecciona una carrera</option>
+            ${CONALEP_CAREERS.map(c => `<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="proto-form-field">
+          <label for="pfGrupo">Grupo / Semestre *</label>
+          <input type="text" id="pfGrupo" placeholder="Ej. 2A, 402, 6B" required maxlength="15">
+        </div>
       </div>
 
-      <div class="proto-form-field">
-        <label for="pfGuardian">Guardián / Orientador asignado</label>
-        <input type="text" id="pfGuardian" value="${escapeHTML(getCurrentUser()?.nombre || 'Orientador Educativo')}" maxlength="60">
+      <div class="proto-form-grid" style="margin-bottom:12px;">
+        <div class="proto-form-field">
+          <label for="pfTurno">Turno Escolar</label>
+          <select id="pfTurno">
+            <option value="Matutino" selected>Matutino</option>
+            <option value="Vespertino">Vespertino</option>
+          </select>
+        </div>
+        <div class="proto-form-field">
+          <label for="pfGuardian">Orientador(a) Asignado</label>
+          <select id="pfGuardian">
+            <option value="">— Selecciona un orientador —</option>
+            ${psychs.map(p => `
+              <option value="${escapeHTML(p.nombre)}" data-email="${escapeHTML(p.email || '')}" ${((currentUser?.nombre || '').toLowerCase() === (p.nombre || '').toLowerCase()) ? 'selected' : ''}>
+                🩺 ${escapeHTML(p.nombre)} (${escapeHTML(p.cargo || 'Orientador')})
+              </option>
+            `).join('')}
+          </select>
+        </div>
+      </div>
+
+      <div class="proto-form-grid" style="margin-bottom:12px;">
+        <div class="proto-form-field">
+          <label for="pfTelefono">Teléfono del Alumno</label>
+          <input type="tel" id="pfTelefono" placeholder="Ej. 9991234567" maxlength="20">
+        </div>
+        <div class="proto-form-field">
+          <label for="pfEmail">Correo Electrónico (Opcional)</label>
+          <input type="email" id="pfEmail" placeholder="Dejar vacío para correo conalep" maxlength="80">
+        </div>
+      </div>
+
+      <div class="proto-form-grid" style="margin-bottom:12px;">
+        <div class="proto-form-field">
+          <label for="pfTutor">Tutor Legal (Padre/Madre)</label>
+          <input type="text" id="pfTutor" placeholder="Ej. Juan Méndez" maxlength="80">
+        </div>
+        <div class="proto-form-field">
+          <label for="pfTelTutor">Teléfono de Emergencia Tutor</label>
+          <input type="tel" id="pfTelTutor" placeholder="Ej. 9997654321" maxlength="20">
+        </div>
       </div>
 
       <div class="proto-form-error" id="pfError"></div>
@@ -586,22 +789,35 @@ function quickNuevaProtoestrella(){
   `);
 }
 
-function saveProtoestrella(){
+async function saveProtoestrella(){
   const nombre    = document.getElementById('pfNombre').value.trim();
   const matricula = document.getElementById('pfMatricula').value.trim();
   const grupo     = document.getElementById('pfGrupo').value.trim();
   const carrera   = document.getElementById('pfCarrera').value;
-  const guardian  = document.getElementById('pfGuardian').value.trim() || getCurrentUser()?.nombre || 'Orientador Educativo';
+  const turno     = document.getElementById('pfTurno')?.value || 'Matutino';
+  const guardianEl= document.getElementById('pfGuardian');
+  const guardian  = guardianEl ? guardianEl.value.trim() : (getCurrentUser()?.nombre || 'Orientador Educativo');
+  const selectedOpt = guardianEl && guardianEl.selectedIndex >= 0 ? guardianEl.options[guardianEl.selectedIndex] : null;
+  const guardianEmail = selectedOpt ? (selectedOpt.getAttribute('data-email') || '') : '';
+  const telefono  = document.getElementById('pfTelefono')?.value.trim() || '';
+  const emailInput= document.getElementById('pfEmail')?.value.trim();
+  const email     = emailInput || `${matricula.toLowerCase()}@alumnos.conalep.edu.mx`;
+  const tutor     = document.getElementById('pfTutor')?.value.trim() || '';
+  const telTutor  = document.getElementById('pfTelTutor')?.value.trim() || '';
   const err       = document.getElementById('pfError');
 
   if(!nombre || !matricula || !grupo || !carrera){
-    err.textContent = 'Completa todos los campos obligatorios (*).';
-    err.style.display = 'block';
+    if(err){
+      err.textContent = 'Completa todos los campos obligatorios (*).';
+      err.style.display = 'block';
+    }
     return;
   }
   if(db.students[matricula]){
-    err.textContent = 'Ya existe un estudiante con esa matrícula.';
-    err.style.display = 'block';
+    if(err){
+      err.textContent = 'Ya existe un estudiante con esa matrícula.';
+      err.style.display = 'block';
+    }
     return;
   }
 
@@ -620,25 +836,545 @@ function saveProtoestrella(){
     matricula,
     nombre,
     display,
-    email: `${matricula.toLowerCase()}@alumnos.conalep.edu.mx`,
+    email,
+    telefono,
+    tutor,
+    tel_tutor: telTutor,
     rol: 'estudiante',
     grupo,
     carrera,
-    guardian,
+    turno,
+    estado: 'activo',
+    motivo_baja: '',
+    fecha_baja: null,
+    guardian: guardian || 'Orientador Educativo',
+    guardianEmail: guardianEmail || null,
     prioridad: 'bajo',
     segFecha,
     avatar,
-    historial: []
+    historial: [],
+    created_at: new Date().toISOString()
   };
 
   db.students[matricula] = newStudent;
   db.users[matricula] = newStudent;
   saveDB();
 
+  if(typeof isSupabaseLive === 'function' && isSupabaseLive()){
+    const client = typeof getActiveSupabaseClient === 'function' ? getActiveSupabaseClient() : null;
+    if(client){
+      try{
+        await client.from('students').insert({
+          matricula,
+          nombre,
+          display,
+          email,
+          grupo,
+          carrera,
+          guardian: newStudent.guardian,
+          prioridad: 'bajo',
+          seg_fecha: segFecha,
+          avatar_config: {
+            ...avatar,
+            _meta: {
+              estado: 'activo',
+              turno,
+              telefono,
+              tutor,
+              tel_tutor: telTutor
+            }
+          }
+        });
+      }catch(e){
+        console.warn('Aviso insertando en Supabase:', e);
+      }
+    }
+  }
+
+  closeModal();
+  alert(`✅ Estudiante ${nombre} registrado exitosamente con estatus ACTIVO.`);
+  if(currentSection === 'alumnos') document.getElementById('content').innerHTML = renderProtoestrellas();
+  else nav('alumnos');
+}
+
+/* ---------- MODIFICAR DATOS DEL ESTUDIANTE (MODAL DE EDICIÓN) ---------- */
+async function openEditStudentModal(matricula){
+  const s = db.students[matricula] || Object.values(db.students).find(st => (st.matricula || '').toLowerCase() === (matricula || '').toLowerCase());
+  if(!s){
+    alert('Estudiante no encontrado.');
+    return;
+  }
+  matricula = s.matricula;
+
+  let psychs = [];
+  try{
+    if(typeof getActivePsychologists === 'function'){
+      psychs = await getActivePsychologists();
+    }
+  }catch(e){}
+  if(!psychs.length){
+    psychs = Object.values(db.users || {}).filter(u => u && u.rol === 'coordinador');
+  }
+
+  const currentGuardian = s.guardian || '';
+  const currentEstado = s.estado || 'activo';
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <span class="section-label">Gestión Institucional de Alumnos</span>
+    <h3 style="font-size:18px;margin-bottom:6px;color:var(--ink);">✏️ Modificar Datos del Estudiante</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin-bottom:16px;">
+      Edita la información académica, contacto o estatus de <strong>${escapeHTML(s.nombre)}</strong> (${escapeHTML(matricula)}).
+    </p>
+
+    <form id="editStudentForm" onsubmit="event.preventDefault();saveEditStudent('${escapeHTML(matricula)}');" autocomplete="off">
+      <div class="proto-form-grid" style="margin-bottom:12px;">
+        <div class="proto-form-field">
+          <label for="edNombre">Nombre Completo *</label>
+          <input type="text" id="edNombre" value="${escapeHTML(s.nombre || '')}" required maxlength="100">
+        </div>
+        <div class="proto-form-field">
+          <label for="edMatricula">Matrícula Institucional *</label>
+          <input type="text" id="edMatricula" value="${escapeHTML(s.matricula || '')}" required maxlength="25">
+        </div>
+      </div>
+
+      <div class="proto-form-grid" style="margin-bottom:12px;">
+        <div class="proto-form-field">
+          <label for="edCarrera">Carrera Técnica *</label>
+          <select id="edCarrera" required>
+            ${CONALEP_CAREERS.map(c => `
+              <option value="${escapeHTML(c)}" ${(s.carrera === c || (c==='Informática' && !s.carrera)) ? 'selected' : ''}>${escapeHTML(c)}</option>
+            `).join('')}
+          </select>
+        </div>
+        <div class="proto-form-field">
+          <label for="edGrupo">Grupo / Semestre *</label>
+          <input type="text" id="edGrupo" value="${escapeHTML(s.grupo || '')}" placeholder="Ej. 6B" required maxlength="15">
+        </div>
+      </div>
+
+      <div class="proto-form-grid" style="margin-bottom:12px;">
+        <div class="proto-form-field">
+          <label for="edTurno">Turno Escolar</label>
+          <select id="edTurno">
+            <option value="Matutino" ${(s.turno==='Matutino' || !s.turno)?'selected':''}>Matutino</option>
+            <option value="Vespertino" ${(s.turno==='Vespertino')?'selected':''}>Vespertino</option>
+          </select>
+        </div>
+        <div class="proto-form-field">
+          <label for="edEstado">Estatus / Estado del Alumno *</label>
+          <select id="edEstado" onchange="toggleEditMotivoBajaField(this.value)">
+            <option value="activo" ${currentEstado==='activo'?'selected':''}>🟢 Activo (Inscrito regular)</option>
+            <option value="baja_temporal" ${currentEstado==='baja_temporal'?'selected':''}>🟡 Baja Temporal (Permiso / suspensión)</option>
+            <option value="baja_definitiva" ${currentEstado==='baja_definitiva'?'selected':''}>🔴 Baja Definitiva (Deserción / baja)</option>
+            <option value="egresado" ${currentEstado==='egresado'?'selected':''}>⚪ Egresado (Graduado)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Campo condicional de Motivo de Baja -->
+      <div class="proto-form-field" id="edMotivoBajaContainer" style="display:${(currentEstado==='baja_temporal'||currentEstado==='baja_definitiva')?'block':'none'};margin-bottom:12px;background:#FDEDEC;padding:12px;border-radius:8px;border:1px solid #F5B7B1;">
+        <label for="edMotivoBaja" style="color:#78281F;font-weight:700;">Motivo de la Baja Escolar</label>
+        <input type="text" id="edMotivoBaja" value="${escapeHTML(s.motivo_baja || '')}" placeholder="Ej. Rezago académico, cambio de plantel, motivos de salud...">
+        <div style="font-size:11px;color:#922B21;margin-top:4px;">
+          Registra la razón institucional para el historial del expediente.
+        </div>
+      </div>
+
+      <div class="proto-form-grid" style="margin-bottom:12px;">
+        <div class="proto-form-field">
+          <label for="edTelefono">Teléfono del Estudiante</label>
+          <input type="tel" id="edTelefono" value="${escapeHTML(s.telefono || '')}" placeholder="Ej. 9991234567" maxlength="20">
+        </div>
+        <div class="proto-form-field">
+          <label for="edEmail">Correo Electrónico</label>
+          <input type="email" id="edEmail" value="${escapeHTML(s.email || '')}" placeholder="correo@ejemplo.com" maxlength="80">
+        </div>
+      </div>
+
+      <div class="proto-form-grid" style="margin-bottom:12px;">
+        <div class="proto-form-field">
+          <label for="edTutor">Tutor Legal (Padre / Madre / Responsable)</label>
+          <input type="text" id="edTutor" value="${escapeHTML(s.tutor || '')}" placeholder="Nombre del padre o tutor" maxlength="80">
+        </div>
+        <div class="proto-form-field">
+          <label for="edTelTutor">Teléfono de Emergencia del Tutor</label>
+          <input type="tel" id="edTelTutor" value="${escapeHTML(s.tel_tutor || '')}" placeholder="Ej. 9997654321" maxlength="20">
+        </div>
+      </div>
+
+      <div class="proto-form-field" style="margin-bottom:14px;">
+        <label for="edGuardian">Orientador(a) / Psicólogo(a) Asignado</label>
+        <select id="edGuardian">
+          <option value="" ${!currentGuardian ? 'selected' : ''}>— Sin orientador asignado —</option>
+          ${psychs.map(p => `
+            <option value="${escapeHTML(p.nombre)}" data-email="${escapeHTML(p.email || '')}" ${(currentGuardian.toLowerCase() === (p.nombre||'').toLowerCase()) ? 'selected' : ''}>
+              🩺 ${escapeHTML(p.nombre)} (${escapeHTML(p.cargo || 'Orientador Educativo')})
+            </option>
+          `).join('')}
+        </select>
+      </div>
+
+      <div class="proto-form-error" id="edError"></div>
+
+      <div class="proto-form-actions">
+        <button type="button" class="btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn-maroon">💾 Guardar Cambios</button>
+      </div>
+    </form>
+  `);
+}
+
+function toggleEditMotivoBajaField(estado){
+  const c = document.getElementById('edMotivoBajaContainer');
+  if(!c) return;
+  if(estado === 'baja_temporal' || estado === 'baja_definitiva'){
+    c.style.display = 'block';
+  } else {
+    c.style.display = 'none';
+  }
+}
+
+async function saveEditStudent(oldMatricula){
+  const s = db.students[oldMatricula];
+  if(!s){
+    alert('Error: Alumno no encontrado.');
+    return;
+  }
+
+  const nombre = document.getElementById('edNombre').value.trim();
+  const matricula = document.getElementById('edMatricula').value.trim();
+  const carrera = document.getElementById('edCarrera').value;
+  const grupo = document.getElementById('edGrupo').value.trim();
+  const turno = document.getElementById('edTurno').value;
+  const estado = document.getElementById('edEstado').value;
+  const motivoBajaInput = document.getElementById('edMotivoBaja');
+  const motivoBaja = motivoBajaInput ? motivoBajaInput.value.trim() : '';
+  const telefono = document.getElementById('edTelefono').value.trim();
+  const email = document.getElementById('edEmail').value.trim() || `${matricula.toLowerCase()}@alumnos.conalep.edu.mx`;
+  const tutor = document.getElementById('edTutor').value.trim();
+  const telTutor = document.getElementById('edTelTutor').value.trim();
+  const guardianEl = document.getElementById('edGuardian');
+  const guardian = guardianEl ? guardianEl.value : '';
+  const selectedOpt = guardianEl && guardianEl.selectedIndex >= 0 ? guardianEl.options[guardianEl.selectedIndex] : null;
+  const guardianEmail = selectedOpt ? (selectedOpt.getAttribute('data-email') || '') : '';
+  const err = document.getElementById('edError');
+
+  if(!nombre || !matricula || !grupo || !carrera){
+    if(err){
+      err.textContent = 'Completa todos los campos obligatorios (*).';
+      err.style.display = 'block';
+    }
+    return;
+  }
+
+  // Si se modificó la matrícula, verificar que no colisione con otro alumno
+  if(matricula !== oldMatricula && db.students[matricula]){
+    if(err){
+      err.textContent = `Ya existe otro estudiante con la matrícula ${matricula}.`;
+      err.style.display = 'block';
+    }
+    return;
+  }
+
+  const parts = nombre.split(/\s+/).filter(Boolean);
+  const display = parts.length >= 2 ? `${parts[0]} ${parts[1].charAt(0).toUpperCase()}.` : parts[0];
+
+  // Verificar cambio de estatus de baja
+  const previousEstado = s.estado || 'activo';
+  let fechaBaja = s.fecha_baja || null;
+  let bajaAutorizada = s.baja_autorizada_por || null;
+  const user = getCurrentUser();
+
+  if(estado !== 'activo' && previousEstado === 'activo'){
+    fechaBaja = new Date().toLocaleDateString('es-MX') + ' ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    bajaAutorizada = user?.nombre || 'Coordinación';
+  } else if(estado === 'activo'){
+    fechaBaja = null;
+  }
+
+  // Actualizar objeto de estudiante
+  s.nombre = nombre;
+  s.display = display;
+  s.matricula = matricula;
+  s.id = matricula;
+  s.carrera = carrera;
+  s.grupo = grupo;
+  s.turno = turno;
+  s.telefono = telefono;
+  s.email = email;
+  s.tutor = tutor;
+  s.tel_tutor = telTutor;
+  s.guardian = guardian;
+  if(guardianEmail) s.guardianEmail = guardianEmail;
+  s.estado = estado;
+  s.motivo_baja = (estado !== 'activo') ? (motivoBaja || s.motivo_baja || 'Baja administrativa') : '';
+  s.fecha_baja = fechaBaja;
+  s.baja_autorizada_por = bajaAutorizada;
+
+  // Si la matrícula cambió, migrar claves y referencias
+  if(matricula !== oldMatricula){
+    db.students[matricula] = s;
+    delete db.students[oldMatricula];
+
+    if(db.users[oldMatricula]){
+      db.users[matricula] = { ...db.users[oldMatricula], ...s, id: matricula, matricula };
+      delete db.users[oldMatricula];
+    } else {
+      db.users[matricula] = s;
+    }
+
+    if(db.tasks && db.tasks[oldMatricula]){
+      db.tasks[matricula] = db.tasks[oldMatricula];
+      delete db.tasks[oldMatricula];
+    }
+    if(db.documents){
+      db.documents.forEach(d => { if(d.studentId === oldMatricula) d.studentId = matricula; });
+    }
+    if(db.alerts){
+      db.alerts.forEach(a => { if(a.studentId === oldMatricula) a.studentId = matricula; });
+    }
+    if(db.appointments){
+      db.appointments.forEach(ap => { if(ap.studentId === oldMatricula) ap.studentId = matricula; });
+    }
+  } else {
+    db.students[matricula] = s;
+    if(db.users[matricula]){
+      db.users[matricula] = { ...db.users[matricula], ...s };
+    }
+  }
+
+  saveDB();
+
+  // Sincronizar en Supabase si está disponible
+  if(typeof isSupabaseLive === 'function' && isSupabaseLive()){
+    const client = typeof getActiveSupabaseClient === 'function' ? getActiveSupabaseClient() : null;
+    if(client){
+      try{
+        const payload = {
+          matricula: s.matricula,
+          nombre: s.nombre,
+          display: s.display,
+          email: s.email,
+          grupo: s.grupo,
+          carrera: s.carrera,
+          guardian: s.guardian,
+          avatar_config: {
+            ...(s.avatar || {}),
+            _meta: {
+              estado: s.estado,
+              motivo_baja: s.motivo_baja,
+              fecha_baja: s.fecha_baja,
+              baja_autorizada_por: s.baja_autorizada_por,
+              telefono: s.telefono,
+              tutor: s.tutor,
+              tel_tutor: s.tel_tutor,
+              turno: s.turno
+            }
+          }
+        };
+        await client.from('students').upsert(payload, { onConflict: 'matricula' });
+        if(matricula !== oldMatricula){
+          await client.from('students').delete().eq('matricula', oldMatricula);
+        }
+      }catch(e){
+        console.warn('Aviso sincronizando edición con Supabase:', e);
+      }
+    }
+  }
+
+  closeModal();
+  alert(`✅ Datos del estudiante ${s.nombre} actualizados correctamente.`);
+  if(currentSection === 'alumnos') document.getElementById('content').innerHTML = renderProtoestrellas();
+  else nav('alumnos');
+}
+
+/* ---------- GESTIÓN DIRECTA DE BAJAS Y REACTIVACIONES ---------- */
+function openBajaStudentModal(matricula){
+  const s = db.students[matricula];
+  if(!s){
+    alert('Estudiante no encontrado.');
+    return;
+  }
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <span class="section-label" style="color:var(--danger);">Control de Estatus Escolar</span>
+    <h3 style="font-size:18px;margin-bottom:6px;color:var(--maroon);">⚠️ Aplicar Baja de Estudiante</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin-bottom:16px;">
+      Registra la baja formal para <strong>${escapeHTML(s.nombre)}</strong> (Matrícula: <span class="mono">${escapeHTML(s.matricula)}</span> · Grupo ${escapeHTML(s.grupo)}).
+    </p>
+
+    <form onsubmit="event.preventDefault();applyStudentBaja('${escapeHTML(matricula)}');">
+      <div class="proto-form-field" style="margin-bottom:12px;">
+        <label for="bajaTipo">Tipo de Baja Institucional *</label>
+        <select id="bajaTipo" required>
+          <option value="baja_temporal" selected>🟡 Baja Temporal (Permiso de ciclo / Suspensión temporal con derecho a reingreso)</option>
+          <option value="baja_definitiva">🔴 Baja Definitiva (Deserción escolar / Baja total del plantel)</option>
+        </select>
+      </div>
+
+      <div class="proto-form-field" style="margin-bottom:12px;">
+        <label for="bajaCausa">Causa / Motivo Oficial *</label>
+        <select id="bajaCausa" required>
+          <option value="Problemas de salud física o psicológica">Problemas de salud física o psicológica</option>
+          <option value="Rezago académico / Reprobación de módulos">Rezago académico / Reprobación de módulos</option>
+          <option value="Cambio de residencia o plantel">Cambio de residencia o plantel</option>
+          <option value="Motivos económicos o de incorporación laboral">Motivos económicos o de incorporación laboral</option>
+          <option value="Decisión personal / familiar">Decisión personal / familiar</option>
+          <option value="Faltas reiteradas / Pérdida de derecho">Faltas reiteradas / Pérdida de derecho</option>
+          <option value="Otro motivo administrativo">Otro motivo administrativo</option>
+        </select>
+      </div>
+
+      <div class="proto-form-field" style="margin-bottom:16px;">
+        <label for="bajaDetalles">Observaciones o Notas del Coordinador (Opcional)</label>
+        <textarea id="bajaDetalles" rows="3" placeholder="Detalles de entrevistas con el alumno o tutor, acuerdos o circunstancias..." style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:12.5px;"></textarea>
+      </div>
+
+      <div style="background:#FDEDEC;padding:12px 14px;border-radius:8px;border-left:3px solid var(--danger);font-size:12px;color:#78281F;margin-bottom:16px;">
+        ✦ Al aplicar la baja, el estudiante no podrá iniciar sesión en el portal y su expediente reflejará el estatus correspondiente.
+      </div>
+
+      <div class="proto-form-actions">
+        <button type="button" class="btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn-maroon" style="background:var(--danger);border-color:var(--danger);">
+          ⚠️ Confirmar Aplicación de Baja
+        </button>
+      </div>
+    </form>
+  `);
+}
+
+async function applyStudentBaja(matricula){
+  const s = db.students[matricula];
+  if(!s) return;
+
+  const tipo = document.getElementById('bajaTipo').value;
+  const causa = document.getElementById('bajaCausa').value;
+  const detalles = (document.getElementById('bajaDetalles').value || '').trim();
+  const user = getCurrentUser();
+
+  const motivoCompleto = causa + (detalles ? ` (${detalles})` : '');
+  const fechaStr = new Date().toLocaleDateString('es-MX') + ' ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+  s.estado = tipo;
+  s.motivo_baja = motivoCompleto;
+  s.fecha_baja = fechaStr;
+  s.baja_autorizada_por = user?.nombre || 'Coordinación';
+
+  if(db.users[matricula]){
+    db.users[matricula].estado = tipo;
+    db.users[matricula].motivo_baja = motivoCompleto;
+    db.users[matricula].fecha_baja = fechaStr;
+  }
+
+  saveDB();
+
+  if(typeof isSupabaseLive === 'function' && isSupabaseLive()){
+    const client = typeof getActiveSupabaseClient === 'function' ? getActiveSupabaseClient() : null;
+    if(client){
+      try{
+        await client.from('students').update({
+          avatar_config: {
+            ...(s.avatar || {}),
+            _meta: {
+              estado: s.estado,
+              motivo_baja: s.motivo_baja,
+              fecha_baja: s.fecha_baja,
+              baja_autorizada_por: s.baja_autorizada_por
+            }
+          }
+        }).eq('matricula', matricula);
+      }catch(e){}
+    }
+  }
+
+  closeModal();
+  alert(`⚠️ Se ha aplicado la ${tipo === 'baja_temporal' ? 'BAJA TEMPORAL' : 'BAJA DEFINITIVA'} al estudiante ${s.nombre}.`);
+  if(currentSection === 'alumnos') document.getElementById('content').innerHTML = renderProtoestrellas();
+  else nav('alumnos');
+}
+
+async function reactivateStudent(matricula){
+  const s = db.students[matricula];
+  if(!s) return;
+
+  if(!confirm(`¿Deseas reactivar al alumno ${s.nombre} (${matricula}) y restablecer su cuenta como ACTIVO?\n\nEl estudiante recuperará acceso normal a NAIMA OS.`)){
+    return;
+  }
+
+  s.estado = 'activo';
+  s.motivo_baja = '';
+  s.fecha_baja = null;
+  s.baja_autorizada_por = null;
+
+  if(db.users[matricula]){
+    db.users[matricula].estado = 'activo';
+    db.users[matricula].motivo_baja = '';
+    db.users[matricula].fecha_baja = null;
+  }
+
+  saveDB();
+
+  if(typeof isSupabaseLive === 'function' && isSupabaseLive()){
+    const client = typeof getActiveSupabaseClient === 'function' ? getActiveSupabaseClient() : null;
+    if(client){
+      try{
+        await client.from('students').update({
+          avatar_config: {
+            ...(s.avatar || {}),
+            _meta: { estado: 'activo' }
+          }
+        }).eq('matricula', matricula);
+      }catch(e){}
+    }
+  }
+
+  alert(`✅ Estudiante ${s.nombre} reactivado exitosamente con estatus ACTIVO.`);
   closeModal();
   if(currentSection === 'alumnos') document.getElementById('content').innerHTML = renderProtoestrellas();
   else nav('alumnos');
 }
+
+async function deleteStudentPermanent(matricula){
+  const s = db.students[matricula] || Object.values(db.students).find(st => st.matricula === matricula);
+  if(!s) return;
+
+  const conf = confirm(
+    `🚨 ATENCIÓN — ACCIÓN DE SEGURIDAD 🚨\n\n` +
+    `¿Estás COMPLETAMENTE SEGURO de eliminar al estudiante ${s.nombre} (Matrícula: ${s.matricula})?\n\n` +
+    `Esta acción eliminará su expediente institucional, check-ins, acuerdos y documentos asociados en el plantel.`
+  );
+  if(!conf) return;
+
+  delete db.students[matricula];
+  delete db.users[matricula];
+  if(db.tasks) delete db.tasks[matricula];
+  if(db.alerts) db.alerts = db.alerts.filter(a => a.studentId !== matricula);
+  if(db.documents) db.documents = db.documents.filter(d => d.studentId !== matricula);
+  if(db.appointments) db.appointments = db.appointments.filter(ap => ap.studentId !== matricula);
+
+  saveDB();
+
+  if(typeof isSupabaseLive === 'function' && isSupabaseLive()){
+    const client = typeof getActiveSupabaseClient === 'function' ? getActiveSupabaseClient() : null;
+    if(client){
+      try{
+        await client.from('students').delete().eq('matricula', matricula);
+      }catch(e){
+        console.warn('Aviso eliminando de Supabase:', e);
+      }
+    }
+  }
+
+  closeModal();
+  alert(`🗑️ El expediente de ${s.nombre} ha sido eliminado definitivamente.`);
+  if(currentSection === 'alumnos') document.getElementById('content').innerHTML = renderProtoestrellas();
+  else nav('alumnos');
+}
+
 
 /* ---------- MODAL DEL EXPEDIENTE DEL ESTUDIANTE (MULTI-PESTAÑA) ---------- */
 function openStudentModal(matricula, activeTab = 'checkins'){
@@ -845,11 +1581,94 @@ function openStudentModal(matricula, activeTab = 'checkins'){
     </div>
   `;
 
+  // --- HTML de Pestaña: Ficha Integral de Datos Escolares ---
+  const estado = s.estado || 'activo';
+  const stInfo = getStudentStatusInfo(s);
+
+  const fichaTabContent = `
+    <div style="background:#FAFBF9;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div>
+          <span class="section-label" style="margin:0;">Información Escolar y Administrativa</span>
+          <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px;">Expediente institucional de ${escapeHTML(s.nombre)}</div>
+        </div>
+        <button class="btn-action-crud btn-crud-edit" onclick="openEditStudentModal('${escapeHTML(matricula)}')">
+          ✏️ Modificar Datos del Estudiante
+        </button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;font-size:12.5px;">
+        <div style="background:#FFF;padding:10px 12px;border:1px solid var(--line);border-radius:8px;">
+          <span style="font-size:11px;color:var(--ink-soft);display:block;">Nombre Oficial</span>
+          <strong style="color:var(--ink);">${escapeHTML(s.nombre)}</strong>
+        </div>
+        <div style="background:#FFF;padding:10px 12px;border:1px solid var(--line);border-radius:8px;">
+          <span style="font-size:11px;color:var(--ink-soft);display:block;">Matrícula Institucional</span>
+          <strong class="mono" style="color:var(--maroon);">${escapeHTML(s.matricula)}</strong>
+        </div>
+        <div style="background:#FFF;padding:10px 12px;border:1px solid var(--line);border-radius:8px;">
+          <span style="font-size:11px;color:var(--ink-soft);display:block;">Grupo y Semestre</span>
+          <strong>${escapeHTML(s.semestre ? s.semestre + ' · ' : '')}${escapeHTML(s.grupo || '—')}</strong>
+        </div>
+        <div style="background:#FFF;padding:10px 12px;border:1px solid var(--line);border-radius:8px;">
+          <span style="font-size:11px;color:var(--ink-soft);display:block;">Carrera Técnica</span>
+          <strong>${escapeHTML(s.carrera || 'Informática')}</strong>
+        </div>
+        <div style="background:#FFF;padding:10px 12px;border:1px solid var(--line);border-radius:8px;">
+          <span style="font-size:11px;color:var(--ink-soft);display:block;">Turno</span>
+          <strong>${escapeHTML(s.turno || 'Matutino')}</strong>
+        </div>
+        <div style="background:#FFF;padding:10px 12px;border:1px solid var(--line);border-radius:8px;">
+          <span style="font-size:11px;color:var(--ink-soft);display:block;">Estatus Escolar</span>
+          <span class="badge-student-status ${stInfo.class}">${stInfo.icon} ${stInfo.label}</span>
+        </div>
+        <div style="background:#FFF;padding:10px 12px;border:1px solid var(--line);border-radius:8px;">
+          <span style="font-size:11px;color:var(--ink-soft);display:block;">Teléfono del Estudiante</span>
+          <span>${escapeHTML(s.telefono || 'Sin registrar')}</span>
+        </div>
+        <div style="background:#FFF;padding:10px 12px;border:1px solid var(--line);border-radius:8px;">
+          <span style="font-size:11px;color:var(--ink-soft);display:block;">Correo Electrónico</span>
+          <span>${escapeHTML(s.email || '—')}</span>
+        </div>
+        <div style="background:#FFF;padding:10px 12px;border:1px solid var(--line);border-radius:8px;">
+          <span style="font-size:11px;color:var(--ink-soft);display:block;">Tutor Legal (Padre / Madre)</span>
+          <strong>${escapeHTML(s.tutor || 'Sin registrar')}</strong>
+        </div>
+        <div style="background:#FFF;padding:10px 12px;border:1px solid var(--line);border-radius:8px;">
+          <span style="font-size:11px;color:var(--ink-soft);display:block;">Teléfono Emergencia Tutor</span>
+          <span>${escapeHTML(s.tel_tutor || 'Sin registrar')}</span>
+        </div>
+        <div style="background:#FFF;padding:10px 12px;border:1px solid var(--line);border-radius:8px;">
+          <span style="font-size:11px;color:var(--ink-soft);display:block;">Orientador(a) Responsable</span>
+          <strong>${escapeHTML(s.guardian || 'Por asignar')}</strong>
+        </div>
+        <div style="background:#FFF;padding:10px 12px;border:1px solid var(--line);border-radius:8px;">
+          <span style="font-size:11px;color:var(--ink-soft);display:block;">Diagnóstico / Motivo Inicial</span>
+          <span>${escapeHTML(s.diagnostico || s.dx || 'Acompañamiento regular')}</span>
+        </div>
+      </div>
+
+      ${(stInfo.isBaja) ? `
+        <div style="margin-top:12px;padding:12px 14px;background:#FDEDEC;border:1px solid #F5B7B1;border-radius:8px;font-size:12px;color:#78281F;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div>
+            <strong>⚠️ Información de la Baja Escolar (${stInfo.label}):</strong><br>
+            <span>Motivo registrado: <em>"${escapeHTML(s.motivo_baja || 'Baja administrativa')}"</em></span><br>
+            <span>Fecha de aplicación: <strong>${escapeHTML(s.fecha_baja || '—')}</strong> · Autorizó: ${escapeHTML(s.baja_autorizada_por || 'Coordinación')}</span>
+          </div>
+          <button class="btn-action-crud btn-crud-reactivar" onclick="reactivateStudent('${escapeHTML(matricula)}')">
+            🔄 Reactivar a Activo
+          </button>
+        </div>
+      ` : ''}
+    </div>
+  `;
+
   // Selector del contenido según pestaña activa
   let activeTabHTML = checkinsTabContent;
   if(activeTab === 'tareas') activeTabHTML = tasksTabContent;
   if(activeTab === 'documentos') activeTabHTML = docsTabContent;
   if(activeTab === 'tamizaje') activeTabHTML = tamizajeTabContent;
+  if(activeTab === 'ficha') activeTabHTML = fichaTabContent;
 
   const studentPhoto = (typeof getStudentPhoto === 'function') ? getStudentPhoto(s) : (s.photo || s.avatar?.photo || null);
 
@@ -866,47 +1685,70 @@ function openStudentModal(matricula, activeTab = 'checkins'){
         `}
       </div>
       <div style="flex:1;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-          <h3 style="font-size:19px;margin:0;color:var(--ink);">${s.nombre}</h3>
-          <span class="prio-chip ${s.prioridad}">Prioridad ${s.prioridad}</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <h3 style="font-size:19px;margin:0;color:var(--ink);">${escapeHTML(s.nombre)}</h3>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="badge-student-status ${stInfo.class}">${stInfo.icon} ${stInfo.label}</span>
+            <span class="prio-chip ${s.prioridad}">Prioridad ${s.prioridad}</span>
+          </div>
         </div>
         <div class="mono" style="font-size:12px;color:var(--ink-soft);margin:3px 0 6px;">
-          ${s.matricula} · Grupo ${s.grupo} · Carrera: ${s.carrera || 'Informática'}
+          ${escapeHTML(s.matricula)} · Grupo ${escapeHTML(s.grupo || '—')} · Carrera: ${escapeHTML(s.carrera || 'Informática')} · ${escapeHTML(s.turno || 'Matutino')}
         </div>
         <div style="font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <span>🛡️ Orientador(a): <strong>${s.guardian || 'Por asignar'}</strong></span>
+          <span>🛡️ Orientador(a): <strong>${escapeHTML(s.guardian || 'Por asignar')}</strong></span>
           ${(!isStudentAssignedToMe(s)) ? `
-            <button class="btn-outline-maroon" style="padding:2px 8px;font-size:11px;border-radius:4px;" onclick="assignStudentToMe('${s.matricula}')">
+            <button class="btn-outline-maroon" style="padding:2px 8px;font-size:11px;border-radius:4px;" onclick="assignStudentToMe('${escapeHTML(s.matricula)}')">
               📌 Asignar a mi tutoría
             </button>
           ` : `
             <span style="color:var(--green);font-weight:600;font-size:11.5px;">✓ Asignado a ti</span>
           `}
-          <span>🏫 Plantel Mérida I (Matutino)</span>
+          <span>🏫 Plantel Mérida I</span>
         </div>
-        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-          <button class="btn-outline-maroon" style="padding:5px 12px;font-size:11.5px;border-radius:100px;" onclick="openOfficialReportModal('${matricula}', 'Expediente Integral del Estudiante')">
-            🖨️ Generar Reporte Oficial CONALEP (PDF)
+
+        <!-- Botones de Acción Rápida CRUD -->
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+          <button class="btn-action-crud btn-crud-edit" onclick="openEditStudentModal('${escapeHTML(matricula)}')" title="Modificar datos del estudiante">
+            ✏️ Modificar Datos
+          </button>
+          ${stInfo.isBaja ? `
+            <button class="btn-action-crud btn-crud-reactivar" onclick="reactivateStudent('${escapeHTML(matricula)}')" title="Reactivar a este alumno como Activo">
+              🔄 Reactivar Alumno
+            </button>
+          ` : `
+            <button class="btn-action-crud btn-crud-baja" onclick="openBajaStudentModal('${escapeHTML(matricula)}')" title="Dar de baja escolar">
+              ⚠️ Dar de Baja
+            </button>
+          `}
+          <button class="btn-outline-maroon" style="padding:5px 12px;font-size:11.5px;border-radius:100px;" onclick="openOfficialReportModal('${escapeHTML(matricula)}', 'Expediente Integral del Estudiante')">
+            🖨️ PDF Oficial
           </button>
           <a href="reporte-psicologico.html?matricula=${encodeURIComponent(matricula)}" target="_blank" class="btn-outline-maroon" style="padding:5px 12px;font-size:11.5px;border-radius:100px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
-            📋 Reporte Psicológico Oficial (Folio)
+            📋 Reporte Psicológico
           </a>
+          <button class="btn-action-crud btn-crud-delete" onclick="deleteStudentPermanent('${escapeHTML(matricula)}')" title="Eliminar expediente">
+            🗑️ Eliminar
+          </button>
         </div>
       </div>
     </div>
 
     <!-- Pestañas de Navegación del Modal -->
     <div class="student-modal-tabs">
-      <button class="sm-tab-btn ${activeTab === 'checkins' ? 'active' : ''}" onclick="openStudentModal('${matricula}', 'checkins')">
+      <button class="sm-tab-btn ${activeTab === 'ficha' ? 'active' : ''}" onclick="openStudentModal('${escapeHTML(matricula)}', 'ficha')">
+        👤 Ficha Escolar
+      </button>
+      <button class="sm-tab-btn ${activeTab === 'checkins' ? 'active' : ''}" onclick="openStudentModal('${escapeHTML(matricula)}', 'checkins')">
         💖 Check-ins (${hist.length})
       </button>
-      <button class="sm-tab-btn ${activeTab === 'tareas' ? 'active' : ''}" onclick="openStudentModal('${matricula}', 'tareas')">
+      <button class="sm-tab-btn ${activeTab === 'tareas' ? 'active' : ''}" onclick="openStudentModal('${escapeHTML(matricula)}', 'tareas')">
         📋 Acuerdos y Tareas (${tasks.length})
       </button>
-      <button class="sm-tab-btn ${activeTab === 'documentos' ? 'active' : ''}" onclick="openStudentModal('${matricula}', 'documentos')">
+      <button class="sm-tab-btn ${activeTab === 'documentos' ? 'active' : ''}" onclick="openStudentModal('${escapeHTML(matricula)}', 'documentos')">
         📁 Documentos (${docs.length})
       </button>
-      <button class="sm-tab-btn ${activeTab === 'tamizaje' ? 'active' : ''}" onclick="openStudentModal('${matricula}', 'tamizaje')">
+      <button class="sm-tab-btn ${activeTab === 'tamizaje' ? 'active' : ''}" onclick="openStudentModal('${escapeHTML(matricula)}', 'tamizaje')">
         🩺 Tamizaje PIOE ${s.tamizaje ? '✓' : ''}
       </button>
     </div>
@@ -918,7 +1760,7 @@ function openStudentModal(matricula, activeTab = 'checkins'){
 
     <!-- Acciones Inferiores -->
     <div style="display:flex;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);">
-      <button class="btn-maroon" style="flex:1;padding:11px 16px;font-size:13px;" onclick="markReviewed('${matricula}')">
+      <button class="btn-maroon" style="flex:1;padding:11px 16px;font-size:13px;" onclick="markReviewed('${escapeHTML(matricula)}')">
         ✓ Marcar seguimiento como revisado y atendido
       </button>
       <button class="btn-ghost" style="padding:11px 18px;font-size:13px;" onclick="closeModal()">

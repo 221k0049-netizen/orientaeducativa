@@ -461,6 +461,21 @@ async function loginUser(identifier, password){
             return { success: false, error: 'Contraseña incorrecta. Por favor verifica tus credenciales.' };
           }
 
+          // Verificar si el estudiante se encuentra en estatus de baja
+          const metaEstado = avatarCfg?._meta?.estado || stData.estado || localSt.estado || 'activo';
+          if(metaEstado === 'baja_definitiva'){
+            return {
+              success: false,
+              error: 'Acceso no permitido: Esta cuenta de estudiante se encuentra en estatus de BAJA DEFINITIVA. Para consultar tu situación escolar, acude a la Coordinación de Orientación.'
+            };
+          }
+          if(metaEstado === 'baja_temporal'){
+            return {
+              success: false,
+              error: 'Acceso temporalmente inactivo: Tu cuenta se encuentra en estatus de BAJA TEMPORAL. Para reactivar tu acceso a NAIMA OS, contacta a tu orientador(a) educativo.'
+            };
+          }
+
           // Si la contraseña fue válida y aún no tenía el hash en Supabase, guardarlo ahora de forma permanente
           if(!avatarCfg._auth_hash || avatarCfg._auth_hash !== inputHash){
             avatarCfg._auth_hash = inputHash;
@@ -533,6 +548,23 @@ async function loginUser(identifier, password){
 
   if(!localValid){
     return { success: false, error: 'Contraseña incorrecta. Por favor verifica tus credenciales.' };
+  }
+
+  // Verificar si el estudiante se encuentra en baja
+  if(user.rol === 'estudiante'){
+    const stEstado = user.estado || (user.avatar?._meta?.estado) || 'activo';
+    if(stEstado === 'baja_definitiva'){
+      return {
+        success: false,
+        error: 'Acceso no permitido: Esta cuenta de estudiante se encuentra en estatus de BAJA DEFINITIVA. Para consultar tu situación escolar, acude a la Coordinación de Orientación.'
+      };
+    }
+    if(stEstado === 'baja_temporal'){
+      return {
+        success: false,
+        error: 'Acceso temporalmente inactivo: Tu cuenta se encuentra en estatus de BAJA TEMPORAL. Para reactivar tu acceso a NAIMA OS, contacta a tu orientador(a) educativo.'
+      };
+    }
   }
 
   setCurrentUser(user.id || user.matricula);
@@ -1360,6 +1392,7 @@ async function pullSupabaseToLocal(){
         const photo = avatarCfg?.photo || st.avatar_url || existing?.photo || null;
         const pwdHash = avatarCfg?._auth_hash || existing?.passwordHash || null;
         const pwd = existing?.password || null;
+        const meta = avatarCfg?._meta || {};
 
         db.students[st.matricula] = {
           id: st.matricula,
@@ -1370,6 +1403,15 @@ async function pullSupabaseToLocal(){
           rol: 'estudiante',
           grupo: st.grupo,
           carrera: st.carrera,
+          semestre: meta.semestre || st.semestre || existing?.semestre || '',
+          turno: meta.turno || st.turno || existing?.turno || 'Matutino',
+          telefono: meta.telefono || st.telefono || existing?.telefono || '',
+          tutor: meta.tutor || st.tutor || existing?.tutor || '',
+          tel_tutor: meta.tel_tutor || st.tel_tutor || existing?.tel_tutor || '',
+          estado: meta.estado || st.estado || existing?.estado || 'activo',
+          motivo_baja: meta.motivo_baja || st.motivo_baja || existing?.motivo_baja || '',
+          fecha_baja: meta.fecha_baja || st.fecha_baja || existing?.fecha_baja || null,
+          baja_autorizada_por: meta.baja_autorizada_por || existing?.baja_autorizada_por || null,
           guardian: st.guardian,
           guardianEmail: existing?.guardianEmail || st.guardian_email || null,
           prioridad: st.prioridad,
