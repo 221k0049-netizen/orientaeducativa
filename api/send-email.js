@@ -240,30 +240,66 @@ module.exports = async function handler(req, res) {
     }
 
     // 2. MÉTODO 2: GMAIL / SMTP (Si existen SMTP_USER y SMTP_PASS)
-    const rawUser = process.env.SMTP_USER ? process.env.SMTP_USER.trim() : '';
-    const rawPass = process.env.SMTP_PASS ? process.env.SMTP_PASS.trim() : '';
-    const cleanPass = rawPass.replace(/\s+/g, '');
+    function findEnv(keys) {
+      for (const k of keys) {
+        if (process.env[k] && typeof process.env[k] === 'string' && process.env[k].trim()) {
+          return process.env[k].trim();
+        }
+      }
+      const lowerKeys = keys.map(k => k.toLowerCase());
+      for (const envKey of Object.keys(process.env)) {
+        const trimmedLower = envKey.trim().toLowerCase();
+        if (lowerKeys.includes(trimmedLower)) {
+          const val = process.env[envKey];
+          if (val && typeof val === 'string' && val.trim()) return val.trim();
+        }
+      }
+      return '';
+    }
+
+    const rawUser = findEnv(['SMTP_USER', 'SMTP_EMAIL', 'EMAIL_USER', 'MAIL_USER', 'GMAIL_USER']);
+    const rawPass = findEnv(['SMTP_PASS', 'SMTP_PASSWORD', 'EMAIL_PASS', 'EMAIL_PASSWORD', 'MAIL_PASS', 'GMAIL_PASS']);
+    const cleanPass = rawPass ? rawPass.replace(/\s+/g, '') : '';
+    const customHost = findEnv(['SMTP_HOST']);
+    const customPort = Number(findEnv(['SMTP_PORT'])) || 465;
+    const fromName = findEnv(['SMTP_FROM_NAME']) || 'NAIMA OS · Orientación CONALEP Mérida I';
 
     if (rawUser && cleanPass) {
       console.log('📨 Enviando correo a través de Nodemailer SMTP hacia:', recipientList.join(', '));
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: Number(process.env.SMTP_PORT) || 465,
-        secure: Number(process.env.SMTP_PORT) === 465 || !process.env.SMTP_PORT,
-        auth: {
-          user: rawUser,
-          pass: cleanPass
-        },
-        tls: {
-          rejectUnauthorized: false
-        },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000
-      });
+      const transportConfig = customHost
+        ? {
+            host: customHost,
+            port: customPort,
+            secure: customPort === 465,
+            auth: {
+              user: rawUser,
+              pass: cleanPass
+            },
+            tls: {
+              rejectUnauthorized: false
+            },
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 15000
+          }
+        : {
+            service: 'gmail',
+            auth: {
+              user: rawUser,
+              pass: cleanPass
+            },
+            tls: {
+              rejectUnauthorized: false
+            },
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 15000
+          };
+
+      const transporter = nodemailer.createTransport(transportConfig);
 
       const mailOptions = {
-        from: `"${process.env.SMTP_FROM_NAME || 'NAIMA OS Orientación'}" <${rawUser}>`,
+        from: `"${fromName}" <${rawUser}>`,
         to: recipientList.join(', '),
         subject: emailSubject,
         html: htmlBody
@@ -281,13 +317,21 @@ module.exports = async function handler(req, res) {
     }
 
     // 3. MODO PREPARADO (Cuando aún no se han agregado las variables en el panel de Vercel)
-    console.warn('⚠️ /api/send-email: Faltan variables SMTP_USER y SMTP_PASS en este entorno.');
+    const detectedKeys = Object.keys(process.env)
+      .filter(k => /smtp|mail|email|pass|user|gmail|resend/i.test(k))
+      .map(k => k.trim());
+
+    console.warn('⚠️ /api/send-email: Faltan variables SMTP_USER y SMTP_PASS en este entorno. Llaves detectadas:', detectedKeys);
     return res.status(200).json({
       success: false,
       configured: false,
       service: 'unconfigured_credentials',
       to: recipientList,
       subject: emailSubject,
+      detectedKeys: detectedKeys,
+      hasUser: Boolean(rawUser),
+      hasPass: Boolean(cleanPass),
+      vercelEnv: process.env.VERCEL_ENV || 'local',
       error: 'Para que los correos salgan en Vercel, agrega SMTP_USER y SMTP_PASS en Settings > Environment Variables de tu proyecto en vercel.com.'
     });
 
