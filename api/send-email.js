@@ -240,21 +240,30 @@ module.exports = async function handler(req, res) {
     }
 
     // 2. MÉTODO 2: GMAIL / SMTP (Si existen SMTP_USER y SMTP_PASS)
-    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    const rawUser = process.env.SMTP_USER ? process.env.SMTP_USER.trim() : '';
+    const rawPass = process.env.SMTP_PASS ? process.env.SMTP_PASS.trim() : '';
+    const cleanPass = rawPass.replace(/\s+/g, '');
+
+    if (rawUser && cleanPass) {
       console.log('📨 Enviando correo a través de Nodemailer SMTP hacia:', recipientList.join(', '));
       const transporter = nodemailer.createTransport({
-        service: process.env.SMTP_SERVICE || (process.env.SMTP_HOST ? undefined : 'gmail'),
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: Number(process.env.SMTP_PORT) || 465,
         secure: Number(process.env.SMTP_PORT) === 465 || !process.env.SMTP_PORT,
         auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
+          user: rawUser,
+          pass: cleanPass
+        },
+        tls: {
+          rejectUnauthorized: false
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000
       });
 
       const mailOptions = {
-        from: `"${process.env.SMTP_FROM_NAME || 'NAIMA OS Orientación'}" <${process.env.SMTP_USER}>`,
+        from: `"${process.env.SMTP_FROM_NAME || 'NAIMA OS Orientación'}" <${rawUser}>`,
         to: recipientList.join(', '),
         subject: emailSubject,
         html: htmlBody
@@ -271,15 +280,15 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // 3. MODO PREPARADO / AUDITORÍA (Cuando aún no se han configurado credenciales en Vercel)
-    console.log('ℹ️ Solicitud de correo recibida para:', to);
+    // 3. MODO PREPARADO (Cuando aún no se han agregado las variables en el panel de Vercel)
+    console.warn('⚠️ /api/send-email: Faltan variables SMTP_USER y SMTP_PASS en este entorno.');
     return res.status(200).json({
-      success: true,
+      success: false,
       configured: false,
-      service: 'simulated_queue',
-      to: to,
+      service: 'unconfigured_credentials',
+      to: recipientList,
       subject: emailSubject,
-      message: 'El endpoint /api/send-email está listo y funcionando. Para que el correo llegue físicamente a tu bandeja de Gmail o institucional, agrega SMTP_USER y SMTP_PASS (o RESEND_API_KEY) en las variables de entorno de Vercel.'
+      error: 'Para que los correos salgan en Vercel, agrega SMTP_USER y SMTP_PASS en Settings > Environment Variables de tu proyecto en vercel.com.'
     });
 
   } catch (error) {
