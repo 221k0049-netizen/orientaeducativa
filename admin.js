@@ -3304,11 +3304,12 @@ async function sendTestAlertEmail(){
     btn.textContent = 'Enviando prueba...';
   }
 
+  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const isPort3000 = window.location.port === '3000';
-  const isProduction = window.location.hostname.includes('vercel.app') || (window.location.protocol.startsWith('http') && !window.location.port);
-  const endpoints = (isPort3000 || isProduction)
-    ? ['/api/send-email', 'http://localhost:3000/api/send-email']
-    : ['http://localhost:3000/api/send-email', '/api/send-email'];
+  const isProduction = !isLocalHost;
+  const endpoints = isProduction
+    ? ['/api/send-email']
+    : (isPort3000 ? ['/api/send-email'] : ['http://localhost:3000/api/send-email', '/api/send-email']);
 
   let lastData = null;
   let lastError = null;
@@ -3342,6 +3343,10 @@ async function sendTestAlertEmail(){
         break;
       }
       lastError = lastData.error || lastData.message || `HTTP ${res.status}`;
+      // Si el backend respondió (ej. falta configurar variables en Vercel), no intentar fallback erróneo
+      if(lastData && (lastData.configured === false || lastData.error)){
+        break;
+      }
     }catch(err){
       lastError = err.message;
     }
@@ -3349,8 +3354,11 @@ async function sendTestAlertEmail(){
 
   if(sentOk){
     alert(`✅ ¡Correo de prueba enviado con éxito!\n\nRevisa la bandeja de entrada de: ${targetEmail}\n(El correo suele tardar entre 5 y 30 segundos en reflejarse)`);
+  } else if(lastData && lastData.configured === false){
+    alert(`⚙️ Configuración requerida en Vercel:\n\n${lastData.error}\n\nVariables necesarias en vercel.com:\n• SMTP_USER\n• SMTP_PASS\n• SMTP_FROM_NAME`);
   } else {
-    alert(`Aviso al enviar correo: ${lastError || 'No se pudo conectar con el servidor local.'}\n\nAsegúrate de que el servidor esté activo con "npm start" en la terminal.`);
+    const hint = isLocalHost ? '\n\nAsegúrate de que el servidor local esté activo con "npm start" en la terminal.' : '';
+    alert(`Aviso al enviar correo: ${lastError || 'No se pudo conectar con el servicio de correo.'}${hint}`);
   }
 
   if(btn){

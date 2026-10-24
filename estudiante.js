@@ -592,12 +592,14 @@ function selectStudentMood(moodId){
 /* ---------- Servicio de Envío de Correo Real vía API Serverless ---------- */
 async function dispatchApiEmailNotification(payload){
   // Detectar automáticamente los endpoints según el entorno (Vercel, Live Server port 5500, o Local Node port 3000)
+  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const isPort3000 = window.location.port === '3000';
-  const isProduction = window.location.hostname.includes('vercel.app') || window.location.protocol.startsWith('http') && !window.location.port;
-  const endpoints = (isPort3000 || isProduction)
-    ? ['/api/send-email', 'http://localhost:3000/api/send-email']
-    : ['http://localhost:3000/api/send-email', '/api/send-email'];
+  const isProduction = !isLocalHost;
+  const endpoints = isProduction
+    ? ['/api/send-email']
+    : (isPort3000 ? ['/api/send-email'] : ['http://localhost:3000/api/send-email', '/api/send-email']);
 
+  let lastData = null;
   let lastError = null;
   for(const ep of endpoints){
     try{
@@ -606,18 +608,21 @@ async function dispatchApiEmailNotification(payload){
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await res.json().catch(() => ({}));
-      if(res.ok && (data.success || data.messageId)){
-        console.log(`✅ Correo de alerta entregado exitosamente mediante ${ep}:`, data);
-        return { success: true, ...data };
+      lastData = await res.json().catch(() => ({}));
+      if(res.ok && (lastData.success || lastData.messageId)){
+        console.log(`✅ Correo de alerta entregado exitosamente mediante ${ep}:`, lastData);
+        return { success: true, ...lastData };
       }
-      lastError = data.error || data.message || `HTTP ${res.status}`;
+      lastError = lastData.error || lastData.message || `HTTP ${res.status}`;
+      if(lastData && (lastData.configured === false || lastData.error)){
+        break;
+      }
     }catch(err){
       lastError = err.message;
     }
   }
-  console.warn('Aviso: El endpoint de correo no respondió en local. Verifica que "node server.js" o "npm start" esté activo:', lastError);
-  return { success: false, error: lastError };
+  console.warn('Aviso al procesar envío de correo:', lastError);
+  return { success: false, error: lastError, data: lastData };
 }
 
 async function submitStudentCheckin(){
